@@ -1,7 +1,7 @@
 // api/auth/login.js — Login endpoint
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { getDb, errorResponse, jsonResponse, corsHeaders } from '../db.js'
+import { getDb, errorResponse, jsonResponse, corsHeaders } from '../_lib/db.js'
 
 // Demo users (hardcoded fallback when no DB)
 const DEMO_USERS = [

@@ -1,6 +1,7 @@
 // api/chat/query.js — AI chat query endpoint
 import jwt from 'jsonwebtoken'
-import { getDb } from '../db.js'
+import { getDb } from '../_lib/db.js'
+import { resolveDetailedCitation } from '../_lib/standardsReferences.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'bis-saarthi-dev-secret-2024'
 
@@ -132,6 +133,9 @@ export default async function handler(req, res) {
     // Generate response
     const effectiveRole = user.role || role || 'consumer'
     const response = generateMockResponse(content, effectiveRole, language, manufacturerProfile)
+    if (response.citations) {
+      response.citations = response.citations.map(resolveDetailedCitation).filter(Boolean)
+    }
 
     // Save to DB if available
     const sql = getDb()

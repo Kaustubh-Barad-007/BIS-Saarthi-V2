@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   UserPlus, User, Building2, Shield,
-  ChevronRight, ChevronLeft, CheckCircle2
+  ChevronRight, ChevronLeft, CheckCircle2, Home
 } from 'lucide-react'
 import { toast } from 'sonner'
 import useAuthStore from '@/store/authStore'
@@ -77,19 +77,29 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-140px)] flex items-center justify-center bg-slate-100 dark:bg-dark-bg py-10 px-4">
+    <div className="min-h-[calc(100vh-140px)] flex items-center justify-center bg-slate-100 dark:bg-dark-bg py-6 sm:py-10 px-3 sm:px-4">
       <div className="w-full max-w-xl">
         <div className="bg-white dark:bg-dark-bg-card rounded-gov-xl shadow-gov-lg overflow-hidden border border-gray-200 dark:border-dark-border">
           {/* Header */}
-          <div className="bg-[linear-gradient(135deg,#00265D_0%,#003580_100%)] text-white px-8 py-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 shadow-sm">
-                <img src="/bis-logo.svg" alt="BIS" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <div className="font-bold">BIS Saarthi Portal Registration</div>
-                <div className="text-xs text-blue-200">Bureau of Indian Standards Portal</div>
-              </div>
+          <div className="bg-[linear-gradient(135deg,#00265D_0%,#003580_100%)] text-white px-5 py-5 sm:px-8 sm:py-6">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group hover:opacity-90 transition-opacity min-w-0" title="Return to Home">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  <img src="/bis-logo.svg" alt="BIS" className="w-full h-full object-contain" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-sm sm:text-base leading-tight truncate">BIS Saarthi Portal Registration</div>
+                  <div className="text-[11px] sm:text-xs text-blue-200 truncate">Bureau of Indian Standards Portal</div>
+                </div>
+              </Link>
+              <Link
+                to="/"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-white/15 hover:bg-white/25 rounded-gov transition-colors shadow-xs shrink-0"
+                title="Return to Home"
+              >
+                <Home className="w-3.5 h-3.5" />
+                <span>Home</span>
+              </Link>
             </div>
             {/* Progress steps */}
             <div className="flex items-center gap-2">
@@ -117,7 +127,7 @@ export default function Register() {
           </div>
 
           {/* Form body */}
-          <div className="p-8">
+          <div className="p-5 sm:p-8">
             <form onSubmit={step === STEPS.length - 1 ? handleSubmit(onSubmit) : (e) => { e.preventDefault(); nextStep() }}>
 
               {/* Step 0 — Personal Info */}
@@ -221,12 +231,18 @@ export default function Register() {
               </div>
             </form>
 
-            <p className="text-center text-sm text-gray-500 dark:text-dark-text-muted mt-5">
-              Already have an account?{' '}
-              <Link to={ROUTES.LOGIN} className="text-bis-navy dark:text-blue-400 font-semibold hover:underline">
-                Sign In
+            <div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-100 dark:border-dark-border text-sm">
+              <Link to="/" className="inline-flex items-center gap-1.5 text-gray-500 dark:text-dark-text-muted hover:text-bis-navy dark:hover:text-blue-400 font-medium transition-colors">
+                <Home className="w-3.5 h-3.5" />
+                <span>Return to Home</span>
               </Link>
-            </p>
+              <p className="text-gray-500 dark:text-dark-text-muted">
+                Already have an account?{' '}
+                <Link to={ROUTES.LOGIN} className="text-bis-navy dark:text-blue-400 font-semibold hover:underline">
+                  Sign In
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>

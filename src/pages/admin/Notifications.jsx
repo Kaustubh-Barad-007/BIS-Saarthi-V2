@@ -155,8 +155,8 @@ export default function AdminNotifications() {
         )
       case 'warning':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-            <AlertTriangle className="w-3 h-3" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+            <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400" />
             Advisory
           </span>
         )
@@ -181,7 +181,7 @@ export default function AdminNotifications() {
     switch (role) {
       case 'consumer':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
             <Users className="w-3 h-3" /> Consumers Only
           </span>
         )
@@ -238,10 +238,10 @@ export default function AdminNotifications() {
         </div>
 
         <div className="card-gov p-4">
-          <div className="text-[11px] font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+          <div className="text-[11px] font-medium text-purple-700 dark:text-purple-300 uppercase tracking-wider">
             Consumer Broadcasts
           </div>
-          <div className="text-2xl font-bold text-amber-700 dark:text-amber-300 mt-1">{consumerCount}</div>
+          <div className="text-2xl font-bold text-purple-700 dark:text-purple-300 mt-1">{consumerCount}</div>
           <div className="text-xs text-gray-400 dark:text-dark-text-muted mt-1">Reaching general public</div>
         </div>
 

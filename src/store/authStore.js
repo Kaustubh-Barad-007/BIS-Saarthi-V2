@@ -44,14 +44,14 @@ const useAuthStore = create(
         }
       },
 
-      // Logout
+      // Logout (Lightning fast: clears credentials & state instantly)
       logout: async () => {
-        try {
-          await authApi.logout()
-        } catch (_) {}
         localStorage.removeItem('bis_token')
         localStorage.removeItem('bis_user')
         set({ user: null, token: null, error: null })
+        try {
+          authApi.logout().catch(() => {})
+        } catch (_) {}
       },
 
       // Fetch current user

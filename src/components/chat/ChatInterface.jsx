@@ -1,13 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Send, Paperclip, Mic, RefreshCw, Copy, ThumbsUp, ThumbsDown,
   Download, Bookmark, Map, FlaskConical, Award, MessageSquare,
-  AlertTriangle, CheckCircle2, X, ChevronDown, Plus, Trash2, Globe,
+  AlertTriangle, CheckCircle2, X, ChevronDown, ChevronRight, Plus, Trash2, Globe,
   Maximize2, Minimize2, Volume2, VolumeX, Edit2, Edit3, Check,
   Search, Sparkles, RotateCcw, Square, SlidersHorizontal, ExternalLink,
-  Printer, FileText, HelpCircle, Type, Building2
+  Printer, FileText, HelpCircle, Type, Building2, BookOpen, ShieldCheck, Scale, FileBadge
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
+import { resolveDetailedCitation, STANDARDS_REGISTRY } from '@/lib/standardsReferences'
 import { toast } from 'sonner'
 import useChatStore from '@/store/chatStore'
 import useAuthStore from '@/store/authStore'
@@ -60,6 +61,7 @@ function MessageBubble({
   onRegenerate,
   onEditUserPrompt,
   onOpenCitation,
+  onOpenSourcesSidebar,
   onOpenFeedback,
   onSelectFollowUp,
   speakingMsgId,
@@ -172,18 +174,6 @@ function MessageBubble({
               </div>
             ) : (
               <div className="ai-response">
-                {message.readingMode && (
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <span className={cn(
-                      "text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider",
-                      message.readingMode === 'technical'
-                        ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                        : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                    )}>
-                      {message.readingMode === 'technical' ? 'Technical Clauses' : 'Citizen Brief'}
-                    </span>
-                  </div>
-                )}
                 {translatedContent && (
                   <div className="mb-2 flex items-center justify-between text-[11px] bg-blue-50/80 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-gov border border-blue-200/80 dark:border-blue-800/40">
                     <span className="flex items-center gap-1.5 font-medium">
@@ -216,35 +206,7 @@ function MessageBubble({
           </div>
         )}
 
-        {/* Citations */}
-        {!isUser && message.citations?.length > 0 && (
-          <div className="w-full mt-1 space-y-1">
-            {message.citations.map((cite, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onOpenCitation(cite)}
-                className={cn(
-                  'w-full text-left flex items-start justify-between gap-2 px-3 py-2 rounded-gov text-xs border transition-all hover:shadow-xs group/cite',
-                  cite.type === 'standard'
-                    ? 'bg-blue-50/90 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-100/70'
-                    : 'bg-green-50/90 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 hover:bg-green-100/70'
-                )}
-                title="Click to view full standard details & BIS clauses"
-              >
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                  <div>
-                    <span className="font-semibold underline underline-offset-2 decoration-blue-400">{cite.source}</span>
-                    {cite.clause && <>, {cite.clause}</>}
-                    {cite.version && <span className="opacity-70 ml-1">({cite.version})</span>}
-                  </div>
-                </div>
-                <ExternalLink className="w-3 h-3 opacity-0 group-hover/cite:opacity-100 transition-opacity mt-0.5 shrink-0" />
-              </button>
-            ))}
-          </div>
-        )}
+
 
         {/* Cannot verify banner */}
         {!isUser && message.canVerify === false && (
@@ -325,6 +287,19 @@ function MessageBubble({
             >
               <Bookmark className={cn("w-3.5 h-3.5", bookmarked && "fill-current")} />
             </button>
+
+            {/* View Sources in Right Sidebar */}
+            {message.citations?.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onOpenSourcesSidebar?.(message.citations[0])}
+                className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-bis-navy dark:text-blue-400 transition-colors flex items-center gap-1 text-[11px] font-semibold border border-transparent hover:border-blue-200 dark:hover:border-blue-800/60"
+                title="View cited standards in Right Sources Sidebar"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Sources ({message.citations.length})</span>
+              </button>
+            )}
 
             {/* Regenerate button (latest assistant message only) */}
             {isLatestAssistant && (
@@ -471,7 +446,7 @@ export default function ChatInterface({ role = 'consumer' }) {
 
   // Local UI states
   const [input, setInput]                           = useState('')
-  const [showSidebar, setShowSidebar]               = useState(true)
+  const [showSidebar, setShowSidebar]               = useState(false)
   const [showLang, setShowLang]                     = useState(false)
   const [showExportMenu, setShowExportMenu]         = useState(false)
   const [showFontMenu, setShowFontMenu]             = useState(false)
@@ -552,6 +527,81 @@ export default function ChatInterface({ role = 'consumer' }) {
   const [feedbackMessage, setFeedbackMessage]       = useState(null)
   const [feedbackReason, setFeedbackReason]         = useState('')
   const [showShortcuts, setShowShortcuts]           = useState(false)
+
+  // Right Sources & Regulatory References Sidebar State
+  const [showSourcesSidebar, setShowSourcesSidebar]       = useState(false)
+  const [sourcesSearchQuery, setSourcesSearchQuery]       = useState('')
+  const [sourcesActiveTab, setSourcesActiveTab]           = useState('cited') // 'cited' | 'directory'
+  const [highlightedSourceKey, setHighlightedSourceKey]   = useState(null)
+
+  // Unique citations extracted across current conversation (newest first)
+  const conversationCitations = useMemo(() => {
+    const list = []
+    const seen = new Set()
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i]
+      if (msg.role === 'assistant' && msg.citations && msg.citations.length > 0) {
+        for (const rawCite of msg.citations) {
+          const resolved = resolveDetailedCitation(rawCite)
+          if (!resolved) continue
+          const key = (resolved.source || '').toLowerCase().trim()
+          if (!seen.has(key)) {
+            seen.add(key)
+            list.push({
+              ...resolved,
+              messageId: msg.id,
+              timestamp: msg.timestamp,
+            })
+          }
+        }
+      }
+    }
+    return list
+  }, [messages])
+
+  // Catalog of standards from STANDARDS_REGISTRY
+  const standardsDirectory = useMemo(() => {
+    return Object.values(STANDARDS_REGISTRY).map(entry => resolveDetailedCitation(entry))
+  }, [])
+
+  // Filtered citations based on sourcesSearchQuery
+  const filteredCitedCitations = useMemo(() => {
+    if (!sourcesSearchQuery.trim()) return conversationCitations
+    const q = sourcesSearchQuery.toLowerCase()
+    return conversationCitations.filter(c =>
+      c.source?.toLowerCase().includes(q) ||
+      c.title?.toLowerCase().includes(q) ||
+      c.clause?.toLowerCase().includes(q) ||
+      c.committee?.toLowerCase().includes(q) ||
+      c.actReference?.toLowerCase().includes(q)
+    )
+  }, [conversationCitations, sourcesSearchQuery])
+
+  const filteredDirectory = useMemo(() => {
+    if (!sourcesSearchQuery.trim()) return standardsDirectory
+    const q = sourcesSearchQuery.toLowerCase()
+    return standardsDirectory.filter(c =>
+      c.source?.toLowerCase().includes(q) ||
+      c.title?.toLowerCase().includes(q) ||
+      c.clause?.toLowerCase().includes(q) ||
+      c.committee?.toLowerCase().includes(q) ||
+      c.actReference?.toLowerCase().includes(q)
+    )
+  }, [standardsDirectory, sourcesSearchQuery])
+
+  const handleOpenSourcesSidebar = (cite) => {
+    setShowSourcesSidebar(true)
+    setSourcesActiveTab('cited')
+    if (cite?.source) {
+      setHighlightedSourceKey(cite.source)
+      setTimeout(() => {
+        const el = document.getElementById(`sidebar-cite-${cite.source}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 100)
+    }
+  }
   
   // Inline rename state in sidebar
   const [editingSessionId, setEditingSessionId]     = useState(null)
@@ -561,6 +611,60 @@ export default function ChatInterface({ role = 'consumer' }) {
   const fileInputRef    = useRef(null)
   const messagesEndRef  = useRef(null)
   const textareaRef     = useRef(null)
+  const chatContainerRef = useRef(null)
+
+  // ── Drag-to-Resize State & Handlers for Left & Right Sidebars ──
+  const [leftSidebarWidth, setLeftSidebarWidth]   = useState(280)
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(380)
+  const [isDraggingLeft, setIsDraggingLeft]       = useState(false)
+  const [isDraggingRight, setIsDraggingRight]     = useState(false)
+
+  const startDraggingLeft = useCallback((e) => {
+    e.preventDefault()
+    setIsDraggingLeft(true)
+  }, [])
+
+  const startDraggingRight = useCallback((e) => {
+    e.preventDefault()
+    setIsDraggingRight(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isDraggingLeft && !isDraggingRight) return
+
+    const handleMouseMove = (e) => {
+      if (!chatContainerRef.current) return
+      const rect = chatContainerRef.current.getBoundingClientRect()
+
+      if (isDraggingLeft) {
+        const newWidth = Math.min(Math.max(200, e.clientX - rect.left), Math.min(520, window.innerWidth * 0.45))
+        setLeftSidebarWidth(Math.round(newWidth))
+      } else if (isDraggingRight) {
+        const newWidth = Math.min(Math.max(280, rect.right - e.clientX), Math.min(650, window.innerWidth * 0.5))
+        setRightSidebarWidth(Math.round(newWidth))
+      }
+    }
+
+    const handleMouseUp = () => {
+      setIsDraggingLeft(false)
+      setIsDraggingRight(false)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isDraggingLeft, isDraggingRight])
 
   // Cleanup speech synthesis, audio player & recognition on unmount
   useEffect(() => {
@@ -857,7 +961,7 @@ export default function ChatInterface({ role = 'consumer' }) {
     if (format === 'markdown') {
       let md = `# ${title}\n`
       md += `*Exported from BIS Saarthi AI on ${new Date().toLocaleString()}*\n`
-      md += `*Language: ${selectedLanguage.toUpperCase()} | Reading Mode: ${readingMode.toUpperCase()}*\n\n---\n\n`
+      md += `*Language: ${selectedLanguage.toUpperCase()}*\n\n---\n\n`
       messages.forEach((m) => {
         const roleName = m.role === 'user' ? 'User' : 'BIS Saarthi AI'
         md += `### ${roleName} (${new Date(m.timestamp).toLocaleTimeString()})\n\n${m.content}\n\n`
@@ -930,22 +1034,67 @@ export default function ChatInterface({ role = 'consumer' }) {
   }
 
   return (
-    <div className={cn(
-      'flex bg-slate-50 dark:bg-dark-bg transition-all duration-200 overflow-hidden relative',
-      isFullscreen
-        ? 'fixed inset-0 z-50 w-screen h-screen rounded-none shadow-2xl border-0'
-        : 'h-[calc(100vh-80px)] rounded-gov-xl shadow-gov border border-gray-200 dark:border-dark-border'
-    )}>
+    <div
+      ref={chatContainerRef}
+      className={cn(
+        'flex bg-slate-50 dark:bg-dark-bg transition-all duration-200 overflow-hidden relative',
+        isFullscreen
+          ? 'fixed inset-0 z-50 w-screen h-screen rounded-none shadow-2xl border-0'
+          : 'h-[calc(100dvh-125px)] md:h-[calc(100vh-80px)] rounded-gov-xl shadow-gov border border-gray-200 dark:border-dark-border'
+      )}
+    >
 
-      {/* ── Session Sidebar ── */}
-      <div className={cn(
-        'flex flex-col bg-white dark:bg-dark-bg-card border-r border-gray-200 dark:border-dark-border transition-all duration-300',
-        showSidebar ? 'w-64' : 'w-0 overflow-hidden'
-      )}>
+      {/* ── Mobile Backdrop for Session Sidebar ── */}
+      {showSidebar && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden animate-fade-in backdrop-blur-2xs"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+
+      {/* ── Session Sidebar (Resizable) ── */}
+      <div
+        style={showSidebar && typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: `${leftSidebarWidth}px` } : undefined}
+        className={cn(
+          'flex flex-col bg-white dark:bg-dark-bg-card border-r border-gray-200 dark:border-dark-border shrink-0 z-40 relative',
+          isDraggingLeft ? 'transition-none select-none' : 'transition-[width] duration-300',
+          showSidebar
+            ? 'max-md:fixed max-md:top-0 max-md:left-0 max-md:h-full max-md:w-72 max-md:shadow-2xl'
+            : 'w-0 overflow-hidden border-r-0'
+        )}
+      >
+        {/* Resize Handle for Left Sidebar (Desktop) */}
+        {showSidebar && (
+          <div
+            onMouseDown={startDraggingLeft}
+            className={cn(
+              'hidden md:flex absolute top-0 right-0 w-2 h-full cursor-col-resize z-50 items-center justify-center group select-none transition-colors -mr-1',
+              isDraggingLeft ? 'bg-blue-600' : 'hover:bg-blue-500/60'
+            )}
+            title="Drag to resize conversation history"
+          >
+            <div className="w-0.5 h-8 bg-gray-400/70 dark:bg-dark-border rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        )}
         {/* Sidebar Header & New Chat */}
         <div className="p-3 border-b border-gray-100 dark:border-dark-border space-y-2">
+          <div className="flex items-center justify-between gap-1 md:hidden pb-1">
+            <span className="text-xs font-bold text-gray-700 dark:text-dark-text uppercase tracking-wider">
+              Chat History
+            </span>
+            <button
+              onClick={() => setShowSidebar(false)}
+              className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-border"
+              title="Close history"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
           <button
-            onClick={() => startSession()}
+            onClick={() => {
+              startSession()
+              if (window.innerWidth < 768) setShowSidebar(false)
+            }}
             className="btn-gov w-full text-xs py-2 flex items-center justify-center gap-1.5 shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" /> {t('new_conversation', 'New Conversation')}
@@ -992,7 +1141,12 @@ export default function ChatInterface({ role = 'consumer' }) {
                       ? 'bg-bis-light-bg dark:bg-blue-900/20 text-bis-navy dark:text-blue-300 font-medium'
                       : 'hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text'
                   )}
-                  onClick={() => !isRenaming && switchSession(session.id)}
+                  onClick={() => {
+                    if (!isRenaming) {
+                      switchSession(session.id)
+                      if (window.innerWidth < 768) setShowSidebar(false)
+                    }
+                  }}
                 >
                   <MessageSquare className="w-3.5 h-3.5 shrink-0 opacity-70" />
 
@@ -1090,46 +1244,8 @@ export default function ChatInterface({ role = 'consumer' }) {
             </div>
           </div>
 
-          {/* Right: Controls (Reading Mode, Font Size, Export, Clear, Lang, Fullscreen) */}
+          {/* Right: Controls (Sources, Language, Font Size, Export, Clear, Fullscreen) */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            
-            {/* Reading Mode Toggle */}
-            <div className="flex items-center bg-gray-100 dark:bg-dark-bg p-0.5 rounded-gov border border-gray-200 dark:border-dark-border text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setReadingMode('citizen')
-                  toast.success('Switched to Citizen Brief mode (concise guidance)')
-                }}
-                className={cn(
-                  'px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1 transition-all',
-                  readingMode === 'citizen'
-                    ? 'bg-white dark:bg-dark-bg-card text-bis-navy dark:text-blue-300 shadow-xs'
-                    : 'text-gray-500 dark:text-dark-text-muted hover:text-gray-800'
-                )}
-                title={t('citizen_mode_tooltip', 'Concise, plain language answers for citizens')}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>{t('citizen_mode', 'Citizen')}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setReadingMode('technical')
-                  toast.success('Switched to Technical Clauses mode (detailed regulatory breakdown)')
-                }}
-                className={cn(
-                  'px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1 transition-all',
-                  readingMode === 'technical'
-                    ? 'bg-white dark:bg-dark-bg-card text-purple-700 dark:text-purple-300 shadow-xs'
-                    : 'text-gray-500 dark:text-dark-text-muted hover:text-gray-800'
-                )}
-                title={t('technical_mode_tooltip', 'Clause-level standard specifications and test procedures')}
-              >
-                <FlaskConical className="w-3.5 h-3.5 text-purple-500" />
-                <span>{t('technical_mode', 'Technical')}</span>
-              </button>
-            </div>
 
             {/* Font Size Accessibility Selector */}
             <div className="relative">
@@ -1240,11 +1356,11 @@ export default function ChatInterface({ role = 'consumer' }) {
               )}
             </div>
 
-            {/* Fullscreen Immersive Mode Toggle */}
+            {/* Fullscreen Immersive Mode Toggle (Desktop only) */}
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className={cn(
-                'flex items-center gap-1 text-xs px-2 py-1.5 border rounded-gov transition-colors',
+                'hidden md:flex items-center gap-1 text-xs px-2 py-1.5 border rounded-gov transition-colors',
                 isFullscreen
                   ? 'bg-bis-navy text-white border-bis-navy dark:bg-blue-600 dark:border-blue-600 shadow-xs'
                   : 'border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text'
@@ -1261,6 +1377,27 @@ export default function ChatInterface({ role = 'consumer' }) {
                   <Maximize2 className="w-3.5 h-3.5" />
                   <span className="hidden lg:inline text-[11px]">Full</span>
                 </>
+              )}
+            </button>
+
+            {/* Sources & References Sidebar Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowSourcesSidebar(!showSourcesSidebar)}
+              className={cn(
+                'flex items-center gap-1.5 text-xs px-2.5 py-1.5 border rounded-gov transition-all shadow-xs',
+                showSourcesSidebar
+                  ? 'bg-blue-50 border-blue-300 text-bis-navy dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 font-bold'
+                  : 'border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text'
+              )}
+              title={showSourcesSidebar ? "Hide Sources & References Sidebar" : "Show Sources & References Sidebar"}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span className="hidden sm:inline text-[11px]">Sources</span>
+              {conversationCitations.length > 0 && (
+                <span className="bg-bis-navy dark:bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                  {conversationCitations.length}
+                </span>
               )}
             </button>
           </div>
@@ -1547,6 +1684,7 @@ export default function ChatInterface({ role = 'consumer' }) {
               onRegenerate={() => regenerateLastResponse()}
               onEditUserPrompt={(msgId, newContent) => editAndResendMessage(msgId, newContent)}
               onOpenCitation={(cite) => setInspectCitation(cite)}
+              onOpenSourcesSidebar={(cite) => handleOpenSourcesSidebar(cite)}
               onOpenFeedback={(m) => setFeedbackMessage(m)}
               onSelectFollowUp={(chip) => { setGatewayDismissed(true); sendMessage(chip, { role }) }}
               speakingMsgId={speakingMsgId}
@@ -1672,82 +1810,551 @@ export default function ChatInterface({ role = 'consumer' }) {
         </div>
       </div>
 
-      {/* ── Citation Details Inspector Modal ── */}
-      {inspectCitation && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white dark:bg-dark-bg-card rounded-gov-xl border border-gray-200 dark:border-dark-border shadow-2xl max-w-md w-full p-6 animate-scale-in">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-dark-border">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-                  <CheckCircle2 className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white font-heading">
-                    Official Standard Reference
-                  </h3>
-                  <p className="text-[11px] text-gray-400 dark:text-dark-text-muted">
-                    Bureau of Indian Standards Knowledge Base
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setInspectCitation(null)}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-white rounded"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      {/* ── Mobile Backdrop for Right Sources Sidebar ── */}
+      {showSourcesSidebar && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden animate-fade-in backdrop-blur-2xs"
+          onClick={() => setShowSourcesSidebar(false)}
+        />
+      )}
+
+      {/* ── Right Sources & Regulatory References Sidebar (Resizable) ── */}
+      <div
+        style={showSourcesSidebar && typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: `${rightSidebarWidth}px` } : undefined}
+        className={cn(
+          'flex flex-col bg-white dark:bg-dark-bg-card border-l border-gray-200 dark:border-dark-border shrink-0 z-40 relative',
+          isDraggingRight ? 'transition-none select-none' : 'transition-[width] duration-300',
+          showSourcesSidebar
+            ? 'max-md:fixed max-md:top-0 max-md:right-0 max-md:w-[92vw] max-md:max-w-sm max-md:h-full max-md:shadow-2xl'
+            : 'w-0 overflow-hidden border-l-0'
+        )}
+      >
+        {/* Resize Handle for Right Sidebar (Desktop) */}
+        {showSourcesSidebar && (
+          <div
+            onMouseDown={startDraggingRight}
+            className={cn(
+              'hidden md:flex absolute top-0 left-0 w-2 h-full cursor-col-resize z-50 items-center justify-center group select-none transition-colors -ml-1',
+              isDraggingRight ? 'bg-blue-600' : 'hover:bg-blue-500/60'
+            )}
+            title="Drag to resize sources & references panel"
+          >
+            <div className="w-0.5 h-8 bg-gray-400/70 dark:bg-dark-border rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        )}
+        {/* Sidebar Header */}
+        <div className="p-3.5 border-b border-gray-100 dark:border-dark-border flex items-center justify-between bg-slate-50/80 dark:bg-dark-bg/80">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-blue-100/90 dark:bg-blue-900/40 text-bis-navy dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/60 dark:border-blue-800/40">
+              <BookOpen className="w-4 h-4" />
             </div>
-
-            <div className="py-4 space-y-3 text-xs">
-              <div className="bg-gray-50 dark:bg-dark-bg p-3 rounded-gov space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Standard / Source:</span>
-                  <span className="font-bold text-gray-900 dark:text-white">{inspectCitation.source}</span>
-                </div>
-                {inspectCitation.clause && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Clause Reference:</span>
-                    <span className="font-semibold text-blue-600 dark:text-blue-400">{inspectCitation.clause}</span>
-                  </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white font-heading truncate">
+                  Sources & References
+                </h3>
+                {conversationCitations.length > 0 && (
+                  <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
+                    {conversationCitations.length} Active
+                  </span>
                 )}
-                {inspectCitation.version && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Edition / Amendment:</span>
-                    <span className="text-gray-700 dark:text-dark-text">{inspectCitation.version}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Conformity Status:</span>
-                  <span className="text-green-600 font-semibold">Active & Mandatory in India</span>
-                </div>
               </div>
-
-              <p className="text-gray-600 dark:text-dark-text leading-relaxed">
-                This clause establishes mandatory requirements approved by the corresponding Sectional Committee of the Bureau of Indian Standards under the BIS Act, 2016.
+              <p className="text-xs text-gray-500 dark:text-dark-text-muted truncate">
+                Official Indian Standards & Acts
               </p>
             </div>
+          </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 dark:border-dark-border">
+          <button
+            type="button"
+            onClick={() => setShowSourcesSidebar(false)}
+            className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded hover:bg-gray-100 dark:hover:bg-dark-border transition-colors shrink-0"
+            title="Close Sources Sidebar"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Search & Tabs */}
+        <div className="p-2.5 border-b border-gray-100 dark:border-dark-border bg-white dark:bg-dark-bg-card space-y-2">
+          {/* Instant Search Bar */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={sourcesSearchQuery}
+              onChange={(e) => setSourcesSearchQuery(e.target.value)}
+              placeholder="Search standards, clauses, acts..."
+              className="w-full pl-8 pr-7 py-1.5 text-sm bg-slate-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-gov focus:outline-none focus:border-bis-navy dark:focus:border-blue-400 text-gray-800 dark:text-dark-text placeholder:text-gray-400"
+            />
+            {sourcesSearchQuery && (
               <button
                 type="button"
-                onClick={() => setInspectCitation(null)}
-                className="btn-gov-outline text-xs py-1.5 px-3"
+                onClick={() => setSourcesSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white"
               >
-                Close
+                <X className="w-3 h-3" />
               </button>
-              <a
-                href="https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/knowyourstandards/indian_standards/isdetails"
-                target="_blank"
-                rel="noreferrer"
-                className="btn-gov text-xs py-1.5 px-3 flex items-center gap-1.5"
-              >
-                <span>BIS Standards Portal</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
+            )}
+          </div>
+
+          {/* Dual Tabs */}
+          <div className="flex gap-1 bg-gray-100 dark:bg-dark-bg p-0.5 rounded-gov text-[11px]">
+            <button
+              type="button"
+              onClick={() => setSourcesActiveTab('cited')}
+              className={cn(
+                'flex-1 py-1 rounded font-medium transition-all text-center',
+                sourcesActiveTab === 'cited'
+                  ? 'bg-white dark:bg-dark-bg-card text-bis-navy dark:text-blue-300 shadow-xs font-bold'
+                  : 'text-gray-500 dark:text-dark-text-muted hover:text-gray-800'
+              )}
+            >
+              Cited in Chat ({conversationCitations.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSourcesActiveTab('directory')}
+              className={cn(
+                'flex-1 py-1 rounded font-medium transition-all text-center',
+                sourcesActiveTab === 'directory'
+                  ? 'bg-white dark:bg-dark-bg-card text-bis-navy dark:text-blue-300 shadow-xs font-bold'
+                  : 'text-gray-500 dark:text-dark-text-muted hover:text-gray-800'
+              )}
+            >
+              BIS Directory ({Object.keys(STANDARDS_REGISTRY).length})
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Scrollable Sources Content */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          {sourcesActiveTab === 'cited' ? (
+            filteredCitedCitations.length === 0 ? (
+              <div className="text-center py-8 px-3 space-y-3">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-400 flex items-center justify-center mx-auto border border-blue-100 dark:border-blue-900/40">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+                    {sourcesSearchQuery ? 'No matching references' : 'No sources cited yet'}
+                  </h4>
+                  <p className="text-[11px] text-gray-500 dark:text-dark-text-muted mt-1 leading-relaxed">
+                    {sourcesSearchQuery
+                      ? 'Try another search term like "IS 1417", "water", "hallmark", or "gold".'
+                      : 'Ask a question about BIS standards, hallmarking, testing procedures, or certification to see verified statutory citations appear here in real time.'}
+                  </p>
+                </div>
+
+                {!sourcesSearchQuery && (
+                  <div className="pt-2 border-t border-gray-100 dark:border-dark-border space-y-1.5 text-left">
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted">
+                      Suggested Regulatory Queries:
+                    </span>
+                    {[
+                      'What are the mandatory gold hallmarking standards (IS 1417)?',
+                      'Show test parameters for packaged drinking water under IS 14543',
+                      'What are helmet safety requirements under IS 4151?',
+                    ].map((sampleQuery, qIdx) => (
+                      <button
+                        key={qIdx}
+                        type="button"
+                        onClick={() => {
+                          setGatewayDismissed(true)
+                          sendMessage(sampleQuery, { role })
+                        }}
+                        className="w-full text-left p-2 rounded-gov bg-gray-50 hover:bg-blue-50 dark:bg-dark-bg dark:hover:bg-blue-950/40 text-[11px] text-gray-700 dark:text-gray-300 border border-gray-200/70 dark:border-dark-border transition-colors leading-snug"
+                      >
+                        {sampleQuery} &rarr;
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              filteredCitedCitations.map((cite, i) => {
+                const isHighlighted = highlightedSourceKey && (cite.source?.toLowerCase().includes(highlightedSourceKey.toLowerCase()) || highlightedSourceKey.toLowerCase().includes(cite.source?.toLowerCase()))
+                return (
+                  <div
+                    key={i}
+                    id={`sidebar-cite-${cite.source}`}
+                    className={cn(
+                      'p-3 rounded-gov-lg border bg-slate-50/70 dark:bg-dark-bg-secondary/70 transition-all shadow-xs space-y-2',
+                      isHighlighted
+                        ? 'border-bis-navy dark:border-blue-400 ring-2 ring-blue-500/20 bg-blue-50/60 dark:bg-blue-950/30'
+                        : 'border-slate-200 dark:border-dark-border hover:border-blue-300 dark:hover:border-blue-600/70'
+                    )}
+                  >
+                    {/* Badge & Code Row */}
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                      <span className={cn(
+                        'text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border',
+                        cite.type === 'standard'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                          : cite.type === 'legislation'
+                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                          : cite.type === 'order'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                      )}>
+                        {cite.type === 'standard' ? 'Indian Standard' : cite.type === 'legislation' ? 'Act' : cite.type === 'order' ? 'QCO' : 'BIS Reference'}
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        Active
+                      </span>
+                    </div>
+
+                    {/* Standard Code & Title */}
+                    <div>
+                      <div className={cn("font-extrabold text-gray-900 dark:text-white font-mono", currentFontSizeClass)}>
+                        {cite.source}
+                      </div>
+                      <h4 className={cn("font-bold text-gray-800 dark:text-gray-100 leading-snug mt-1", currentFontSizeClass)}>
+                        {cite.title}
+                      </h4>
+                    </div>
+
+                    {/* Meta Badges */}
+                    <div className="space-y-1.5 text-xs text-gray-600 dark:text-dark-text-muted">
+                      {cite.clause && (
+                        <div className="flex items-center gap-1.5">
+                          <FileBadge className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                          <span className="font-semibold text-blue-700 dark:text-blue-300 truncate">
+                            {cite.clause}
+                          </span>
+                        </div>
+                      )}
+                      {cite.actReference && (
+                        <div className="flex items-center gap-1.5">
+                          <Scale className="w-3.5 h-3.5 text-bis-navy dark:text-blue-400 shrink-0" />
+                          <span className="truncate">{cite.actReference}</span>
+                        </div>
+                      )}
+                      {cite.committee && (
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                          <span className="truncate">{cite.committee}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Regulatory Summary */}
+                    {cite.summary && (
+                      <p className={cn("text-gray-600 dark:text-gray-300 leading-relaxed bg-white/80 dark:bg-dark-bg/60 p-2.5 rounded border border-slate-200/80 dark:border-dark-border/60", currentFontSizeClass)}>
+                        {cite.summary}
+                      </p>
+                    )}
+
+                    {/* Key Provisions */}
+                    {cite.keyPoints && cite.keyPoints.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold text-gray-500 dark:text-dark-text-muted uppercase tracking-wider">
+                          Key Provisions:
+                        </span>
+                        {cite.keyPoints.slice(0, 2).map((pt, pIdx) => (
+                          <div key={pIdx} className={cn("flex items-start gap-1.5 text-gray-600 dark:text-gray-300", currentFontSizeClass)}>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                            <span>{pt}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Card Actions */}
+                    <div className="pt-2 border-t border-slate-200/60 dark:border-dark-border/50 flex items-center justify-between gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setInspectCitation(cite)}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-bis-navy dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline"
+                      >
+                        <FileText className="w-3 h-3" />
+                        <span>Inspect Dossier &rarr;</span>
+                      </button>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${cite.source} — ${cite.title} (${cite.clause})`)
+                            toast.success('Reference copied')
+                          }}
+                          className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-white rounded hover:bg-gray-100 dark:hover:bg-dark-border transition-colors"
+                          title="Copy Reference"
+                        >
+                          <Copy className="w-3 h-3" />
+                        </button>
+                        {cite.url && (
+                          <a
+                            href={cite.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                            title="Verify on BIS Portal"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )
+          ) : (
+            /* Directory Tab */
+            filteredDirectory.length === 0 ? (
+              <div className="text-center py-8 text-xs text-gray-500 dark:text-dark-text-muted">
+                No standards match "{sourcesSearchQuery}"
+              </div>
+            ) : (
+              filteredDirectory.map((std, idx) => (
+                <div
+                  key={idx}
+                  className="p-2.5 rounded-gov border border-gray-200 dark:border-dark-border bg-slate-50/50 dark:bg-dark-bg-secondary/50 hover:border-blue-300 dark:hover:border-blue-600 transition-all space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className={cn("font-mono font-bold text-bis-navy dark:text-blue-400", currentFontSizeClass)}>
+                      {std.source}
+                    </span>
+                    <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/40">
+                      Standard
+                    </span>
+                  </div>
+                  <h5 className={cn("font-bold text-gray-800 dark:text-gray-100 leading-snug", currentFontSizeClass)}>
+                    {std.title}
+                  </h5>
+                  <p className="text-xs text-gray-500 dark:text-dark-text-muted truncate">
+                    {std.committee} · {std.clause}
+                  </p>
+                  <div className="pt-2 border-t border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setInspectCitation(std)}
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Inspect Dossier</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGatewayDismissed(true)
+                        sendMessage(`Provide full technical requirements, testing methods, and conformity assessment details for ${std.source} (${std.title}).`, { role })
+                      }}
+                      className="text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-bis-navy dark:hover:text-blue-300 hover:underline"
+                    >
+                      Ask Saarthi &rarr;
+                    </button>
+                  </div>
+                </div>
+              ))
+            )
+          )}
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="p-2.5 border-t border-gray-100 dark:border-dark-border bg-slate-50/70 dark:bg-dark-bg/70 text-[10px] text-gray-500 dark:text-dark-text-muted flex items-center justify-between">
+          <span className="flex items-center gap-1 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>BIS Act, 2016 Mandated</span>
+          </span>
+          <a
+            href="https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/knowyourstandards/indian_standards/isdetails"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 font-semibold"
+          >
+            <span>Manakonline</span>
+            <ExternalLink className="w-2.5 h-2.5" />
+          </a>
+        </div>
+      </div>
+
+      {/* ── Citation Details Inspector Modal ── */}
+      {inspectCitation && (() => {
+        const cite = resolveDetailedCitation(inspectCitation)
+        return (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+            <div className="bg-white dark:bg-dark-bg-card rounded-gov-xl border border-gray-200 dark:border-dark-border shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-scale-in">
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-dark-border flex items-start justify-between gap-3 bg-slate-50/80 dark:bg-dark-bg/80">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100/90 dark:bg-blue-900/40 text-bis-navy dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/70 dark:border-blue-800/60 mt-0.5">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className={cn(
+                        'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border',
+                        cite.type === 'standard'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                          : cite.type === 'legislation'
+                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                          : cite.type === 'order'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                      )}>
+                        {cite.type === 'standard' ? 'Indian Standard' : cite.type === 'legislation' ? 'Act of Parliament' : cite.type === 'order' ? 'Quality Control Order' : cite.type === 'circular' ? 'Statutory Circular' : 'BIS Regulation'}
+                      </span>
+                      <span className="font-mono font-black text-sm text-gray-900 dark:text-white">
+                        {cite.source}
+                      </span>
+                    </div>
+                    <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white font-heading leading-snug">
+                      {cite.title}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInspectCitation(null)}
+                  className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-dark-border transition-colors shrink-0"
+                  aria-label="Close modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Body */}
+              <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs">
+                {/* Status Bar */}
+                <div className="flex items-center justify-between p-3 rounded-gov bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div>
+                      <div className="text-[10px] font-bold text-emerald-900 dark:text-emerald-300 uppercase tracking-wider">
+                        Enforcement & Conformity Status
+                      </div>
+                      <div className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">
+                        {cite.status}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 font-extrabold uppercase">
+                    Verified
+                  </span>
+                </div>
+
+                {/* 2-column Metadata Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted flex items-center gap-1">
+                      <Scale className="w-3 h-3 text-bis-navy dark:text-blue-400" />
+                      Legal Enabling Act
+                    </span>
+                    <p className="font-semibold text-gray-800 dark:text-dark-text text-[11px]">
+                      {cite.actReference}
+                    </p>
+                  </div>
+
+                  <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted flex items-center gap-1">
+                      <Building2 className="w-3 h-3 text-bis-navy dark:text-blue-400" />
+                      Sectional Committee
+                    </span>
+                    <p className="font-semibold text-gray-800 dark:text-dark-text text-[11px]">
+                      {cite.committee}
+                    </p>
+                  </div>
+
+                  <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted flex items-center gap-1">
+                      <FileBadge className="w-3 h-3 text-bis-navy dark:text-blue-400" />
+                      Clause / Section Reference
+                    </span>
+                    <p className="font-bold text-blue-700 dark:text-blue-300 text-[11px]">
+                      {cite.clause}
+                    </p>
+                  </div>
+
+                  <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted flex items-center gap-1">
+                      <BookOpen className="w-3 h-3 text-bis-navy dark:text-blue-400" />
+                      Edition / Amendment
+                    </span>
+                    <p className="font-semibold text-gray-800 dark:text-dark-text text-[11px]">
+                      {cite.version}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Scope & Mandate Summary */}
+                <div className="space-y-1.5">
+                  <h4 className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Statutory Scope & Legal Mandate
+                  </h4>
+                  <p className="text-xs text-gray-700 dark:text-gray-200 leading-relaxed bg-slate-50 dark:bg-dark-bg/80 p-3 rounded-gov border border-slate-200/80 dark:border-dark-border">
+                    {cite.summary}
+                  </p>
+                </div>
+
+                {/* Key Provisions */}
+                {cite.keyPoints && cite.keyPoints.length > 0 && (
+                  <div className="space-y-1.5">
+                    <h4 className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      Key Technical & Compliance Mandates
+                    </h4>
+                    <div className="space-y-1.5">
+                      {cite.keyPoints.map((pt, pIdx) => (
+                        <div
+                          key={pIdx}
+                          className="flex items-start gap-2 p-2 rounded-gov bg-gray-50/80 dark:bg-dark-bg/60 border border-gray-100 dark:border-dark-border/60 text-gray-700 dark:text-gray-200"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                          <span className="text-xs leading-relaxed">{pt}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Authority Signature Note */}
+                <div className="text-[11px] text-gray-500 dark:text-dark-text-muted italic flex items-center gap-1.5 pt-1">
+                  <span>Issuing Authority:</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">{cite.authority}</span>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-3.5 sm:p-4 border-t border-gray-100 dark:border-dark-border flex flex-wrap items-center justify-between gap-2 bg-gray-50/70 dark:bg-dark-bg/60">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${cite.source} — ${cite.title} | ${cite.clause} | ${cite.actReference}`);
+                    toast.success('Full standard reference copied to clipboard');
+                  }}
+                  className="px-3 py-1.5 rounded-gov bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-dark-border text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy Full Reference</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setInspectCitation(null)}
+                    className="btn-gov-outline text-xs py-1.5 px-3"
+                  >
+                    Close
+                  </button>
+                  {cite.url && (
+                    <a
+                      href={cite.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-gov text-xs py-1.5 px-3 flex items-center gap-1.5 shadow-xs"
+                    >
+                      <span>Verify on {cite.portalName || 'BIS Portal'}</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Thumbs Down Feedback Reason Modal ── */}
       {feedbackMessage && (

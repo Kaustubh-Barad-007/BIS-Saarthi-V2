@@ -4,8 +4,9 @@ import {
   LayoutDashboard, MessageSquare, BookOpen, Award, AlertTriangle,
   BadgeCheck, Map, FileText, Globe, Users, Database, ClipboardList,
   BarChart3, ChevronLeft, ChevronRight, X, LogOut, User, Sun, Moon, Settings,
-  Bell, Radio, Megaphone
+  Bell, Radio, Megaphone, Home
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn, getRoleLabel } from '@/lib/utils'
 import { SIDEBAR_NAV, ROUTES } from '@/lib/constants'
 import useAuthStore from '@/store/authStore'
@@ -27,14 +28,14 @@ export default function Sidebar({ mobile = false, onClose }) {
   const location  = useLocation()
   const navigate  = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
-  const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   if (!user) return null
   const navItems = SIDEBAR_NAV[user.role] || []
   const unreadNotifs = getUnreadNotificationsCount(user.role, user.email)
 
-  const handleLogout = async () => {
-    await logout()
+  const handleLogout = () => {
+    logout()
+    toast.success(t('sign_out_success', 'Signed out successfully'))
     navigate(ROUTES.LOGIN)
     if (onClose) onClose()
   }
@@ -79,23 +80,33 @@ export default function Sidebar({ mobile = false, onClose }) {
         collapsed ? 'justify-center' : 'justify-between'
       )}>
         {!collapsed ? (
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 dark:border-dark-border flex items-center justify-center shrink-0 p-0.5 shadow-xs">
+          <Link
+            to="/"
+            onClick={mobile ? onClose : undefined}
+            className="flex items-center gap-2.5 overflow-hidden group hover:opacity-85 transition-opacity"
+            title={t('nav_home', 'Portal Home')}
+          >
+            <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 dark:border-dark-border flex items-center justify-center shrink-0 p-0.5 shadow-xs group-hover:scale-105 transition-transform">
               <img src="/bis-logo.svg" alt="BIS" className="w-full h-full object-contain" />
             </div>
             <div className="leading-none truncate">
-              <div className="text-sm font-bold text-bis-navy dark:text-blue-300 tracking-wide uppercase font-heading">
+              <div className="text-sm font-bold text-bis-navy dark:text-blue-300 tracking-wide uppercase font-heading group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                 {t('portal_brand', 'BIS Saarthi')}
               </div>
               <div className="text-xs text-gray-500 dark:text-dark-text-muted mt-1 capitalize">
                 {getPortalTitle()}
               </div>
             </div>
-          </div>
+          </Link>
         ) : (
-          <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 dark:border-dark-border flex items-center justify-center shrink-0 p-0.5 shadow-xs">
+          <Link
+            to="/"
+            onClick={mobile ? onClose : undefined}
+            className="w-8 h-8 rounded-lg bg-white border border-gray-200 dark:border-dark-border flex items-center justify-center shrink-0 p-0.5 shadow-xs hover:scale-105 transition-transform"
+            title={t('nav_home', 'Portal Home')}
+          >
             <img src="/bis-logo.svg" alt="BIS" className="w-full h-full object-contain" />
-          </div>
+          </Link>
         )}
 
         {mobile ? (
@@ -138,11 +149,33 @@ export default function Sidebar({ mobile = false, onClose }) {
 
       {/* ── Navigation Items ── */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+        {/* Direct Link to Home / Landing Page */}
+        <NavLink
+          to="/"
+          onClick={mobile ? onClose : undefined}
+          title={collapsed ? t('nav_home', 'Portal Home') : undefined}
+          className={cn(
+            'sidebar-item text-sm text-gray-700 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors',
+            location.pathname === '/' && 'active',
+            collapsed && 'justify-center px-2'
+          )}
+        >
+          <Home className="w-4 h-4 shrink-0 text-bis-navy dark:text-blue-300" />
+          {!collapsed && (
+            <div className="flex-1 flex items-center justify-between min-w-0">
+              <span className="truncate font-medium">{t('nav_home', 'Portal Home')}</span>
+              <span className="text-[10px] uppercase font-semibold px-1.5 py-0.2 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800/40">
+                Home
+              </span>
+            </div>
+          )}
+        </NavLink>
+
         {navItems.map((item) => {
           const Icon = ICON_MAP[item.icon] || LayoutDashboard
           const isActive = location.pathname === item.path ||
             (item.path !== '/' && location.pathname.startsWith(item.path))
-          const isNotificationItem = item.label === 'Notifications' || item.label === 'Broadcasts'
+          const isNotificationItem = item.label === 'Notifications'
 
           return (
             <NavLink
@@ -194,9 +227,9 @@ export default function Sidebar({ mobile = false, onClose }) {
           {!collapsed && <span>{t('nav_settings', 'Settings')}</span>}
         </NavLink>
 
-        {/* Sign Out Button */}
+        {/* Sign Out Button (Fast 1-click logout) */}
         <button
-          onClick={() => setShowLogoutModal(true)}
+          onClick={handleLogout}
           title={collapsed ? t('sign_out', 'Sign Out') : undefined}
           className={cn(
             'sidebar-item w-full text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 transition-colors',
@@ -209,56 +242,11 @@ export default function Sidebar({ mobile = false, onClose }) {
 
         {!collapsed && (
           <div className="pt-2 px-2 text-xs text-gray-400 dark:text-dark-text-muted">
-            <div className="font-semibold text-gray-500 dark:text-dark-text-muted">BIS Saarthi v2.0</div>
+            <div className="font-semibold text-gray-500 dark:text-dark-text-muted">BIS Saarthi</div>
             <div>Bureau of Indian Standards</div>
           </div>
         )}
       </div>
-
-      {/* ── Logout Confirmation Dialog ── */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white dark:bg-dark-bg-card rounded-gov-xl border border-gray-200 dark:border-dark-border shadow-2xl max-w-sm w-full p-6 animate-scale-in">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
-                <LogOut className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-gray-900 dark:text-white font-heading">
-                  {t('sign_out_confirm_title', 'Sign Out Confirmation')}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-dark-text-muted">
-                  {t('sign_out_confirm_sub', 'End your current BIS Saarthi session')}
-                </p>
-              </div>
-            </div>
-
-            <p className="text-sm text-gray-600 dark:text-dark-text-muted mb-6 leading-relaxed">
-              {t('sign_out_confirm_msg', 'Are you sure you want to sign out? You will need to log in again to access your role dashboard.')}
-            </p>
-
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowLogoutModal(false)}
-                className="btn-gov-outline text-xs py-2 px-4"
-              >
-                {t('cancel', 'Cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  setShowLogoutModal(false)
-                  await handleLogout()
-                }}
-                className="btn-gov bg-red-600 hover:bg-red-700 text-xs py-2 px-4"
-              >
-                {t('sign_out', 'Sign Out')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </aside>
   )
 }

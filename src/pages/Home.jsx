@@ -40,10 +40,10 @@ const ROLE_CARDS = [
 
 const CARD_STYLE = {
   blue: {
-    wrap:   'border-blue-200 dark:border-blue-800/60',
-    header: 'bg-blue-50 dark:bg-blue-950/40',
-    icon:   'bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400',
-    btn:    'bg-blue-600 hover:bg-blue-700 text-white',
+    wrap:   'border-blue-200 dark:border-blue-700/60 hover:border-blue-400 dark:hover:border-blue-500',
+    header: 'bg-blue-50/90 dark:bg-blue-950/70 border-b border-blue-100 dark:border-blue-800/40',
+    icon:   'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/50',
+    btn:    'bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white shadow-sm transition-all',
     check:  'text-blue-500 dark:text-blue-400',
   },
   orange: {
@@ -72,7 +72,7 @@ const FLOW_STEPS = [
 ]
 
 const FEATURES = [
-  { icon: MessageSquare, color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
+  { icon: MessageSquare, color: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-800/40' },
   { icon: BookOpen,      color: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' },
   { icon: Award,         color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' },
   { icon: BarChart3,     color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' },
@@ -166,26 +166,31 @@ export default function Home() {
       }[user.role] || ROUTES.CONSUMER_CHAT
       navigate(target)
     } else {
-      // Direct quick start as Consumer
-      handleQuickLaunch(ROLES.CONSUMER)
+      // User requested asking bis saarthi and launch assistant redirect to login
+      navigate(ROUTES.LOGIN)
     }
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen overflow-x-hidden">
 
       {/* ── News Ticker ── */}
-      <div className="bg-bis-navy text-white py-1.5 overflow-hidden border-b border-bis-navy-dark">
-        <div className="flex items-center gap-3">
-          <span className="shrink-0 bg-amber-700 text-white text-xs font-bold px-3 py-0.5 ml-4 uppercase tracking-wide">{t('updates', 'Updates')}</span>
+      <div className="bg-bis-navy dark:bg-[#061426] text-white py-2 overflow-hidden border-b border-bis-navy-dark dark:border-blue-950/80 shadow-sm transition-colors">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="shrink-0 flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-orange-600 via-amber-500 to-orange-600 text-white text-[10px] sm:text-xs font-black px-2.5 sm:px-3.5 py-0.5 sm:py-1 ml-2 sm:ml-4 rounded-full uppercase tracking-wider shadow-sm border border-amber-400/40 select-none">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-85" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+            </span>
+            <span>{t('updates', 'Updates')}</span>
+          </div>
           <div className="ticker-wrap flex-1 overflow-hidden">
-            <div
-              ref={tickerRef}
-              className="inline-block whitespace-nowrap text-sm text-blue-100"
-              style={{ animation: 'ticker 40s linear infinite' }}
-            >
+            <div className="ticker-track text-xs sm:text-sm text-blue-100 dark:text-blue-200/95 font-medium select-none">
               {[...NEWS_ITEMS, ...NEWS_ITEMS].map((item, i) => (
-                <span key={i} className="mr-16">🔹 {item}</span>
+                <span key={i} className="inline-flex items-center mr-8 sm:mr-12 hover:text-amber-300 dark:hover:text-amber-300 transition-colors cursor-default">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 mr-2 shrink-0" />
+                  {item}
+                </span>
               ))}
             </div>
           </div>
@@ -193,61 +198,61 @@ export default function Home() {
       </div>
 
       {/* ── Hero: Prioritizes Early AI Chat Interface ── */}
-      <section className="relative bg-[linear-gradient(135deg,#00265D_0%,#003580_60%,#1650A1_100%)] text-white overflow-hidden py-14 md:py-20">
-        <div className="absolute inset-0 bg-hero-pattern opacity-30 pointer-events-none" />
-        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/5 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+      <section className="relative bg-[linear-gradient(135deg,#00265D_0%,#003580_60%,#1650A1_100%)] dark:bg-[linear-gradient(135deg,#020a17_0%,#061730_55%,#0a254d_100%)] text-white overflow-hidden py-10 sm:py-16 md:py-20 border-b border-transparent dark:border-blue-900/30 transition-colors">
+        <div className="absolute inset-0 bg-hero-pattern opacity-30 dark:opacity-15 pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/5 dark:bg-blue-500/5 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-amber-500/10 dark:amber-500/5 blur-3xl pointer-events-none" />
 
         <div className="relative max-w-screen-xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-2 gap-10 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-10 items-center">
 
             {/* Left: Headline & 1-Click Launch */}
             <div className="animate-slide-up">
-              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-xs sm:text-sm text-blue-100 mb-5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                <span>{t('hero_badge', 'AI-Powered BIS Assistant • Direct Verified Citations')}</span>
+              <div className="inline-flex items-center gap-2 bg-white/10 dark:bg-blue-500/10 backdrop-blur-sm border border-white/20 dark:border-blue-400/25 rounded-full px-3.5 sm:px-4 py-1.5 text-[11px] sm:text-xs text-blue-100 dark:text-blue-200 mb-4 sm:mb-5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
+                <span className="truncate">{t('hero_badge', 'AI-Powered BIS Assistant • Direct Verified Citations')}</span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] font-extrabold font-heading leading-[1.15] mb-5 text-white">
-                {t('hero_title_1', 'BIS')} <span className="text-amber-400">{t('hero_title_accent', 'Saarthi')}</span>
+              <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-[3.25rem] font-extrabold font-heading leading-[1.18] mb-4 sm:mb-5 text-white">
+                {t('hero_title_1', 'BIS')} <span className="text-amber-400 dark:text-amber-400">{t('hero_title_accent', 'Saarthi')}</span>
                 <br />
-                <span className="text-2xl sm:text-3xl md:text-4xl font-semibold text-blue-200">
+                <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-blue-200 dark:text-blue-300">
                   {t('hero_subtitle', 'Intelligent Standards Assistant')}
                 </span>
               </h1>
 
-              <p className="text-base sm:text-lg text-blue-100 mb-6 max-w-xl leading-relaxed">
+              <p className="text-sm sm:text-base md:text-lg text-blue-100 dark:text-blue-200/90 mb-6 max-w-xl leading-relaxed">
                 {t('hero_desc', 'Empowering Citizens, MSMEs, and Officials with verified answers on 22,000+ Indian Standards, ISI Mark certification, and Gold Hallmarking.')}
               </p>
 
               {/* ── High-Priority Quick Chat Launcher ── */}
-              <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-gov-xl p-4 mb-6">
-                <div className="text-xs font-semibold text-amber-300 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+              <div className="bg-white/10 dark:bg-slate-900/60 backdrop-blur-sm border border-white/20 dark:border-blue-800/40 rounded-gov-xl p-3.5 sm:p-4 mb-6 shadow-inner">
+                <div className="text-xs font-semibold text-amber-300 dark:text-amber-300 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
                   <Zap className="w-3.5 h-3.5" />
                   <span>{t('ai_access_label', 'Direct AI Assistant Access by Role:')}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <button
                     onClick={() => handleQuickLaunch(ROLES.CONSUMER)}
-                    className="flex items-center justify-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 border border-white/25 rounded-gov text-xs font-semibold text-white transition-all hover:scale-[1.02]"
+                    className="flex items-center justify-center gap-2 px-3 py-2 bg-white/15 dark:bg-blue-950/60 hover:bg-white/25 dark:hover:bg-blue-900/60 border border-white/25 dark:border-blue-700/50 rounded-gov text-xs font-semibold text-white dark:text-blue-100 transition-all hover:scale-[1.02]"
                   >
-                    <User className="w-3.5 h-3.5 text-blue-300" />
+                    <User className="w-3.5 h-3.5 text-blue-300 dark:text-blue-300 shrink-0" />
                     <span>{t('btn_citizen_chat', 'Citizen AI Chat')}</span>
                   </button>
 
                   <button
                     onClick={() => handleQuickLaunch(ROLES.MANUFACTURER)}
-                    className="flex items-center justify-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 border border-white/25 rounded-gov text-xs font-semibold text-white transition-all hover:scale-[1.02]"
+                    className="flex items-center justify-center gap-2 px-3 py-2 bg-white/15 dark:bg-blue-950/60 hover:bg-white/25 dark:hover:bg-blue-900/60 border border-white/25 dark:border-blue-700/50 rounded-gov text-xs font-semibold text-white dark:text-amber-100 transition-all hover:scale-[1.02]"
                   >
-                    <Building2 className="w-3.5 h-3.5 text-amber-300" />
+                    <Building2 className="w-3.5 h-3.5 text-amber-300 dark:text-amber-300 shrink-0" />
                     <span>{t('btn_msme_chat', 'MSME AI Chat')}</span>
                   </button>
 
                   <button
                     onClick={() => handleQuickLaunch(ROLES.ADMIN)}
-                    className="flex items-center justify-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 border border-white/25 rounded-gov text-xs font-semibold text-white transition-all hover:scale-[1.02]"
+                    className="flex items-center justify-center gap-2 px-3 py-2 bg-white/15 dark:bg-blue-950/60 hover:bg-white/25 dark:hover:bg-blue-900/60 border border-white/25 dark:border-blue-700/50 rounded-gov text-xs font-semibold text-white dark:text-red-100 transition-all hover:scale-[1.02]"
                   >
-                    <Shield className="w-3.5 h-3.5 text-red-300" />
+                    <Shield className="w-3.5 h-3.5 text-red-300 dark:text-red-300 shrink-0" />
                     <span>{t('btn_official_chat', 'BIS Official')}</span>
                   </button>
                 </div>
@@ -257,26 +262,26 @@ export default function Home() {
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleHeroMainAction}
-                  className="inline-flex items-center justify-center gap-2 px-8 py-3.5 text-base font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-gov shadow-lg transition-all active:scale-[0.98]"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-3.5 text-sm sm:text-base font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-gov shadow-lg transition-all active:scale-[0.98]"
                 >
-                  <MessageSquare className="w-5 h-5" />
+                  <MessageSquare className="w-5 h-5 shrink-0" />
                   <span>{user ? t('btn_open_assistant', 'Open Your AI Assistant') : t('btn_start_asking', 'Start Asking BIS Saarthi AI')}</span>
-                  <ArrowRight className="w-4 h-4 ml-1" />
+                  <ArrowRight className="w-4 h-4 ml-1 shrink-0" />
                 </button>
               </div>
             </div>
 
             {/* Right: Live Clickable Chat Preview */}
             <div className="hidden lg:block animate-fade-in">
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-gov-xl p-6 shadow-2xl">
-                <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
+              <div className="bg-white/10 dark:bg-slate-900/75 backdrop-blur-md border border-white/20 dark:border-blue-800/50 rounded-gov-xl p-6 shadow-2xl">
+                <div className="flex items-center justify-between mb-4 border-b border-white/10 dark:border-blue-800/30 pb-3">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-red-400" />
                     <div className="w-3 h-3 rounded-full bg-yellow-400" />
                     <div className="w-3 h-3 rounded-full bg-green-400" />
-                    <span className="ml-2 text-sm text-blue-200 font-semibold">{t('preview_title', 'BIS Saarthi AI • Interactive Preview')}</span>
+                    <span className="ml-2 text-sm text-blue-200 dark:text-blue-300 font-semibold">{t('preview_title', 'BIS Saarthi AI • Interactive Preview')}</span>
                   </div>
-                  <span className="text-xs bg-green-500/20 text-green-300 border border-green-400/30 px-2 py-0.5 rounded-full font-mono">
+                  <span className="text-xs bg-green-500/20 text-green-300 dark:text-green-400 border border-green-400/30 px-2 py-0.5 rounded-full font-mono">
                     {t('preview_online', 'Online')}
                   </span>
                 </div>
@@ -285,20 +290,20 @@ export default function Home() {
                 <div className="space-y-3.5">
                   <div className="flex gap-2.5">
                     <div className="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center text-xs font-bold text-white shrink-0">U</div>
-                    <div className="bg-white/20 rounded-gov-lg px-3.5 py-2 text-xs text-white max-w-[85%]">
+                    <div className="bg-white/20 dark:bg-slate-800/80 rounded-gov-lg px-3.5 py-2 text-xs text-white dark:text-slate-100 max-w-[85%] border border-transparent dark:border-slate-700/50">
                       {t('preview_q', 'Is ISI Mark mandatory for packaged drinking water in India?')}
                     </div>
                   </div>
 
                   <div className="flex gap-2.5 justify-end">
-                    <div className="bg-bis-navy/60 border border-white/20 rounded-gov-lg px-3.5 py-2.5 text-xs text-white max-w-[88%]">
-                      <div className="text-blue-200 text-xs mb-1 font-semibold flex items-center gap-1">
+                    <div className="bg-bis-navy/60 dark:bg-blue-950/80 border border-white/20 dark:border-blue-700/50 rounded-gov-lg px-3.5 py-2.5 text-xs text-white max-w-[88%]">
+                      <div className="text-blue-200 dark:text-blue-300 text-xs mb-1 font-semibold flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> BIS Saarthi AI
                       </div>
                       <p className="leading-relaxed">
                         {t('preview_a', 'Yes, ISI mark certification is strictly mandatory for packaged natural mineral water under IS 13428 and packaged drinking water under IS 14543. Sale without BIS certification is punishable under the BIS Act 2016.')}
                       </p>
-                      <div className="mt-2 pt-1.5 border-t border-white/10 text-xs text-blue-200/80 font-mono">
+                      <div className="mt-2 pt-1.5 border-t border-white/10 dark:border-blue-800/40 text-xs text-blue-200/80 dark:text-blue-300/80 font-mono">
                         📚 IS 14543:2016 &bull; FSSAI &amp; BIS Joint Gazette Notification
                       </div>
                     </div>
@@ -309,17 +314,17 @@ export default function Home() {
 
                   {/* Clickable Quick Prompts */}
                   <div className="pt-2">
-                    <div className="text-xs text-blue-200 mb-2">{t('preview_try_asking', 'Try asking directly:')}</div>
+                    <div className="text-xs text-blue-200 dark:text-blue-300 mb-2">{t('preview_try_asking', 'Try asking directly:')}</div>
                     <div className="flex flex-wrap gap-1.5">
                       <button
                         onClick={() => handleQuickLaunch(ROLES.CONSUMER)}
-                        className="text-xs bg-white/15 hover:bg-white/25 text-white px-2.5 py-1 rounded border border-white/20 transition-colors"
+                        className="text-xs bg-white/15 dark:bg-blue-900/40 hover:bg-white/25 dark:hover:bg-blue-800/60 text-white dark:text-blue-100 px-2.5 py-1 rounded border border-white/20 dark:border-blue-700/50 transition-colors"
                       >
                         &ldquo;{t('preview_prompt_1', 'What is 6-digit HUID in gold?')}&rdquo; &rarr;
                       </button>
                       <button
                         onClick={() => handleQuickLaunch(ROLES.MANUFACTURER)}
-                        className="text-xs bg-white/15 hover:bg-white/25 text-white px-2.5 py-1 rounded border border-white/20 transition-colors"
+                        className="text-xs bg-white/15 dark:bg-blue-900/40 hover:bg-white/25 dark:hover:bg-blue-800/60 text-white dark:text-blue-100 px-2.5 py-1 rounded border border-white/20 dark:border-blue-700/50 transition-colors"
                       >
                         &ldquo;{t('preview_prompt_2', 'Steps to get ISI Mark')}&rdquo; &rarr;
                       </button>
@@ -352,7 +357,7 @@ export default function Home() {
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-bis-navy dark:text-blue-300 rounded-full px-3.5 py-1 text-xs font-semibold mb-4">
+              <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-950/60 text-bis-navy dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 rounded-full px-3.5 py-1 text-xs font-semibold mb-4">
                 <BookOpen className="w-3.5 h-3.5" />
                 <span>{t('about_tag', 'About Bureau of Indian Standards')}</span>
               </div>
@@ -419,7 +424,7 @@ export default function Home() {
       <section id="roles" className="py-16 bg-slate-50 dark:bg-dark-bg scroll-mt-20">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-bis-navy/10 dark:bg-blue-900/30 text-bis-navy dark:text-blue-300 rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold mb-3">
+            <div className="inline-flex items-center gap-2 bg-bis-navy/10 dark:bg-blue-950/60 text-bis-navy dark:text-blue-300 border border-bis-navy/15 dark:border-blue-800/50 rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold mb-3">
               <User className="w-4 h-4" /> {t('roles_tag', 'Role-Based Specialized Portals')}
             </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white font-heading tracking-tight mb-3">
@@ -488,7 +493,7 @@ export default function Home() {
               const Icon = step.icon
               return (
                 <div key={step.num} className="p-4 rounded-gov bg-slate-50 dark:bg-dark-bg-secondary border border-slate-200 dark:border-dark-border flex flex-col items-center">
-                  <div className="w-11 h-11 rounded-full bg-bis-navy text-white flex items-center justify-center shadow-sm mb-2.5">
+                  <div className="w-11 h-11 rounded-full bg-bis-navy dark:bg-blue-600 text-white flex items-center justify-center shadow-sm dark:shadow-md dark:shadow-blue-950/50 mb-2.5 transition-colors">
                     <Icon className="w-5 h-5" />
                   </div>
                   <div className="text-xs text-amber-600 dark:text-amber-400 font-mono font-bold">{step.num}</div>
@@ -529,19 +534,19 @@ export default function Home() {
       </section>
 
       {/* ── Direct Launch Banner (Replacing redundant repetitive buttons) ── */}
-      <section className="py-12 bg-bis-navy text-white">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+      <section className="py-8 sm:py-12 bg-bis-navy dark:bg-gradient-to-r dark:from-[#030d1a] dark:via-[#071935] dark:to-[#0c2b58] text-white border-t border-bis-navy-dark dark:border-blue-900/40 transition-colors">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-6 text-center md:text-left">
           <div>
-            <h2 className="text-2xl font-bold font-heading mb-1 text-white">
+            <h2 className="text-xl sm:text-2xl font-bold font-heading mb-1 text-white">
               {t('cta_title', 'Ready to verify standards or explore compliance?')}
             </h2>
-            <p className="text-blue-200 text-sm">
+            <p className="text-blue-200 dark:text-blue-200/90 text-xs sm:text-sm">
               {t('cta_sub', 'Use BIS Saarthi AI Assistant instantly — no complex setup required.')}
             </p>
           </div>
           <button
             onClick={handleHeroMainAction}
-            className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-gov shadow transition-all active:scale-[0.98] shrink-0"
+            className="w-full sm:w-auto px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-gov shadow transition-all active:scale-[0.98] shrink-0"
           >
             {t('cta_btn', 'Launch BIS Saarthi Assistant Now')} &rarr;
           </button>

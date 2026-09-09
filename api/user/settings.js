@@ -1,6 +1,6 @@
 // api/user/settings.js — User Settings Persistence Endpoint
 import jwt from 'jsonwebtoken'
-import { getDb } from '../db.js'
+import { getDb } from '../_lib/db.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'bis-saarthi-dev-secret-2024'
 

@@ -98,8 +98,8 @@ export default function NotificationCenter({ role = 'consumer' }) {
         )
       case 'warning':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-            <AlertTriangle className="w-3 h-3" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+            <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400" />
             Advisory
           </span>
         )

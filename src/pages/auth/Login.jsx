@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   Eye, EyeOff, LogIn, Shield, Copy, CheckCircle,
-  User, Building2, Briefcase, AlertCircle, ChevronRight, X, KeyRound
+  User, Building2, Briefcase, AlertCircle, ChevronRight, Home
 } from 'lucide-react'
 import { toast } from 'sonner'
 import useAuthStore from '@/store/authStore'
@@ -45,9 +45,6 @@ export default function Login() {
 
   const [showPass, setShowPass] = useState(false)
   const [copied,   setCopied]   = useState(null)
-  const [showForgotModal, setShowForgotModal] = useState(false)
-  const [forgotEmail, setForgotEmail] = useState('')
-  const [forgotSubmitted, setForgotSubmitted] = useState(false)
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
@@ -61,21 +58,6 @@ export default function Login() {
   }, [location.state, setValue])
 
   useEffect(() => { clearError() }, [])
-
-  const handleForgotSubmit = (e) => {
-    e.preventDefault()
-    if (!forgotEmail || !forgotEmail.includes('@')) {
-      toast.error('Please enter a valid email address')
-      return
-    }
-    setForgotSubmitted(true)
-    toast.success(`Password reset link sent to ${forgotEmail}`)
-    setTimeout(() => {
-      setShowForgotModal(false)
-      setForgotSubmitted(false)
-      setForgotEmail('')
-    }, 2500)
-  }
 
   const onSubmit = async (data) => {
     try {
@@ -108,7 +90,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-140px)] flex items-center justify-center bg-slate-100 dark:bg-dark-bg py-10 px-4">
+    <div className="min-h-[calc(100vh-140px)] flex items-center justify-center bg-slate-100 dark:bg-dark-bg py-6 sm:py-10 px-3 sm:px-4">
       <div className="w-full max-w-5xl grid lg:grid-cols-[420px_1fr] shadow-gov-lg rounded-gov-xl overflow-hidden border border-gray-200 dark:border-dark-border">
 
         {/* ── LEFT PANEL: always dark navy gradient ── */}
@@ -117,16 +99,16 @@ export default function Login() {
           <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/5" />
           <div className="absolute -bottom-20 -left-10 w-48 h-48 rounded-full bg-bis-saffron/10" />
 
-          {/* Logo + brand */}
-          <div className="relative flex items-center gap-3 mb-8">
-            <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-md p-1 shrink-0">
+          {/* Logo + brand: clickable to Home */}
+          <Link to="/" className="relative flex items-center gap-3 mb-8 group hover:opacity-90 transition-opacity" title="Return to Home">
+            <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-md p-1 shrink-0 group-hover:scale-105 transition-transform">
               <img src="/bis-logo.svg" alt="BIS" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="font-bold text-white text-sm leading-tight">BIS Saarthi</div>
               <div className="text-blue-200 text-xs">AI-Powered Standards Assistant</div>
             </div>
-          </div>
+          </Link>
 
           {/* Heading */}
           <h2 className="relative text-2xl font-bold text-white font-heading mb-1">Demo Accounts</h2>
@@ -183,22 +165,41 @@ export default function Login() {
         </div>
 
         {/* ── RIGHT PANEL: login form ── */}
-        <div className="bg-white dark:bg-dark-bg-card p-8 sm:p-10 flex flex-col justify-center">
+        <div className="bg-white dark:bg-dark-bg-card p-5 sm:p-8 md:p-10 flex flex-col justify-center">
 
-          {/* Mobile logo row */}
-          <div className="flex lg:hidden items-center gap-2 mb-6">
-            <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center p-0.5 shrink-0">
-              <img src="/bis-logo.svg" alt="BIS" className="w-full h-full object-contain" />
-            </div>
-            <span className="text-sm font-bold text-bis-navy dark:text-blue-300">BIS Saarthi</span>
+          {/* Mobile logo and home row */}
+          <div className="flex lg:hidden items-center justify-between gap-2 mb-6">
+            <Link to="/" className="flex items-center gap-2" title="Return to Home">
+              <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center p-0.5 shrink-0">
+                <img src="/bis-logo.svg" alt="BIS" className="w-full h-full object-contain" />
+              </div>
+              <span className="text-sm font-bold text-bis-navy dark:text-blue-300">BIS Saarthi</span>
+            </Link>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-bis-navy dark:text-blue-300 bg-slate-100 dark:bg-dark-bg-secondary hover:bg-slate-200 dark:hover:bg-dark-bg px-2.5 py-1.5 rounded-gov transition-colors"
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span>Home</span>
+            </Link>
           </div>
 
-          {/* Heading */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white font-heading">Welcome Back</h1>
-            <p className="text-gray-500 dark:text-dark-text-muted text-sm mt-1">
-              Sign in to your BIS Saarthi portal
-            </p>
+          {/* Heading with Desktop Home Button */}
+          <div className="flex items-start justify-between mb-6 sm:mb-8">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white font-heading">Welcome Back</h1>
+              <p className="text-gray-500 dark:text-dark-text-muted text-xs sm:text-sm mt-1">
+                Sign in to your BIS Saarthi portal
+              </p>
+            </div>
+            <Link
+              to="/"
+              className="hidden lg:inline-flex items-center gap-1.5 text-xs font-semibold text-bis-navy dark:text-blue-300 bg-slate-100 dark:bg-dark-bg-secondary hover:bg-slate-200 dark:hover:bg-dark-bg px-3 py-1.5 rounded-gov transition-colors shadow-xs"
+              title="Return to Home"
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span>Home</span>
+            </Link>
           </div>
 
           {/* Server error */}
@@ -209,7 +210,7 @@ export default function Login() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">
@@ -229,16 +230,9 @@ export default function Login() {
 
             {/* Password */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-gray-700 dark:text-dark-text">Password</label>
-                <button
-                  type="button"
-                  onClick={() => setShowForgotModal(true)}
-                  className="text-xs text-bis-navy dark:text-blue-400 hover:underline"
-                >
-                  Forgot password?
-                </button>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">
+                Password
+              </label>
               <div className="relative">
                 <input
                   {...register('password')}
@@ -302,90 +296,20 @@ export default function Login() {
             </div>
           </div>
 
-          <p className="text-center text-sm text-gray-500 dark:text-dark-text-muted mt-6">
-            Don't have an account?{' '}
-            <Link to={ROUTES.REGISTER} className="text-bis-navy dark:text-blue-400 font-semibold hover:underline">
-              Register here
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 text-sm text-gray-500 dark:text-dark-text-muted mt-6 pt-4 border-t border-gray-100 dark:border-dark-border">
+            <Link to="/" className="inline-flex items-center gap-1.5 text-gray-500 dark:text-dark-text-muted hover:text-bis-navy dark:hover:text-blue-400 font-medium transition-colors">
+              <Home className="w-3.5 h-3.5" />
+              <span>Return to Home</span>
             </Link>
-          </p>
-        </div>
-      </div>
-
-      {/* ── Forgot Password Modal ── */}
-      {showForgotModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white dark:bg-dark-bg-card rounded-gov-xl border border-gray-200 dark:border-dark-border shadow-2xl max-w-md w-full p-6 animate-scale-in">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-dark-border">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-bis-navy dark:text-blue-400">
-                  <KeyRound className="w-4 h-4" />
-                </div>
-                <h3 className="font-bold text-gray-900 dark:text-white font-heading">Reset Your Password</h3>
-              </div>
-              <button
-                onClick={() => setShowForgotModal(false)}
-                className="p-1.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {forgotSubmitted ? (
-              <div className="py-6 text-center space-y-2">
-                <CheckCircle className="w-12 h-12 text-green-500 mx-auto animate-bounce" />
-                <h4 className="font-semibold text-gray-900 dark:text-white">Reset Link Sent!</h4>
-                <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-                  Please check your inbox at <span className="font-mono text-bis-navy dark:text-blue-400">{forgotEmail}</span> to complete password recovery.
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handleForgotSubmit} className="mt-4 space-y-4">
-                <p className="text-xs text-gray-500 dark:text-dark-text-muted">
-                  Enter your registered BIS Saarthi account email to receive a secure password recovery link.
-                </p>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">
-                    Registered Email
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="e.g. consumer@bis.gov.in"
-                    className="input-gov"
-                  />
-                </div>
-
-                <div className="p-3 bg-slate-50 dark:bg-dark-bg-secondary rounded-gov border border-slate-200 dark:border-dark-border text-xs text-gray-600 dark:text-dark-text-muted">
-                  <div className="font-semibold mb-1 text-gray-800 dark:text-dark-text">Or Use Demo Passwords:</div>
-                  <div className="space-y-0.5 font-mono text-[11px]">
-                    <div>Consumer: <code className="text-bis-navy dark:text-blue-300">Consumer@123</code></div>
-                    <div>MSME: <code className="text-bis-navy dark:text-blue-300">Msme@123</code></div>
-                    <div>Admin: <code className="text-bis-navy dark:text-blue-300">Admin@123</code></div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowForgotModal(false)}
-                    className="btn-gov-outline text-xs py-2"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-gov text-xs py-2"
-                  >
-                    Send Reset Link
-                  </button>
-                </div>
-              </form>
-            )}
+            <p>
+              Don't have an account?{' '}
+              <Link to={ROUTES.REGISTER} className="text-bis-navy dark:text-blue-400 font-semibold hover:underline">
+                Register here
+              </Link>
+            </p>
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }

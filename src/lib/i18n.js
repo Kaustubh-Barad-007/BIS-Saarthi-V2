@@ -61,6 +61,9 @@ export const TRANSLATIONS = {
 
     // Home - Hero & Updates
     updates: 'Updates',
+    sources_and_references: 'Sources & Regulatory References',
+    bis_verified_reference: 'BIS Gazette & Standards Verified',
+    inspect_dossier: 'Inspect Full Standard Dossier',
     hero_badge: 'AI-Powered BIS Assistant • Direct Verified Citations',
     hero_title_1: 'BIS',
     hero_title_accent: 'Saarthi',
@@ -289,6 +292,9 @@ export const TRANSLATIONS = {
 
     // Home - Hero & Updates
     updates: 'अपडेट्स',
+    sources_and_references: 'स्रोत और विनियामक संदर्भ',
+    bis_verified_reference: 'बीआईएस राजपत्र और मानकों द्वारा सत्यापित',
+    inspect_dossier: 'पूर्ण मानक विवरण देखें',
     hero_badge: 'एआई-संचालित बीआईएस सहायक • आधिकारिक सत्यापित संदर्भ',
     hero_title_1: 'बीआईएस',
     hero_title_accent: 'सारथी',
@@ -517,6 +523,9 @@ export const TRANSLATIONS = {
 
     // Home - Hero & Updates
     updates: 'अपडेट्स',
+    sources_and_references: 'स्रोत आणि नियामक संदर्भ',
+    bis_verified_reference: 'बीआयएस राजपत्र आणि मानकांनुसार सत्यापित',
+    inspect_dossier: 'संपूर्ण मानक तपशील पहा',
     hero_badge: 'एआय-सक्षम बीआयएस सहाय्यक • थेट सत्यापित संदर्भ',
     hero_title_1: 'बीआयएस',
     hero_title_accent: 'सारथी',

@@ -95,7 +95,7 @@ const INITIAL_NOTIFICATIONS = [
   {
     id: 'NOTIF-2025-005',
     title: 'National Standards Conclave & e-Governance Portal Upgrades',
-    message: 'BIS Saarthi V2 system update introduces real-time complaint tracking, automated MSME lab allocation, and Bhashini multilingual voice integration for 10 Indian languages.',
+    message: 'BIS Saarthi system update introduces real-time complaint tracking, automated MSME lab allocation, and Bhashini multilingual voice integration for 10 Indian languages.',
     targetRole: 'all',
     priority: 'info',
     category: 'Portal Update',

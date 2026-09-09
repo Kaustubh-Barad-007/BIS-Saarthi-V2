@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
-import { Menu } from 'lucide-react'
+import { useLocation, Link } from 'react-router-dom'
+import { Menu, Home } from 'lucide-react'
 import Sidebar from './Sidebar'
 
 export default function DashboardLayout({ children }) {
@@ -36,15 +36,25 @@ export default function DashboardLayout({ children }) {
       {/* Main content: only this pane scrolls up and down */}
       <main ref={mainRef} className="flex-1 flex flex-col overflow-y-auto min-w-0">
         {/* Mobile header bar */}
-        <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-white dark:bg-dark-bg-card border-b border-gray-200 dark:border-dark-border shrink-0">
-          <button
-            onClick={() => setMobileSidebarOpen(true)}
-            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors"
-            aria-label="Open sidebar"
+        <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-dark-bg-card border-b border-gray-200 dark:border-dark-border shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors"
+              aria-label="Open sidebar"
+            >
+              <Menu className="w-5 h-5 text-gray-600 dark:text-dark-text-muted" />
+            </button>
+            <span className="text-sm font-semibold text-bis-navy dark:text-blue-300">BIS Portal Navigation</span>
+          </div>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-bis-navy dark:text-blue-300 bg-slate-100 dark:bg-dark-bg-secondary hover:bg-slate-200 dark:hover:bg-dark-bg px-2.5 py-1.5 rounded-gov transition-colors shadow-xs"
+            title="Return to Home"
           >
-            <Menu className="w-5 h-5 text-gray-600 dark:text-dark-text-muted" />
-          </button>
-          <span className="text-sm font-semibold text-bis-navy dark:text-blue-300">BIS Portal Navigation</span>
+            <Home className="w-3.5 h-3.5" />
+            <span>Home</span>
+          </Link>
         </div>
 
         <div className="flex-1 p-4 sm:p-6">

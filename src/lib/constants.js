@@ -1,5 +1,5 @@
 // ============================================================
-// BIS Saarthi V2 — Application Constants
+// BIS Saarthi — Application Constants
 // ============================================================
 
 // User Roles

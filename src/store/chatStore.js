@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { chatApi } from '@/lib/api'
 import { MOCK_RESPONSES } from '@/lib/constants'
 import { genId, sleep } from '@/lib/utils'
+import { resolveDetailedCitation } from '@/lib/standardsReferences'
 
 export const DEFAULT_MANUFACTURER_PROFILE = {
   companyName: '',
@@ -452,7 +453,7 @@ const useChatStore = create((set, get) => ({
         id:        genId('msg'),
         role:      'assistant',
         content:   aiContent,
-        citations,
+        citations: (citations || []).map(resolveDetailedCitation).filter(Boolean),
         canVerify,
         followUps,
         readingMode,
@@ -529,7 +530,7 @@ const useChatStore = create((set, get) => ({
         id:        genId('msg'),
         role:      'assistant',
         content:   aiContent,
-        citations: mockData.citations,
+        citations: (mockData.citations || []).map(resolveDetailedCitation).filter(Boolean),
         canVerify: mockData.canVerify,
         followUps,
         readingMode,
