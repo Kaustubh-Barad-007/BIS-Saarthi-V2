@@ -1,0 +1,177 @@
+/* ================================================
+   BIS Saarthi V2 — Global Styles
+   Bureau of Indian Standards Government Portal
+   ================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base Styles ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  @apply bg-slate-50 text-gray-900 dark:bg-dark-bg dark:text-dark-text;
+  line-height: 1.6;
+  min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Typography ── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', 'Inter', sans-serif;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+/* ── Scrollbar Styling ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-dark-border rounded-full hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors;
+}
+
+/* ── Selection ── */
+::selection {
+  @apply bg-bis-navy/20 text-gray-900 dark:bg-blue-600/40 dark:text-white;
+}
+
+/* ── Focus Visible ── */
+:focus-visible {
+  @apply outline-none ring-2 ring-bis-navy ring-offset-2 dark:ring-blue-500 dark:ring-offset-dark-bg transition-shadow;
+}
+
+/* ── Utility Classes ── */
+@layer components {
+  /* Government Button */
+  .btn-gov {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium
+           text-white bg-bis-navy rounded-gov transition-all duration-200 
+           hover:bg-bis-navy-light active:scale-[0.98]
+           shadow-sm shadow-inset-top border border-transparent;
+  }
+
+  .btn-gov-outline {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium
+           text-bis-navy border border-gray-200 bg-white rounded-gov 
+           transition-all duration-200 hover:bg-gray-50 hover:border-gray-300 
+           active:scale-[0.98] shadow-sm
+           dark:bg-dark-bg-card dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-bg-secondary;
+  }
+
+  .btn-saffron {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium
+           text-white bg-amber-700 rounded-gov transition-all duration-200 
+           hover:bg-amber-600 active:scale-[0.98] 
+           shadow-sm shadow-inset-top border border-transparent;
+  }
+
+  /* Government Card */
+  .card-gov {
+    @apply bg-white dark:bg-dark-bg-card rounded-gov-lg border border-gray-200 
+           dark:border-dark-border shadow-card transition-all duration-200;
+  }
+
+  .card-gov:hover {
+    @apply shadow-gov-md border-gray-300 dark:border-slate-600;
+  }
+
+  /* Input */
+  .input-gov {
+    @apply w-full px-3.5 py-2 text-sm border border-gray-300 dark:border-dark-border 
+           rounded-gov bg-white dark:bg-dark-bg-secondary text-gray-900 dark:text-dark-text 
+           placeholder-gray-400 dark:placeholder-dark-text-muted transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-bis-navy/20 focus:border-bis-navy 
+           dark:focus:ring-blue-500/20 dark:focus:border-blue-500 shadow-sm;
+  }
+
+  /* Badge */
+  .badge-gov {
+    @apply inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-md tracking-wide;
+  }
+
+  /* Section Header */
+  .section-header {
+    @apply text-xl font-bold text-gray-900 dark:text-white font-heading tracking-tight;
+  }
+
+  /* Dashboard sidebar item */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-gov text-sm font-medium
+           text-gray-600 dark:text-dark-text-muted transition-all duration-200
+           hover:bg-gray-100 dark:hover:bg-dark-bg-secondary hover:text-gray-900 
+           dark:hover:text-dark-text cursor-pointer;
+  }
+
+  .sidebar-item.active {
+    @apply bg-gray-100 text-bis-navy dark:bg-dark-bg-secondary dark:text-blue-300 font-semibold;
+  }
+
+  /* Gov divider with tricolor */
+  .gov-divider {
+    @apply flex w-full h-1;
+    background: linear-gradient(to right, #FF9933 33.33%, #FFFFFF 33.33% 66.66%, #138808 66.66%);
+  }
+}
+
+/* ── Chat Styles ── */
+.chat-message-user {
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chat-message-ai {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Prose for AI Responses ── */
+.ai-response {
+  line-height: 1.6;
+}
+
+.ai-response p { margin-bottom: 0.75rem; }
+.ai-response ul { margin: 0.5rem 0 0.75rem 1.25rem; list-style: disc; }
+.ai-response ol { margin: 0.5rem 0 0.75rem 1.25rem; list-style: decimal; }
+.ai-response li { margin-bottom: 0.25rem; padding-left: 0.25rem; }
+.ai-response strong { font-weight: 600; color: inherit; }
+.ai-response code {
+  @apply bg-gray-100 dark:bg-dark-bg-secondary text-gray-800 dark:text-dark-text px-1.5 py-0.5 rounded font-mono text-[0.85em];
+}
+.ai-response pre {
+  @apply bg-gray-50 dark:bg-dark-bg-secondary p-3 rounded-gov overflow-x-auto text-sm border border-gray-200 dark:border-dark-border my-2;
+}
+.ai-response blockquote {
+  @apply border-l-4 border-gray-300 dark:border-gray-600 pl-3 italic text-gray-600 dark:text-gray-400 my-2;
+}
+
+/* ── Status Colors (Semantic mapping with dark mode support) ── */
+.status-active   { @apply text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200/60 dark:border-emerald-500/30; }
+.status-pending  { @apply text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border border-amber-200/60 dark:border-amber-500/30; }
+.status-rejected { @apply text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/15 border border-rose-200/60 dark:border-rose-500/30; }
+.status-approved { @apply text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/15 border border-blue-200/60 dark:border-blue-500/30; }
+
+/* ── Utilities ── */
+.shadow-inset-top {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+}
