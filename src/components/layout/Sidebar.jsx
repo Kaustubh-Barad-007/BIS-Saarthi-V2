@@ -4,7 +4,7 @@ import {
   LayoutDashboard, MessageSquare, BookOpen, Award, AlertTriangle,
   BadgeCheck, Map, FileText, Globe, Users, Database, ClipboardList,
   BarChart3, ChevronLeft, ChevronRight, X, LogOut, User, Sun, Moon, Settings,
-  Bell, Radio, Megaphone, Home
+  Bell, Radio, Megaphone
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, getRoleLabel } from '@/lib/utils'
@@ -32,6 +32,10 @@ export default function Sidebar({ mobile = false, onClose }) {
   if (!user) return null
   const navItems = SIDEBAR_NAV[user.role] || []
   const unreadNotifs = getUnreadNotificationsCount(user.role, user.email)
+
+  const roleDefaultRoute = user.role === 'consumer' ? ROUTES.CONSUMER_DASHBOARD :
+    user.role === 'manufacturer' ? ROUTES.MANUFACTURER_DASHBOARD :
+    ROUTES.ADMIN_DASHBOARD
 
   const handleLogout = () => {
     logout()
@@ -81,10 +85,10 @@ export default function Sidebar({ mobile = false, onClose }) {
       )}>
         {!collapsed ? (
           <Link
-            to="/"
+            to={roleDefaultRoute}
             onClick={mobile ? onClose : undefined}
             className="flex items-center gap-2.5 overflow-hidden group hover:opacity-85 transition-opacity"
-            title={t('nav_home', 'Portal Home')}
+            title={getPortalTitle()}
           >
             <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 dark:border-dark-border flex items-center justify-center shrink-0 p-0.5 shadow-xs group-hover:scale-105 transition-transform">
               <img src="/bis-logo.svg" alt="BIS" className="w-full h-full object-contain" />
@@ -100,10 +104,10 @@ export default function Sidebar({ mobile = false, onClose }) {
           </Link>
         ) : (
           <Link
-            to="/"
+            to={roleDefaultRoute}
             onClick={mobile ? onClose : undefined}
             className="w-8 h-8 rounded-lg bg-white border border-gray-200 dark:border-dark-border flex items-center justify-center shrink-0 p-0.5 shadow-xs hover:scale-105 transition-transform"
-            title={t('nav_home', 'Portal Home')}
+            title={getPortalTitle()}
           >
             <img src="/bis-logo.svg" alt="BIS" className="w-full h-full object-contain" />
           </Link>
@@ -149,27 +153,6 @@ export default function Sidebar({ mobile = false, onClose }) {
 
       {/* ── Navigation Items ── */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-        {/* Direct Link to Home / Landing Page */}
-        <NavLink
-          to="/"
-          onClick={mobile ? onClose : undefined}
-          title={collapsed ? t('nav_home', 'Portal Home') : undefined}
-          className={cn(
-            'sidebar-item text-sm text-gray-700 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors',
-            location.pathname === '/' && 'active',
-            collapsed && 'justify-center px-2'
-          )}
-        >
-          <Home className="w-4 h-4 shrink-0 text-bis-navy dark:text-blue-300" />
-          {!collapsed && (
-            <div className="flex-1 flex items-center justify-between min-w-0">
-              <span className="truncate font-medium">{t('nav_home', 'Portal Home')}</span>
-              <span className="text-[10px] uppercase font-semibold px-1.5 py-0.2 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800/40">
-                Home
-              </span>
-            </div>
-          )}
-        </NavLink>
 
         {navItems.map((item) => {
           const Icon = ICON_MAP[item.icon] || LayoutDashboard

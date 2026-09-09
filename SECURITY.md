@@ -1,4 +1,4 @@
-# Security Policy for BIS Saarthi v2.0
+# Security Policy for BIS Saarthi
 
 ## Supported Versions
 

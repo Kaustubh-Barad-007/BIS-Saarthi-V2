@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   MessageSquare, Shield, BookOpen, Award, ChevronRight,
@@ -85,6 +85,20 @@ export default function Home() {
   const navigate  = useNavigate()
   const tickerRef = useRef(null)
   const { t } = useTranslation()
+
+  // Strictly block signed-in users from ever staying on Home without signing out
+  useEffect(() => {
+    if (user) {
+      const target = {
+        consumer:     ROUTES.CONSUMER_CHAT,
+        manufacturer: ROUTES.MANUFACTURER_CHAT,
+        admin:        ROUTES.ADMIN_DASHBOARD,
+      }[user.role] || ROUTES.CONSUMER_CHAT
+      navigate(target, { replace: true })
+    }
+  }, [user, navigate])
+
+  if (user) return null
 
   const getRoleCardTitle = (role) => {
     if (role === ROLES.CONSUMER) return t('consumer_portal', 'Consumer Portal')

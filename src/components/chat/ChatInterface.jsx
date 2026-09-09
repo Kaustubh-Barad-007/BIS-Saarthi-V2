@@ -5,7 +5,8 @@ import {
   AlertTriangle, CheckCircle2, X, ChevronDown, ChevronRight, Plus, Trash2, Globe,
   Maximize2, Minimize2, Volume2, VolumeX, Edit2, Edit3, Check,
   Search, Sparkles, RotateCcw, Square, SlidersHorizontal, ExternalLink,
-  Printer, FileText, HelpCircle, Type, Building2, BookOpen, ShieldCheck, Scale, FileBadge
+  Printer, FileText, HelpCircle, Type, Building2, BookOpen, ShieldCheck, Scale, FileBadge,
+  PanelLeftOpen, PanelLeftClose, History
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { resolveDetailedCitation, STANDARDS_REGISTRY } from '@/lib/standardsReferences'
@@ -1052,6 +1053,44 @@ export default function ChatInterface({ role = 'consumer' }) {
         />
       )}
 
+      {/* ── Collapsed Dock Strip (Desktop) - Visual indicator that sidebar exists ── */}
+      {!showSidebar && (
+        <div className="hidden md:flex flex-col items-center justify-between bg-white dark:bg-dark-bg-card border-r border-gray-200 dark:border-dark-border w-12 shrink-0 py-3 z-20 select-none">
+          <div className="flex flex-col items-center gap-2.5">
+            <button
+              onClick={() => setShowSidebar(true)}
+              className="p-2 rounded-lg text-gov-navy dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors shadow-2xs group"
+              title="Open Chat History (Past Conversations)"
+              aria-label="Open Chat History"
+            >
+              <PanelLeftOpen className="w-4 h-4 transition-transform group-hover:scale-110" />
+            </button>
+            <button
+              onClick={() => startSession()}
+              className="p-2 rounded-lg text-gray-500 hover:text-gov-navy dark:text-dark-text-muted dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-border transition-colors"
+              title="New Conversation"
+              aria-label="New Conversation"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+
+          <button
+            onClick={() => setShowSidebar(true)}
+            className="flex flex-col items-center gap-2 text-gray-400 hover:text-gov-navy dark:hover:text-blue-400 transition-colors py-3 group cursor-pointer"
+            title="Click to open Chat History"
+          >
+            <History className="w-4 h-4 text-gray-400 group-hover:text-gov-navy dark:group-hover:text-blue-400 transition-colors" />
+            <span
+              className="text-[10px] font-bold tracking-widest uppercase text-gray-400 group-hover:text-gov-navy dark:group-hover:text-blue-400 transition-colors"
+              style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+            >
+              History ({sessions.length})
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* ── Session Sidebar (Resizable) ── */}
       <div
         style={showSidebar && typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: `${leftSidebarWidth}px` } : undefined}
@@ -1078,16 +1117,23 @@ export default function ChatInterface({ role = 'consumer' }) {
         )}
         {/* Sidebar Header & New Chat */}
         <div className="p-3 border-b border-gray-100 dark:border-dark-border space-y-2">
-          <div className="flex items-center justify-between gap-1 md:hidden pb-1">
-            <span className="text-xs font-bold text-gray-700 dark:text-dark-text uppercase tracking-wider">
-              Chat History
-            </span>
+          <div className="flex items-center justify-between gap-1 pb-1">
+            <div className="flex items-center gap-1.5">
+              <History className="w-4 h-4 text-gov-navy dark:text-blue-400" />
+              <span className="text-xs font-bold text-gray-800 dark:text-dark-text uppercase tracking-wider">
+                Chat History
+              </span>
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                {sessions.length}
+              </span>
+            </div>
             <button
               onClick={() => setShowSidebar(false)}
-              className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-border"
+              className="p-1 rounded-md text-gray-400 hover:text-gray-700 dark:text-dark-text-muted dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-border transition-colors flex items-center gap-1 text-xs"
               title="Close history"
+              aria-label="Collapse sidebar"
             >
-              <X className="w-4 h-4" />
+              <PanelLeftClose className="w-4 h-4" />
             </button>
           </div>
           <button
@@ -1224,10 +1270,26 @@ export default function ChatInterface({ role = 'consumer' }) {
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setShowSidebar(!showSidebar)}
-              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors"
-              title="Toggle sidebar"
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all shadow-2xs cursor-pointer",
+                showSidebar
+                  ? "bg-blue-50 border-blue-200 text-gov-navy dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300"
+                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 dark:bg-dark-bg-card dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-border"
+              )}
+              title={showSidebar ? "Collapse Chat History" : "Open Chat History"}
+              aria-label="Toggle chat history sidebar"
             >
-              <MessageSquare className="w-4 h-4 text-gray-500 dark:text-dark-text-muted" />
+              {showSidebar ? (
+                <PanelLeftClose className="w-4 h-4 text-gov-navy dark:text-blue-400 shrink-0" />
+              ) : (
+                <PanelLeftOpen className="w-4 h-4 text-gov-navy dark:text-blue-400 shrink-0" />
+              )}
+              <span className="hidden sm:inline font-semibold">
+                {showSidebar ? "Close History" : "Chat History"}
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-dark-border text-gray-700 dark:text-dark-text-muted font-bold leading-none">
+                {sessions.length}
+              </span>
             </button>
             <div>
               <div className="flex items-center gap-2">

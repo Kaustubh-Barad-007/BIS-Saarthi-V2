@@ -38,17 +38,33 @@ import Settings            from '@/pages/Settings'
 
 import DashboardLayout from '@/components/layout/DashboardLayout'
 
+import useAuthStore from '@/store/authStore'
+
 function DashWrapper({ children }) {
   return <DashboardLayout>{children}</DashboardLayout>
+}
+
+// Strictly prevents signed-in users from ever visiting Home, Login, or Register without signing out
+function PublicOnlyRoute({ children }) {
+  const { user } = useAuthStore()
+  if (user) {
+    const target = {
+      consumer:     ROUTES.CONSUMER_CHAT,
+      manufacturer: ROUTES.MANUFACTURER_CHAT,
+      admin:        ROUTES.ADMIN_DASHBOARD,
+    }[user.role] || ROUTES.CONSUMER_DASHBOARD
+    return <Navigate to={target} replace />
+  }
+  return children
 }
 
 export default function AppRouter() {
   return (
     <Routes>
-      {/* Public */}
-      <Route path={ROUTES.HOME}     element={<Home />}     />
-      <Route path={ROUTES.LOGIN}    element={<Login />}    />
-      <Route path={ROUTES.REGISTER} element={<Register />} />
+      {/* Public Pages — Signed-in users can never go to home/login/register without signout */}
+      <Route path={ROUTES.HOME}     element={<PublicOnlyRoute><Home /></PublicOnlyRoute>}     />
+      <Route path={ROUTES.LOGIN}    element={<PublicOnlyRoute><Login /></PublicOnlyRoute>}    />
+      <Route path={ROUTES.REGISTER} element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
 
       {/* Consumer routes */}
       <Route path={ROUTES.CONSUMER_DASHBOARD}

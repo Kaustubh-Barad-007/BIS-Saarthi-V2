@@ -1,10 +1,10 @@
 <div align="center">
 
-# 🏛️ BIS Saarthi (बीआईएस सारथी) v2.0
+# 🏛️ BIS Saarthi (बीआईएस सारथी)
 ### Next-Generation AI Regulatory Copilot, Multilingual Assistance & Compliance Intelligence Engine
 **Bureau of Indian Standards (BIS) • Ministry of Consumer Affairs, Food & Public Distribution • Government of India**
 
-[![Production Status](https://img.shields.io/badge/Deployment-Live%20on%20Vercel-success?style=for-the-badge&logo=vercel&logoColor=white)](https://bis-saarthi-v2.vercel.app)
+[![Production Status](https://img.shields.io/badge/Deployment-Live%20on%20Vercel-success?style=for-the-badge&logo=vercel&logoColor=white)](https://bis-saarthi-assistant.vercel.app)
 [![React](https://img.shields.io/badge/Frontend-React%2018%20%7C%20Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20CSS%203.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Database](https://img.shields.io/badge/Database-Neon%20Serverless%20PostgreSQL-00E599?style=for-the-badge&logo=postgresql&logoColor=white)](https://neon.tech/)
@@ -12,7 +12,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![GIGW Compliant](https://img.shields.io/badge/Compliance-GIGW%203.0%20%7C%20WCAG%202.1%20AA-138808?style=for-the-badge)]()
 
-**[🌐 Experience Live Production Portal](https://bis-saarthi-v2.vercel.app)** • **[📖 Project Documentation](PROJECT_STRUCTURE.md)** • **[🛡️ Security Policy](SECURITY.md)**
+**[🌐 Experience Live Production Portal](https://bis-saarthi-assistant.vercel.app)** • **[📖 Project Documentation](PROJECT_STRUCTURE.md)** • **[🛡️ Security Policy](SECURITY.md)**
 
 ---
 
@@ -20,7 +20,7 @@
 
 ## 📌 Executive Summary
 
-**BIS Saarthi (बीआईएस सारथी) v2.0** is an enterprise-grade, sovereign AI regulatory copilot developed to bridge the information gap between the **Bureau of Indian Standards (BIS)**, Indian consumers, and MSME manufacturers. 
+**BIS Saarthi (बीआईएस सारथी)** is an enterprise-grade, sovereign AI regulatory copilot developed to bridge the information gap between the **Bureau of Indian Standards (BIS)**, Indian consumers, and MSME manufacturers. 
 
 By integrating **Bhashini (National Language Translation Mission, MeitY)**, BIS Saarthi delivers voice-first, multimodal, and multilingual regulatory guidance in **10 Indian languages**, democratizing access to quality standards, mandatory product certifications, ISI marks, and gold hallmarking.
 
@@ -248,7 +248,7 @@ Contributions are welcomed! Please review our [Contributing Guidelines](CONTRIBU
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
-> **Disclaimer**: *BIS Saarthi v2.0 is an advanced digital technology prototype designed in alignment with the standards and public guidelines of the Bureau of Indian Standards (Govt. of India). For formal statutory certifications, refer to official gazettes on [bis.gov.in](https://www.bis.gov.in).*
+> **Disclaimer**: *BIS Saarthi is an advanced digital technology prototype designed in alignment with the standards and public guidelines of the Bureau of Indian Standards (Govt. of India). For formal statutory certifications, refer to official gazettes on [bis.gov.in](https://www.bis.gov.in).*
 
 ---
 
