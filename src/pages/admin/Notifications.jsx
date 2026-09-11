@@ -149,7 +149,7 @@ export default function AdminNotifications() {
       case 'urgent':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
             Urgent Directive
           </span>
         )

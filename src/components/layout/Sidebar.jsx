@@ -175,14 +175,14 @@ export default function Sidebar({ mobile = false, onClose }) {
               <div className="relative">
                 <Icon className="w-4 h-4 shrink-0" />
                 {isNotificationItem && unreadNotifs > 0 && collapsed && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-600 ring-2 ring-white dark:ring-dark-bg-card animate-pulse shadow-xs" />
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-600 ring-2 ring-white dark:ring-dark-bg-card shadow-xs" />
                 )}
               </div>
               {!collapsed && (
                 <div className="flex-1 flex items-center justify-between min-w-0">
                   <span className="truncate font-medium">{getNavLabel(item)}</span>
                   {isNotificationItem && unreadNotifs > 0 && (
-                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-600 text-white font-mono shadow-xs animate-pulse">
+                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-600 text-white font-mono shadow-xs">
                       {unreadNotifs}
                     </span>
                   )}

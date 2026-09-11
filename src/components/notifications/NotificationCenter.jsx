@@ -92,7 +92,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
       case 'urgent':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
             Urgent Directive
           </span>
         )
@@ -139,7 +139,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
               {role === 'consumer' ? 'Official Citizen Notifications' : 'MSME Directives & Circulars'}
             </h1>
             {unreadCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white font-mono shadow-xs animate-pulse">
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white font-mono shadow-xs">
                 {unreadCount} unread
               </span>
             )}
@@ -207,7 +207,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
                   : 'bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-dark-text hover:bg-gray-200'
               )}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
               <span>Urgent ({urgentCount})</span>
             </button>
 
@@ -280,7 +280,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
                     {/* Unread indicator or Priority Icon */}
                     <div className="mt-0.5 shrink-0">
                       {!isRead ? (
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-600 ring-4 ring-red-600/20 mt-1 animate-pulse" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-600 ring-4 ring-red-600/20 mt-1" />
                       ) : (
                         <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-dark-border mt-1" />
                       )}

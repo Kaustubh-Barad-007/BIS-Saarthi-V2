@@ -40,13 +40,14 @@ export const useDataStore = create((set, get) => ({
     if (token) headers['Authorization'] = `Bearer ${token}`
 
     try {
-      const [uRes, lRes, dRes, cRes, certRes, nRes] = await Promise.allSettled([
+      const [uRes, lRes, dRes, cRes, certRes, nRes, mDocRes] = await Promise.allSettled([
         fetch('/api/admin/users', { headers }),
         fetch('/api/data?type=audit-logs', { headers }),
         fetch('/api/data?type=documents', { headers }),
         fetch('/api/data?type=complaints', { headers }),
         fetch('/api/data?type=certifications', { headers }),
         fetch('/api/data?type=notifications', { headers }),
+        fetch('/api/data?type=manufacturer-documents', { headers }),
       ])
 
       const updates = {}
@@ -73,6 +74,10 @@ export const useDataStore = create((set, get) => ({
       if (nRes.status === 'fulfilled' && nRes.value.ok) {
         const data = await nRes.value.json()
         if (data.notifications) updates.notifications = data.notifications
+      }
+      if (mDocRes.status === 'fulfilled' && mDocRes.value.ok) {
+        const data = await mDocRes.value.json()
+        if (data.documents) updates.manufacturerDocs = data.documents
       }
 
       set({ ...updates, isLoadingDb: false })
@@ -340,14 +345,20 @@ export const useDataStore = create((set, get) => ({
   },
 
   // ── MANUFACTURER DOCUMENTS CRUD ──
-  addManufacturerDoc: (file) => {
+  addManufacturerDoc: async (docData) => {
     const newDoc = {
-      id: Date.now(),
-      name: file.name,
-      size: file.size || 1200000,
-      type: file.type || 'Uploaded Document',
+      id: docData.id || `DOC-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
+      name: docData.name,
+      category: docData.category || 'Compliance Document',
+      standardCode: docData.standardCode || 'IS 14543:2024',
+      fileType: docData.fileType || 'PDF',
+      size: docData.size || 1500000,
+      version: docData.version || '1.0',
       uploaded: new Date().toISOString(),
-      status: 'pending',
+      status: docData.status || 'pending',
+      reviewNotes: docData.reviewNotes || 'Submitted for technical scrutiny',
+      checksum: docData.checksum || `SHA256:${Math.random().toString(36).substring(2, 12)}`,
+      validUntil: docData.validUntil || null,
     }
     set((s) => {
       const next = { ...s, manufacturerDocs: [newDoc, ...s.manufacturerDocs] }
@@ -356,13 +367,36 @@ export const useDataStore = create((set, get) => ({
     })
     get().logAction({
       user: 'msme@bis.gov.in',
-      action: 'UPLOAD',
-      resource: `Uploaded manufacturer document: ${newDoc.name}`,
+      action: 'DOC_UPLOAD',
+      resource: `Uploaded manufacturer document: ${newDoc.name} (${newDoc.category})`,
     })
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const res = await fetch('/api/data?type=manufacturer-documents', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(newDoc),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.document) {
+          set((s) => {
+            const next = {
+              ...s,
+              manufacturerDocs: s.manufacturerDocs.map((d) => (d.id === newDoc.id ? data.document : d)),
+            }
+            savePersistedData(next)
+            return next
+          })
+        }
+      }
+    } catch (_) {}
     return newDoc
   },
 
-  deleteManufacturerDoc: (id) => {
+  deleteManufacturerDoc: async (id) => {
     const targetDoc = get().manufacturerDocs.find((d) => d.id === id)
     set((s) => {
       const next = { ...s, manufacturerDocs: s.manufacturerDocs.filter((d) => d.id !== id) }
@@ -371,9 +405,18 @@ export const useDataStore = create((set, get) => ({
     })
     get().logAction({
       user: 'msme@bis.gov.in',
-      action: 'DELETE',
+      action: 'DOC_DELETE',
       resource: `Deleted manufacturer document: ${targetDoc?.name || id}`,
     })
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch(`/api/data?type=manufacturer-documents&id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers,
+      })
+    } catch (_) {}
   },
 
   incrementQueryCount: () => {

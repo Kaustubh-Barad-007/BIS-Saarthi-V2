@@ -122,7 +122,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 4. Documents
+    // 4. Knowledge Base Documents
     if (type === 'documents') {
       if (req.method === 'GET') {
         const rows = await sql`
@@ -144,6 +144,68 @@ export default async function handler(req, res) {
       if (req.method === 'DELETE') {
         const id = req.query?.id || req.body?.id
         await sql`DELETE FROM knowledge_docs WHERE id = ${id}`
+        return res.status(200).json({ message: 'Deleted' })
+      }
+    }
+
+    // 4b. Manufacturer Statutory Documents
+    if (type === 'manufacturer-documents') {
+      if (req.method === 'GET') {
+        let rows = []
+        if (user?.role === 'admin') {
+          rows = await sql`
+            SELECT id, user_email as "userEmail", name, category, standard_code as "standardCode", file_type as "fileType", file_size as "size", version, status, review_notes as "reviewNotes", checksum, uploaded_at as "uploaded", valid_until as "validUntil"
+            FROM manufacturer_documents
+            ORDER BY uploaded_at DESC
+          `
+        } else {
+          const userEmail = user?.email || 'msme@bis.gov.in'
+          rows = await sql`
+            SELECT id, user_email as "userEmail", name, category, standard_code as "standardCode", file_type as "fileType", file_size as "size", version, status, review_notes as "reviewNotes", checksum, uploaded_at as "uploaded", valid_until as "validUntil"
+            FROM manufacturer_documents
+            WHERE user_email = ${userEmail} OR user_email IS NULL
+            ORDER BY uploaded_at DESC
+          `
+        }
+        return res.status(200).json({ documents: rows || [] })
+      }
+      if (req.method === 'POST') {
+        const {
+          name,
+          category = 'Compliance Document',
+          standardCode = 'IS 14543:2024',
+          fileType = 'PDF',
+          size = 1500000,
+          version = '1.0',
+          status = 'pending',
+          reviewNotes = 'Uploaded by manufacturer; queued for scrutiny',
+          checksum = `SHA256:${Math.random().toString(36).substring(2, 12)}`,
+          validUntil = null
+        } = req.body || {}
+        if (!name) return res.status(400).json({ error: 'Document name is required' })
+        const docId = `DOC-${new Date().getFullYear()}-${category.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`
+        const userEmail = user?.email || 'msme@bis.gov.in'
+        const userId = user?.id || null
+        const [newRow] = await sql`
+          INSERT INTO manufacturer_documents (id, user_id, user_email, name, category, standard_code, file_type, file_size, version, status, review_notes, checksum, valid_until)
+          VALUES (${docId}, ${userId}, ${userEmail}, ${name}, ${category}, ${standardCode}, ${fileType}, ${size}, ${version}, ${status}, ${reviewNotes}, ${checksum}, ${validUntil})
+          RETURNING id, user_email as "userEmail", name, category, standard_code as "standardCode", file_type as "fileType", file_size as "size", version, status, review_notes as "reviewNotes", checksum, uploaded_at as "uploaded", valid_until as "validUntil"
+        `
+        return res.status(201).json({ document: newRow })
+      }
+      if (req.method === 'PUT') {
+        const { id, status, reviewNotes } = req.body || {}
+        const [updated] = await sql`
+          UPDATE manufacturer_documents
+          SET status = COALESCE(${status}, status), review_notes = COALESCE(${reviewNotes}, review_notes)
+          WHERE id = ${id}
+          RETURNING id, user_email as "userEmail", name, category, standard_code as "standardCode", file_type as "fileType", file_size as "size", version, status, review_notes as "reviewNotes", checksum, uploaded_at as "uploaded", valid_until as "validUntil"
+        `
+        return res.status(200).json({ document: updated })
+      }
+      if (req.method === 'DELETE') {
+        const id = req.query?.id || req.body?.id
+        await sql`DELETE FROM manufacturer_documents WHERE id = ${id}`
         return res.status(200).json({ message: 'Deleted' })
       }
     }

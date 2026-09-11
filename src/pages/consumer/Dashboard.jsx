@@ -133,7 +133,7 @@ export default function ConsumerDashboard() {
                 className="flex gap-3 p-3 hover:bg-gray-50 dark:hover:bg-dark-bg-secondary rounded-gov transition-colors group"
               >
                 <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                  item.priority === 'urgent' ? 'bg-red-500 animate-pulse' :
+                  item.priority === 'urgent' ? 'bg-red-600' :
                   item.priority === 'warning' ? 'bg-amber-500' :
                   item.priority === 'success' ? 'bg-green-500' : 'bg-blue-500'
                 }`} />
