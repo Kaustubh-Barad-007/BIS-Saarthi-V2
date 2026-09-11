@@ -42,11 +42,11 @@ export const useDataStore = create((set, get) => ({
     try {
       const [uRes, lRes, dRes, cRes, certRes, nRes] = await Promise.allSettled([
         fetch('/api/admin/users', { headers }),
-        fetch('/api/audit-logs', { headers }),
-        fetch('/api/documents', { headers }),
-        fetch('/api/complaints', { headers }),
-        fetch('/api/certifications', { headers }),
-        fetch('/api/notifications', { headers }),
+        fetch('/api/data?type=audit-logs', { headers }),
+        fetch('/api/data?type=documents', { headers }),
+        fetch('/api/data?type=complaints', { headers }),
+        fetch('/api/data?type=certifications', { headers }),
+        fetch('/api/data?type=notifications', { headers }),
       ])
 
       const updates = {}

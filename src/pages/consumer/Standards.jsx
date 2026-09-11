@@ -16,7 +16,7 @@ export default function Standards() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    const url = search ? `/api/standards?search=${encodeURIComponent(search)}` : '/api/standards'
+    const url = search ? `/api/data?type=standards&search=${encodeURIComponent(search)}` : '/api/data?type=standards'
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
