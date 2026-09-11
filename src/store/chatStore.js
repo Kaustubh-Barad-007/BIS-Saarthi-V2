@@ -114,10 +114,11 @@ const persistSessions = (sessions, activeId, user = null) => {
   } catch (_) {}
 }
 
-const DEFAULT_FALLBACK_RAG_KEY = typeof atob !== 'undefined' ? atob('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=') : ''
+const DEFAULT_FALLBACK_GEMINI_KEY = typeof atob !== 'undefined' ? atob('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=') : ''
 
+// External RAG API Key used strictly for data extraction
 const getStoredRagApiKey = () => {
-  if (typeof window === 'undefined') return DEFAULT_FALLBACK_RAG_KEY
+  if (typeof window === 'undefined') return ''
   try {
     const saved = localStorage.getItem('bis_settings_v2')
     if (saved) {
@@ -125,7 +126,20 @@ const getStoredRagApiKey = () => {
       if (parsed?.ragApiKey) return parsed.ragApiKey
     }
   } catch (_) {}
-  return DEFAULT_FALLBACK_RAG_KEY
+  return localStorage.getItem('bis_rag_api_key') || ''
+}
+
+// Gemini API Key used strictly for perfect formatting and general answers
+const getStoredGeminiApiKey = () => {
+  if (typeof window === 'undefined') return DEFAULT_FALLBACK_GEMINI_KEY
+  try {
+    const saved = localStorage.getItem('bis_settings_v2')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (parsed?.geminiApiKey) return parsed.geminiApiKey
+    }
+  } catch (_) {}
+  return localStorage.getItem('bis_gemini_api_key') || DEFAULT_FALLBACK_GEMINI_KEY
 }
 
 // Helper to determine contextual follow-up question chips
@@ -424,6 +438,7 @@ const useChatStore = create((set, get) => ({
 
       try {
         const ragApiKey = getStoredRagApiKey()
+        const geminiApiKey = getStoredGeminiApiKey()
         const previousMessages = (get().messages || []).slice(0, -1)
         const chatHistory = previousMessages.slice(-4).map((m) => ({
           role: m.role,
@@ -439,6 +454,7 @@ const useChatStore = create((set, get) => ({
           role,
           manufacturerProfile,
           ragApiKey,
+          geminiApiKey,
         })
         if (apiRes?.content) {
           aiContent = apiRes.content

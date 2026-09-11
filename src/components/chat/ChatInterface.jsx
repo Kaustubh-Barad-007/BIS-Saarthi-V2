@@ -9,7 +9,7 @@ import {
   PanelLeftOpen, PanelLeftClose, History, Key, Eye, EyeOff, Loader2
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
-import { resolveDetailedCitation, STANDARDS_REGISTRY } from '@/lib/standardsReferences'
+import { resolveDetailedCitation } from '@/lib/standardsReferences'
 import { toast } from 'sonner'
 import useChatStore from '@/store/chatStore'
 import useAuthStore from '@/store/authStore'
@@ -536,7 +536,6 @@ export default function ChatInterface({ role = 'consumer' }) {
   // Right Sources & Regulatory References Sidebar State
   const [showSourcesSidebar, setShowSourcesSidebar]       = useState(false)
   const [sourcesSearchQuery, setSourcesSearchQuery]       = useState('')
-  const [sourcesActiveTab, setSourcesActiveTab]           = useState('cited') // 'cited' | 'directory'
   const [highlightedSourceKey, setHighlightedSourceKey]   = useState(null)
 
   // Unique citations extracted across current conversation (newest first)
@@ -564,11 +563,6 @@ export default function ChatInterface({ role = 'consumer' }) {
     return list
   }, [messages])
 
-  // Catalog of standards from STANDARDS_REGISTRY
-  const standardsDirectory = useMemo(() => {
-    return Object.values(STANDARDS_REGISTRY).map(entry => resolveDetailedCitation(entry))
-  }, [])
-
   // Filtered citations based on sourcesSearchQuery
   const filteredCitedCitations = useMemo(() => {
     if (!sourcesSearchQuery.trim()) return conversationCitations
@@ -582,21 +576,8 @@ export default function ChatInterface({ role = 'consumer' }) {
     )
   }, [conversationCitations, sourcesSearchQuery])
 
-  const filteredDirectory = useMemo(() => {
-    if (!sourcesSearchQuery.trim()) return standardsDirectory
-    const q = sourcesSearchQuery.toLowerCase()
-    return standardsDirectory.filter(c =>
-      c.source?.toLowerCase().includes(q) ||
-      c.title?.toLowerCase().includes(q) ||
-      c.clause?.toLowerCase().includes(q) ||
-      c.committee?.toLowerCase().includes(q) ||
-      c.actReference?.toLowerCase().includes(q)
-    )
-  }, [standardsDirectory, sourcesSearchQuery])
-
   const handleOpenSourcesSidebar = (cite) => {
     setShowSourcesSidebar(true)
-    setSourcesActiveTab('cited')
     if (cite?.source) {
       setHighlightedSourceKey(cite.source)
       setTimeout(() => {
@@ -614,7 +595,6 @@ export default function ChatInterface({ role = 'consumer' }) {
       const lastMsg = messages[messages.length - 1]
       if (lastMsg.role === 'assistant' && lastMsg.citations?.length > 0) {
         setShowSourcesSidebar(true)
-        setSourcesActiveTab('cited')
         if (lastMsg.citations[0]?.source) {
           setHighlightedSourceKey(lastMsg.citations[0].source)
         }
@@ -1883,16 +1863,16 @@ export default function ChatInterface({ role = 'consumer' }) {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white font-heading truncate">
-                  Sources & References
+                  Supporting Documents
                 </h3>
                 {conversationCitations.length > 0 && (
                   <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
-                    {conversationCitations.length} Active
+                    {conversationCitations.length} Grounded
                   </span>
                 )}
               </div>
               <p className="text-xs text-gray-500 dark:text-dark-text-muted truncate">
-                Official Indian Standards & Acts
+                Official RAG Statutory References
               </p>
             </div>
           </div>
@@ -1900,248 +1880,168 @@ export default function ChatInterface({ role = 'consumer' }) {
           <button
             type="button"
             onClick={() => setShowSourcesSidebar(false)}
-            className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded hover:bg-gray-100 dark:hover:bg-dark-border transition-colors shrink-0"
+            className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded hover:bg-gray-100 dark:hover:bg-dark-border transition-colors shrink-0 cursor-pointer"
             title="Close Sources Sidebar"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Search & Tabs */}
-        <div className="p-2.5 border-b border-gray-100 dark:border-dark-border bg-white dark:bg-dark-bg-card space-y-2">
-          {/* Instant Search Bar */}
+        {/* Instant Search Bar */}
+        <div className="p-2.5 border-b border-gray-100 dark:border-dark-border bg-white dark:bg-dark-bg-card">
           <div className="relative">
             <Search className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={sourcesSearchQuery}
               onChange={(e) => setSourcesSearchQuery(e.target.value)}
-              placeholder="Search standards, clauses, acts..."
+              placeholder="Search supporting documents, standards, clauses..."
               className="w-full pl-8 pr-7 py-1.5 text-sm bg-slate-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-gov focus:outline-none focus:border-bis-navy dark:focus:border-blue-400 text-gray-800 dark:text-dark-text placeholder:text-gray-400"
             />
             {sourcesSearchQuery && (
               <button
                 type="button"
                 onClick={() => setSourcesSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"
               >
                 <X className="w-3 h-3" />
               </button>
             )}
           </div>
-
-          {/* Dual Tabs */}
-          <div className="flex gap-1 bg-gray-100 dark:bg-dark-bg p-0.5 rounded-gov text-[11px]">
-            <button
-              type="button"
-              onClick={() => setSourcesActiveTab('cited')}
-              className={cn(
-                'flex-1 py-1 rounded font-medium transition-all text-center',
-                sourcesActiveTab === 'cited'
-                  ? 'bg-white dark:bg-dark-bg-card text-bis-navy dark:text-blue-300 shadow-xs font-bold'
-                  : 'text-gray-500 dark:text-dark-text-muted hover:text-gray-800'
-              )}
-            >
-              Cited in Chat ({conversationCitations.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setSourcesActiveTab('directory')}
-              className={cn(
-                'flex-1 py-1 rounded font-medium transition-all text-center',
-                sourcesActiveTab === 'directory'
-                  ? 'bg-white dark:bg-dark-bg-card text-bis-navy dark:text-blue-300 shadow-xs font-bold'
-                  : 'text-gray-500 dark:text-dark-text-muted hover:text-gray-800'
-              )}
-            >
-              BIS Directory ({Object.keys(STANDARDS_REGISTRY).length})
-            </button>
-          </div>
         </div>
 
-        {/* Scrollable Sources Content */}
+        {/* Scrollable Supporting Documents Content */}
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
-          {sourcesActiveTab === 'cited' ? (
-            filteredCitedCitations.length === 0 ? (
-              <div className="text-center py-8 px-3 space-y-3">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-400 flex items-center justify-center mx-auto border border-blue-100 dark:border-blue-900/40">
-                  <BookOpen className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-gray-900 dark:text-white">
-                    {sourcesSearchQuery ? 'No matching references' : 'No sources cited yet'}
-                  </h4>
-                  <p className="text-[11px] text-gray-500 dark:text-dark-text-muted mt-1 leading-relaxed">
-                    {sourcesSearchQuery
-                      ? 'Try another search term like "IS 1417", "water", "hallmark", or "gold".'
-                      : 'Ask a question about BIS standards, hallmarking, testing procedures, or certification to see verified statutory citations appear here in real time.'}
-                  </p>
-                </div>
-
-                {!sourcesSearchQuery && (
-                  <div className="pt-2 border-t border-gray-100 dark:border-dark-border space-y-1.5 text-left">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted">
-                      Suggested Regulatory Queries:
-                    </span>
-                    {[
-                      'What are the mandatory gold hallmarking standards (IS 1417)?',
-                      'Show test parameters for packaged drinking water under IS 14543',
-                      'What are helmet safety requirements under IS 4151?',
-                    ].map((sampleQuery, qIdx) => (
-                      <button
-                        key={qIdx}
-                        type="button"
-                        onClick={() => {
-                          setGatewayDismissed(true)
-                          sendMessage(sampleQuery, { role })
-                        }}
-                        className="w-full text-left p-2 rounded-gov bg-gray-50 hover:bg-blue-50 dark:bg-dark-bg dark:hover:bg-blue-950/40 text-[11px] text-gray-700 dark:text-gray-300 border border-gray-200/70 dark:border-dark-border transition-colors leading-snug"
-                      >
-                        {sampleQuery} &rarr;
-                      </button>
-                    ))}
-                  </div>
-                )}
+          {filteredCitedCitations.length === 0 ? (
+            <div className="text-center py-8 px-3 space-y-3">
+              <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-400 flex items-center justify-center mx-auto border border-blue-100 dark:border-blue-900/40">
+                <BookOpen className="w-6 h-6" />
               </div>
-            ) : (
-              filteredCitedCitations.map((cite, i) => {
-                const isHighlighted = highlightedSourceKey && (cite.source?.toLowerCase().includes(highlightedSourceKey.toLowerCase()) || highlightedSourceKey.toLowerCase().includes(cite.source?.toLowerCase()))
-                return (
-                  <div
-                    key={i}
-                    id={`sidebar-cite-${cite.source}`}
-                    className={cn(
-                      'p-3 rounded-gov border bg-white dark:bg-dark-bg-card transition-all shadow-2xs space-y-2',
-                      isHighlighted
-                        ? 'border-bis-navy dark:border-blue-400 ring-2 ring-blue-500/20 bg-blue-50/40 dark:bg-blue-950/20'
-                        : 'border-gray-200 dark:border-dark-border hover:border-blue-300 dark:hover:border-blue-700'
-                    )}
-                  >
-                    {/* Badge & Status Row */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/50 text-bis-navy dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
-                        {cite.source}
-                      </span>
-                      <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                        Active
-                      </span>
-                    </div>
+              <div>
+                <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+                  {sourcesSearchQuery ? 'No matching references' : 'No supporting documents cited yet'}
+                </h4>
+                <p className="text-[11px] text-gray-500 dark:text-dark-text-muted mt-1 leading-relaxed">
+                  {sourcesSearchQuery
+                    ? 'Try another search term like "IS 1417", "water", "hallmark", or "gold".'
+                    : 'Ask a question about BIS standards, hallmarking, testing procedures, or certification to see verified statutory citations extracted by RAG appear here in real time.'}
+                </p>
+              </div>
 
-                    {/* Standard Title */}
-                    <h4 className={cn("font-bold text-gray-900 dark:text-white leading-snug", currentFontSizeClass)}>
-                      {cite.title}
-                    </h4>
-
-                    {/* Simple summary */}
-                    {cite.summary && (
-                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                        {cite.summary}
-                      </p>
-                    )}
-
-                    {/* Key Requirements */}
-                    {cite.keyPoints && cite.keyPoints.length > 0 && (
-                      <div className="space-y-1 bg-gray-50/80 dark:bg-dark-bg/60 p-2 rounded border border-gray-100 dark:border-dark-border/60">
-                        {cite.keyPoints.slice(0, 2).map((pt, pIdx) => (
-                          <div key={pIdx} className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-300 leading-snug">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-                            <span>{pt}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Card Actions */}
-                    <div className="pt-2 border-t border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setInspectCitation(cite)}
-                        className="text-xs font-semibold text-bis-navy dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>View Details</span>
-                      </button>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(`${cite.source} — ${cite.title} (${cite.clause})`)
-                            toast.success('Reference copied')
-                          }}
-                          className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded hover:bg-gray-100 dark:hover:bg-dark-border transition-colors cursor-pointer"
-                          title="Copy Reference"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                        {cite.url && (
-                          <a
-                            href={cite.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium ml-1"
-                            title="Verify on BIS Portal"
-                          >
-                            <span>BIS Portal</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })
-            )
+              {!sourcesSearchQuery && (
+                <div className="pt-2 border-t border-gray-100 dark:border-dark-border space-y-1.5 text-left">
+                  <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted">
+                    Suggested Regulatory Queries:
+                  </span>
+                  {[
+                    'What are the mandatory gold hallmarking standards (IS 1417)?',
+                    'Show test parameters for packaged drinking water under IS 14543',
+                    'What are helmet safety requirements under IS 4151?',
+                  ].map((sampleQuery, qIdx) => (
+                    <button
+                      key={qIdx}
+                      type="button"
+                      onClick={() => {
+                        setGatewayDismissed(true)
+                        sendMessage(sampleQuery, { role })
+                      }}
+                      className="w-full text-left p-2 rounded-gov bg-gray-50 hover:bg-blue-50 dark:bg-dark-bg dark:hover:bg-blue-950/40 text-[11px] text-gray-700 dark:text-gray-300 border border-gray-200/70 dark:border-dark-border transition-colors leading-snug cursor-pointer"
+                    >
+                      {sampleQuery} &rarr;
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
-            /* Directory Tab */
-            filteredDirectory.length === 0 ? (
-              <div className="text-center py-8 text-xs text-gray-500 dark:text-dark-text-muted">
-                No standards match "{sourcesSearchQuery}"
-              </div>
-            ) : (
-              filteredDirectory.map((std, idx) => (
+            filteredCitedCitations.map((cite, i) => {
+              const isHighlighted = highlightedSourceKey && (cite.source?.toLowerCase().includes(highlightedSourceKey.toLowerCase()) || highlightedSourceKey.toLowerCase().includes(cite.source?.toLowerCase()))
+              return (
                 <div
-                  key={idx}
-                  className="p-2.5 rounded-gov border border-gray-200 dark:border-dark-border bg-slate-50/50 dark:bg-dark-bg-secondary/50 hover:border-blue-300 dark:hover:border-blue-600 transition-all space-y-1.5"
+                  key={i}
+                  id={`sidebar-cite-${cite.source}`}
+                  className={cn(
+                    'p-3 rounded-gov border bg-white dark:bg-dark-bg-card transition-all shadow-2xs space-y-2',
+                    isHighlighted
+                      ? 'border-bis-navy dark:border-blue-400 ring-2 ring-blue-500/20 bg-blue-50/40 dark:bg-blue-950/20'
+                      : 'border-gray-200 dark:border-dark-border hover:border-blue-300 dark:hover:border-blue-700'
+                  )}
                 >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className={cn("font-mono font-bold text-bis-navy dark:text-blue-400", currentFontSizeClass)}>
-                      {std.source}
+                  {/* Badge & Status Row */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/50 text-bis-navy dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
+                      {cite.source}
                     </span>
-                    <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/40">
-                      Standard
+                    <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      RAG Grounded
                     </span>
                   </div>
-                  <h5 className={cn("font-bold text-gray-800 dark:text-gray-100 leading-snug", currentFontSizeClass)}>
-                    {std.title}
-                  </h5>
-                  <p className="text-xs text-gray-500 dark:text-dark-text-muted truncate">
-                    {std.committee} · {std.clause}
-                  </p>
+
+                  {/* Standard Title */}
+                  <h4 className={cn("font-bold text-gray-900 dark:text-white leading-snug", currentFontSizeClass)}>
+                    {cite.title}
+                  </h4>
+
+                  {/* Simple summary */}
+                  {cite.summary && (
+                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                      {cite.summary}
+                    </p>
+                  )}
+
+                  {/* Key Requirements */}
+                  {cite.keyPoints && cite.keyPoints.length > 0 && (
+                    <div className="space-y-1 bg-gray-50/80 dark:bg-dark-bg/60 p-2 rounded border border-gray-100 dark:border-dark-border/60">
+                      {cite.keyPoints.slice(0, 2).map((pt, pIdx) => (
+                        <div key={pIdx} className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-300 leading-snug">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                          <span>{pt}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Card Actions */}
                   <div className="pt-2 border-t border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
                     <button
                       type="button"
-                      onClick={() => setInspectCitation(std)}
-                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                      onClick={() => setInspectCitation(cite)}
+                      className="text-xs font-semibold text-bis-navy dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       <span>View Details</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGatewayDismissed(true)
-                        sendMessage(`Provide full technical requirements, testing methods, and conformity assessment details for ${std.source} (${std.title}).`, { role })
-                      }}
-                      className="text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-bis-navy dark:hover:text-blue-300 hover:underline"
-                    >
-                      Ask Saarthi &rarr;
-                    </button>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${cite.source} — ${cite.title} (${cite.clause})`)
+                          toast.success('Reference copied')
+                        }}
+                        className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded hover:bg-gray-100 dark:hover:bg-dark-border transition-colors cursor-pointer"
+                        title="Copy Reference"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      {cite.url && (
+                        <a
+                          href={cite.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium ml-1"
+                          title="Verify on BIS Portal"
+                        >
+                          <span>BIS Portal</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))
-            )
+              )
+            })
           )}
         </div>
 
