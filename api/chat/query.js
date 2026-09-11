@@ -188,39 +188,81 @@ function buildContextString(matches) {
 
 const DEFAULT_GEMINI_KEY = Buffer.from('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=', 'base64').toString('utf-8')
 
-async function queryGemini(userQuery, dbContext, apiKeyOverride) {
+async function callGeminiApi(promptText, apiKeyOverride) {
   const apiKey = apiKeyOverride || process.env.GEMINI_API_KEY || DEFAULT_GEMINI_KEY
   if (!apiKey) return null
 
-  const prompt = `You are BIS Saarthi, an AI regulatory assistant for the Bureau of Indian Standards (BIS).
-Answer the user's query strictly and solely based on the official database records provided below.
+  // gemini-2.5-flash is current generation; fallback to gemini-flash-latest
+  const models = ['gemini-2.5-flash', 'gemini-flash-latest']
+  for (const model of models) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptText }] }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 1024,
+          },
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+        if (text) return text.trim()
+      }
+    } catch (_) {}
+  }
+  return null
+}
 
-NON-NEGOTIABLE RULES:
-1. Answer ONLY using the facts present in the database records below.
-2. If the database records do not contain the answer, respond ONLY with:
-"The Bureau of Indian Standards database does not contain sufficient information to answer this query."
-3. Do NOT make up, assume, or invent standard codes, clauses, or numbers.
-4. Keep the answer professional, clear, and easy to read using clean bullet points and markdown.
+async function queryGeminiRAG(userQuery, dbContext, chatHistory, apiKeyOverride) {
+  let historyStr = ''
+  if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+    historyStr = 'Recent Conversation History:\n' + chatHistory.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n') + '\n\n'
+  }
 
-Database Records:
+  const prompt = `You are BIS Saarthi, the AI assistant for the Bureau of Indian Standards (BIS), Ministry of Consumer Affairs, Government of India.
+Answer the user's query clearly, simply, and accurately using the official database records provided below.
+
+RESPONSE INSTRUCTIONS:
+1. Make the response simple, direct, and easy to understand for any citizen or manufacturer.
+2. Structure the answer clearly:
+   - **Direct Summary**: 1-2 sentence concise answer upfront.
+   - **Key Standards & Requirements**: 3-4 clean bullet points highlighting key safety rules, testing parameters, or compliance steps.
+   - **Applicable Standard**: Explicitly mention the Indian Standard code (e.g. IS 14543, IS 1417) and scheme.
+3. Avoid dense bureaucratic jargon, walls of legal text, and confusing nested tables.
+4. Keep the tone helpful, reassuring, and professional.
+
+${historyStr}Official Database Records:
 ${dbContext}
 
 User Query: ${userQuery}`
 
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-      }),
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || null
-  } catch (_) {
-    return null
+  return await callGeminiApi(prompt, apiKeyOverride)
+}
+
+async function queryGeminiBasic(userQuery, chatHistory, apiKeyOverride) {
+  let historyStr = ''
+  if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+    historyStr = 'Recent Conversation History:\n' + chatHistory.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n') + '\n\n'
   }
+
+  const prompt = `You are BIS Saarthi, the official AI assistant for the Bureau of Indian Standards (BIS), Government of India.
+The user has asked a general question about BIS standards, certification schemes (ISI Mark, CRS, Hallmarking), consumer rights, or quality guidelines.
+
+RESPONSE INSTRUCTIONS:
+1. Explain the answer in simple, crystal-clear, and easy-to-understand language.
+2. Structure your answer:
+   - **Direct Answer**: 1-2 simple sentences directly addressing the query.
+   - **Key Points / Steps**: 3-4 clean, easy-to-read bullet points.
+   - **Official Verification**: Mention the official portal (Manakonline at services.bis.gov.in) or the BIS Care App, and encourage them to specify a product or Indian Standard code (e.g., IS 14543 for water, IS 1417 for gold) for exact technical requirements.
+3. Keep it friendly, simple, and authoritative. Do NOT return dense legalese or say "database error".
+
+${historyStr}User Query: ${userQuery}`
+
+  return await callGeminiApi(prompt, apiKeyOverride)
 }
 
 function formatDirectResponse(matches) {
@@ -262,7 +304,17 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { content: rawContent, query: rawQuery, sessionId, language = 'en', role = 'consumer', manufacturerProfile, ragApiKey } = req.body || {}
+  const {
+    content: rawContent,
+    query: rawQuery,
+    sessionId,
+    chatHistory = [],
+    language = 'en',
+    role = 'consumer',
+    manufacturerProfile,
+    ragApiKey,
+  } = req.body || {}
+
   const content = (rawContent || rawQuery || '').trim()
   if (!content) {
     return res.status(400).json({ error: 'Query content is required' })
@@ -298,10 +350,12 @@ export default async function handler(req, res) {
     let finalContent = ''
 
     if (matches.length === 0) {
-      finalContent = '### 📋 Bureau of Indian Standards — No Database Record Found\n\nNo records matching your query were found in the connected Bureau of Indian Standards database.\n\nPlease check the Indian Standard number (e.g., `IS 14543`, `IS 383`, `IS 1417`) or product keyword and try again.'
+      // Use Gemini API key for basic / conversational responses
+      const geminiBasic = await queryGeminiBasic(content, chatHistory, activeApiKey)
+      finalContent = geminiBasic || '### 📋 Bureau of Indian Standards Assistant\n\nNo specific standard code was matched in the database for your query. For official requirements, please specify an Indian Standard (e.g., `IS 14543`, `IS 1417`) or product keyword, or verify on [Manakonline](https://www.services.bis.gov.in).'
     } else {
       const dbContext = buildContextString(matches)
-      const geminiAnswer = await queryGemini(content, dbContext, activeApiKey)
+      const geminiAnswer = await queryGeminiRAG(content, dbContext, chatHistory, activeApiKey)
       finalContent = geminiAnswer || formatDirectResponse(matches)
     }
 
@@ -311,16 +365,21 @@ export default async function handler(req, res) {
       canVerify: citations.length > 0,
     }
 
-    // Save chat message to DB if session exists
+    // Save chat message to DB if session exists — store ONLY lean metadata, no bulky payloads!
     if (sessionId && user.id !== 'guest') {
       try {
+        const leanCitations = (response.citations || []).map((c) => ({
+          source: c.source,
+          title: c.title,
+          clause: c.clause,
+        }))
         await sql`
           INSERT INTO chat_messages (session_id, role, content, metadata)
           VALUES (${sessionId}, 'user', ${content}, ${JSON.stringify({ language })}::jsonb)
         `
         await sql`
           INSERT INTO chat_messages (session_id, role, content, metadata)
-          VALUES (${sessionId}, 'assistant', ${response.content}, ${JSON.stringify({ citations: response.citations })}::jsonb)
+          VALUES (${sessionId}, 'assistant', ${response.content}, ${JSON.stringify({ citations: leanCitations })}::jsonb)
         `
         await sql`
           INSERT INTO audit_logs (user_id, user_email, action, resource)

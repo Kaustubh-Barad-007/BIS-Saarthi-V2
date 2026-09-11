@@ -34,7 +34,15 @@ const loadSavedSessions = () => {
     const raw = localStorage.getItem(SESSIONS_STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed
+      if (Array.isArray(parsed)) {
+        return parsed.map((s) => ({
+          ...s,
+          messages: (s.messages || []).map((m) => ({
+            ...m,
+            citations: (m.citations || []).map(resolveDetailedCitation).filter(Boolean),
+          })),
+        }))
+      }
     }
   } catch (_) {}
   return []
@@ -52,7 +60,28 @@ const loadSavedActiveSessionId = (sessions) => {
 const persistSessions = (sessions, activeId) => {
   if (typeof window === 'undefined') return
   try {
-    localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions))
+    // Sanitize sessions: store ONLY lean chat history, timestamps, and minimal citation tags.
+    // No raw bulky document dumps, schemas, or heavy payloads are stored.
+    const leanSessions = (sessions || []).map((s) => ({
+      id: s.id,
+      title: s.title,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+      messages: (s.messages || []).map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp,
+        citations: (m.citations || []).map((c) => ({
+          source: c.source,
+          title: c.title,
+          clause: c.clause,
+        })),
+        followUps: m.followUps || [],
+      })),
+    }))
+
+    localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(leanSessions))
     if (activeId) {
       localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, activeId)
     } else {
@@ -305,9 +334,16 @@ const useChatStore = create((set, get) => ({
 
       try {
         const ragApiKey = getStoredRagApiKey()
+        const previousMessages = (get().messages || []).slice(0, -1)
+        const chatHistory = previousMessages.slice(-4).map((m) => ({
+          role: m.role,
+          content: m.content,
+        }))
+
         const apiRes = await chatApi.query({
           sessionId,
           content,
+          chatHistory,
           language: selectedLanguage,
           mode: readingMode,
           role,
@@ -408,9 +444,16 @@ const useChatStore = create((set, get) => ({
       let canVerify = false
 
       try {
+        const previousMessages = trimmedMessages.slice(0, -1)
+        const chatHistory = previousMessages.slice(-4).map((m) => ({
+          role: m.role,
+          content: m.content,
+        }))
+
         const apiRes = await chatApi.query({
           sessionId: currentSessionId,
           content: lastUserMsg.content,
+          chatHistory,
           language: selectedLanguage,
           mode: readingMode,
           role: currentRole,
