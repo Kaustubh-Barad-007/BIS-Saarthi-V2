@@ -153,9 +153,19 @@ export async function initDb(sql) {
     await sql`ALTER TABLE complaints ADD COLUMN IF NOT EXISTS location TEXT`
     await sql`ALTER TABLE complaints ADD COLUMN IF NOT EXISTS date TIMESTAMP DEFAULT NOW()`
     await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS user_email TEXT`
+    await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS standard TEXT`
+    await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS category TEXT`
     await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS lab TEXT`
-    await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS validity TEXT DEFAULT 'Under Review'`
+    await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`
+    await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS applied TIMESTAMP DEFAULT NOW()`
     await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS updated TIMESTAMP DEFAULT NOW()`
+    await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS validity TEXT DEFAULT 'Under Review'`
+    await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_role TEXT DEFAULT 'all'`
+    await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS priority TEXT DEFAULT 'info'`
+    await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'General'`
+    await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS sender TEXT DEFAULT 'BIS Official'`
+    await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS action_url TEXT`
+    await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`
     await sql`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_email TEXT`
     await sql`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS ip_address TEXT`
   } catch (_) {}
@@ -175,6 +185,48 @@ export async function initDb(sql) {
           ('msme@bis.gov.in', ${mHash}, 'Rajesh Kumar', 'manufacturer', 'RK Industries Ltd'),
           ('admin@bis.gov.in', ${aHash}, 'Admin Officer', 'admin', 'BIS HQ Delhi')
         ON CONFLICT (email) DO NOTHING
+      `
+    }
+  } catch (_) {}
+
+  // Seed certifications if empty
+  try {
+    const [{ count }] = await sql`SELECT count(*)::int as count FROM certifications`
+    if (count === 0) {
+      await sql`
+        INSERT INTO certifications (id, product, standard, category, lab, status, validity)
+        VALUES 
+          ('CM/L-8400123', 'Packaged Drinking Water', 'IS 14543:2024', 'Food & Agriculture', 'Central Laboratory Sahibabad', 'active', 'Valid until 31 Mar 2026'),
+          ('CM/L-7200456', 'Ordinary Portland Cement (43 Grade)', 'IS 269:2015', 'Civil Engineering', 'Western Regional Lab Mumbai', 'in_progress', 'Under Lab Testing')
+        ON CONFLICT (id) DO NOTHING
+      `
+    }
+  } catch (_) {}
+
+  // Seed notifications if empty
+  try {
+    const [{ count }] = await sql`SELECT count(*)::int as count FROM notifications`
+    if (count === 0) {
+      await sql`
+        INSERT INTO notifications (id, title, message, target_role, priority, category, sender)
+        VALUES 
+          ('NOTIF-2025-01', 'Mandatory QCO for Electronics Goods', 'Quality Control Order now in force for IT hardware & battery packs under IS 16046.', 'all', 'urgent', 'Gazette Order', 'BIS Directorate General'),
+          ('NOTIF-2025-02', 'MSME Concession on Surveillance Charges', '80% fee waiver applicable for Micro & Small Enterprises under Scheme-I.', 'manufacturer', 'info', 'Fee Schedule', 'SME Promotion Cell')
+        ON CONFLICT (id) DO NOTHING
+      `
+    }
+  } catch (_) {}
+
+  // Seed knowledge docs if empty
+  try {
+    const [{ count }] = await sql`SELECT count(*)::int as count FROM knowledge_docs`
+    if (count === 0) {
+      await sql`
+        INSERT INTO knowledge_docs (title, category, version, size, status, chunks)
+        VALUES 
+          ('IS 14543:2024 Packaged Drinking Water Specification', 'Standard', '2024.1', 450000, 'published', 14),
+          ('IS 269:2015 Ordinary Portland Cement Specifications', 'Standard', '2015.3', 620000, 'published', 22),
+          ('BIS Act 2016 & Conformity Assessment Rules', 'Gazette', '2018.1', 890000, 'published', 35)
       `
     }
   } catch (_) {}
