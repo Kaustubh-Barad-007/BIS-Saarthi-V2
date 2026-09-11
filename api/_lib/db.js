@@ -147,6 +147,19 @@ export async function initDb(sql) {
     )
   `
 
+  // Ensure missing columns exist in existing tables
+  try {
+    await sql`ALTER TABLE complaints ADD COLUMN IF NOT EXISTS user_email TEXT`
+    await sql`ALTER TABLE complaints ADD COLUMN IF NOT EXISTS location TEXT`
+    await sql`ALTER TABLE complaints ADD COLUMN IF NOT EXISTS date TIMESTAMP DEFAULT NOW()`
+    await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS user_email TEXT`
+    await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS lab TEXT`
+    await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS validity TEXT DEFAULT 'Under Review'`
+    await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS updated TIMESTAMP DEFAULT NOW()`
+    await sql`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_email TEXT`
+    await sql`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS ip_address TEXT`
+  } catch (_) {}
+
   // Seed demo users if users table is empty (allowing demo login)
   try {
     const [{ count }] = await sql`SELECT count(*)::int as count FROM users`

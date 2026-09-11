@@ -260,7 +260,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { content, sessionId, language = 'en', role = 'consumer', manufacturerProfile } = req.body || {}
+  const { content: rawContent, query: rawQuery, sessionId, language = 'en', role = 'consumer', manufacturerProfile } = req.body || {}
+  const content = (rawContent || rawQuery || '').trim()
   if (!content) {
     return res.status(400).json({ error: 'Query content is required' })
   }
