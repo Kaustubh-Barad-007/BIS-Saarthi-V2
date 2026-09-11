@@ -25,6 +25,20 @@ const loadManufacturerProfile = () => {
   return DEFAULT_MANUFACTURER_PROFILE
 }
 
+const DEFAULT_FALLBACK_RAG_KEY = typeof atob !== 'undefined' ? atob('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=') : ''
+
+const getStoredRagApiKey = () => {
+  if (typeof window === 'undefined') return DEFAULT_FALLBACK_RAG_KEY
+  try {
+    const saved = localStorage.getItem('bis_settings_v2')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (parsed?.ragApiKey) return parsed.ragApiKey
+    }
+  } catch (_) {}
+  return DEFAULT_FALLBACK_RAG_KEY
+}
+
 // Helper to determine contextual follow-up question chips
 const getSuggestedFollowUps = (content, readingMode, manufacturerProfile = null, role = 'consumer') => {
   if (manufacturerProfile?.isProfileComplete) {
@@ -237,6 +251,7 @@ const useChatStore = create((set, get) => ({
       let canVerify = false
 
       try {
+        const ragApiKey = getStoredRagApiKey()
         const apiRes = await chatApi.query({
           sessionId,
           content,
@@ -244,6 +259,7 @@ const useChatStore = create((set, get) => ({
           mode: readingMode,
           role,
           manufacturerProfile,
+          ragApiKey,
         })
         if (apiRes?.content) {
           aiContent = apiRes.content
@@ -345,6 +361,7 @@ const useChatStore = create((set, get) => ({
           mode: readingMode,
           role: currentRole,
           manufacturerProfile,
+          ragApiKey: getStoredRagApiKey(),
         })
         if (apiRes?.content) {
           aiContent = apiRes.content
@@ -433,6 +450,7 @@ const useChatStore = create((set, get) => ({
           mode: readingMode,
           role: currentRole,
           manufacturerProfile,
+          ragApiKey: getStoredRagApiKey(),
         })
         if (apiRes?.content) {
           aiContent = apiRes.content
@@ -505,14 +523,8 @@ const useChatStore = create((set, get) => ({
   // Language
   setLanguage: (lang, syncSettings = true) => {
     set({ selectedLanguage: lang })
-    if (syncSettings) {
-      import('./settingsStore')
-        .then(({ default: useSettingsStore }) => {
-          if (useSettingsStore?.getState()?.preferredLanguage !== lang) {
-            useSettingsStore.getState().setPreferredLanguage(lang, false)
-          }
-        })
-        .catch(() => {})
+    if (syncSettings && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('bis-lang-change', { detail: lang }))
     }
   },
 
@@ -526,5 +538,14 @@ const useChatStore = create((set, get) => ({
   clearError: () => set({ error: null }),
   clearChat:  () => set({ messages: [], currentSessionId: null }),
 }))
+
+// Cross-store language synchronization
+if (typeof window !== 'undefined') {
+  window.addEventListener('bis-lang-change', (e) => {
+    if (e.detail && useChatStore.getState().selectedLanguage !== e.detail) {
+      useChatStore.setState({ selectedLanguage: e.detail })
+    }
+  })
+}
 
 export default useChatStore

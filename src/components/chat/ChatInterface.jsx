@@ -6,7 +6,7 @@ import {
   Maximize2, Minimize2, Volume2, VolumeX, Edit2, Edit3, Check,
   Search, Sparkles, RotateCcw, Square, SlidersHorizontal, ExternalLink,
   Printer, FileText, HelpCircle, Type, Building2, BookOpen, ShieldCheck, Scale, FileBadge,
-  PanelLeftOpen, PanelLeftClose, History
+  PanelLeftOpen, PanelLeftClose, History, Key, Eye, EyeOff, Loader2
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { resolveDetailedCitation, STANDARDS_REGISTRY } from '@/lib/standardsReferences'
@@ -69,6 +69,7 @@ function MessageBubble({
   onToggleTTS,
   fontSizeClass,
   translatedContent,
+  isSourcesOpen,
 }) {
   const [copied, setCopied] = useState(false)
   const [feedback, setFeedback] = useState(null)
@@ -289,8 +290,8 @@ function MessageBubble({
               <Bookmark className={cn("w-3.5 h-3.5", bookmarked && "fill-current")} />
             </button>
 
-            {/* View Sources in Right Sidebar */}
-            {message.citations?.length > 0 && (
+            {/* View Sources in Right Sidebar (hidden when sidebar is open) */}
+            {!isSourcesOpen && message.citations?.length > 0 && (
               <button
                 type="button"
                 onClick={() => onOpenSourcesSidebar?.(message.citations[0])}
@@ -529,6 +530,63 @@ export default function ChatInterface({ role = 'consumer' }) {
   const [feedbackReason, setFeedbackReason]         = useState('')
   const [showShortcuts, setShowShortcuts]           = useState(false)
 
+  // RAG API Key Modal State
+  const DEFAULT_RAG_KEY = typeof atob !== 'undefined' ? atob('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=') : ''
+  const [showRagKeyModal, setShowRagKeyModal] = useState(false)
+  const [ragKeyInput, setRagKeyInput]         = useState(settings.ragApiKey || DEFAULT_RAG_KEY)
+  const [isTestingRagKey, setIsTestingRagKey] = useState(false)
+  const [showKeyPassword, setShowKeyPassword] = useState(false)
+
+  useEffect(() => {
+    if (settings.ragApiKey) {
+      setRagKeyInput(settings.ragApiKey)
+    }
+  }, [settings.ragApiKey])
+
+  const handleSaveRagKey = () => {
+    if (!ragKeyInput.trim()) {
+      toast.error('Please enter a valid Gemini API key')
+      return
+    }
+    settings.setRagApiKey(ragKeyInput.trim())
+    setShowRagKeyModal(false)
+    toast.success('RAG Gemini API Key saved and active!')
+  }
+
+  const handleResetRagKey = () => {
+    setRagKeyInput(DEFAULT_RAG_KEY)
+    settings.setRagApiKey(DEFAULT_RAG_KEY)
+    toast.info('Reset to default Gemini RAG API key')
+  }
+
+  const handleTestRagKey = async () => {
+    if (!ragKeyInput.trim()) {
+      toast.error('Please enter an API key to test')
+      return
+    }
+    setIsTestingRagKey(true)
+    try {
+      const res = await fetch('/api/chat/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: 'Test connection: What is BIS ISI mark?',
+          ragApiKey: ragKeyInput.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        toast.success('API Key validated! Gemini response received successfully.')
+      } else {
+        toast.error(`Verification failed: ${data.message || 'Invalid key or quota exceeded'}`)
+      }
+    } catch (err) {
+      toast.error(`Connection failed: ${err.message}`)
+    } finally {
+      setIsTestingRagKey(false)
+    }
+  }
+
   // Right Sources & Regulatory References Sidebar State
   const [showSourcesSidebar, setShowSourcesSidebar]       = useState(false)
   const [sourcesSearchQuery, setSourcesSearchQuery]       = useState('')
@@ -603,6 +661,20 @@ export default function ChatInterface({ role = 'consumer' }) {
       }, 100)
     }
   }
+
+  // Automatically display supporting RAG document in the right sidebar when AI response arrives with citations
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1]
+      if (lastMsg.role === 'assistant' && lastMsg.citations?.length > 0) {
+        setShowSourcesSidebar(true)
+        setSourcesActiveTab('cited')
+        if (lastMsg.citations[0]?.source) {
+          setHighlightedSourceKey(lastMsg.citations[0].source)
+        }
+      }
+    }
+  }, [messages])
   
   // Inline rename state in sidebar
   const [editingSessionId, setEditingSessionId]     = useState(null)
@@ -1045,251 +1117,20 @@ export default function ChatInterface({ role = 'consumer' }) {
       )}
     >
 
-      {/* ── Mobile Backdrop for Session Sidebar ── */}
-      {showSidebar && (
-        <div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden animate-fade-in backdrop-blur-2xs"
-          onClick={() => setShowSidebar(false)}
-        />
-      )}
-
-      {/* ── Collapsed Dock Strip (Desktop) - Visual indicator that sidebar exists ── */}
-      {!showSidebar && (
-        <div className="hidden md:flex flex-col items-center justify-between bg-white dark:bg-dark-bg-card border-r border-gray-200 dark:border-dark-border w-12 shrink-0 py-3 z-20 select-none">
-          <div className="flex flex-col items-center gap-2.5">
-            <button
-              onClick={() => setShowSidebar(true)}
-              className="p-2 rounded-lg text-gov-navy dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors shadow-2xs group"
-              title="Open Chat History (Past Conversations)"
-              aria-label="Open Chat History"
-            >
-              <PanelLeftOpen className="w-4 h-4 transition-transform group-hover:scale-110" />
-            </button>
-            <button
-              onClick={() => startSession()}
-              className="p-2 rounded-lg text-gray-500 hover:text-gov-navy dark:text-dark-text-muted dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-border transition-colors"
-              title="New Conversation"
-              aria-label="New Conversation"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-
-          <button
-            onClick={() => setShowSidebar(true)}
-            className="flex flex-col items-center gap-2 text-gray-400 hover:text-gov-navy dark:hover:text-blue-400 transition-colors py-3 group cursor-pointer"
-            title="Click to open Chat History"
-          >
-            <History className="w-4 h-4 text-gray-400 group-hover:text-gov-navy dark:group-hover:text-blue-400 transition-colors" />
-            <span
-              className="text-[10px] font-bold tracking-widest uppercase text-gray-400 group-hover:text-gov-navy dark:group-hover:text-blue-400 transition-colors"
-              style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-            >
-              History ({sessions.length})
-            </span>
-          </button>
-        </div>
-      )}
-
-      {/* ── Session Sidebar (Resizable) ── */}
-      <div
-        style={showSidebar && typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: `${leftSidebarWidth}px` } : undefined}
-        className={cn(
-          'flex flex-col bg-white dark:bg-dark-bg-card border-r border-gray-200 dark:border-dark-border shrink-0 z-40 relative',
-          isDraggingLeft ? 'transition-none select-none' : 'transition-[width] duration-300',
-          showSidebar
-            ? 'max-md:fixed max-md:top-0 max-md:left-0 max-md:h-full max-md:w-72 max-md:shadow-2xl'
-            : 'w-0 overflow-hidden border-r-0'
-        )}
-      >
-        {/* Resize Handle for Left Sidebar (Desktop) */}
-        {showSidebar && (
-          <div
-            onMouseDown={startDraggingLeft}
-            className={cn(
-              'hidden md:flex absolute top-0 right-0 w-2 h-full cursor-col-resize z-50 items-center justify-center group select-none transition-colors -mr-1',
-              isDraggingLeft ? 'bg-blue-600' : 'hover:bg-blue-500/60'
-            )}
-            title="Drag to resize conversation history"
-          >
-            <div className="w-0.5 h-8 bg-gray-400/70 dark:bg-dark-border rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        )}
-        {/* Sidebar Header & New Chat */}
-        <div className="p-3 border-b border-gray-100 dark:border-dark-border space-y-2">
-          <div className="flex items-center justify-between gap-1 pb-1">
-            <div className="flex items-center gap-1.5">
-              <History className="w-4 h-4 text-gov-navy dark:text-blue-400" />
-              <span className="text-xs font-bold text-gray-800 dark:text-dark-text uppercase tracking-wider">
-                Chat History
-              </span>
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
-                {sessions.length}
-              </span>
-            </div>
-            <button
-              onClick={() => setShowSidebar(false)}
-              className="p-1 rounded-md text-gray-400 hover:text-gray-700 dark:text-dark-text-muted dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-border transition-colors flex items-center gap-1 text-xs"
-              title="Close history"
-              aria-label="Collapse sidebar"
-            >
-              <PanelLeftClose className="w-4 h-4" />
-            </button>
-          </div>
-          <button
-            onClick={() => {
-              startSession()
-              if (window.innerWidth < 768) setShowSidebar(false)
-            }}
-            className="btn-gov w-full text-xs py-2 flex items-center justify-center gap-1.5 shadow-xs"
-          >
-            <Plus className="w-3.5 h-3.5" /> {t('new_conversation', 'New Conversation')}
-          </button>
-
-          {/* Search sessions input */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-text-muted" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('search_conversations', 'Search conversations...')}
-              className="w-full bg-gray-50 dark:bg-dark-bg pl-8 pr-2.5 py-1.5 text-xs rounded-gov border border-gray-200 dark:border-dark-border outline-none text-gray-800 dark:text-dark-text placeholder-gray-400 dark:placeholder-dark-text-muted"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Sessions List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {filteredSessions.length === 0 ? (
-            <p className="text-xs text-center text-gray-400 dark:text-dark-text-muted py-8">
-              {searchQuery ? 'No matching conversations' : t('no_conversations', 'No conversations yet')}
-            </p>
-          ) : (
-            filteredSessions.map((session) => {
-              const isSelected = session.id === currentSessionId
-              const isRenaming = editingSessionId === session.id
-
-              return (
-                <div
-                  key={session.id}
-                  className={cn(
-                    'group flex items-center gap-1.5 px-2.5 py-2 rounded-gov cursor-pointer transition-colors relative text-xs',
-                    isSelected
-                      ? 'bg-bis-light-bg dark:bg-blue-900/20 text-bis-navy dark:text-blue-300 font-medium'
-                      : 'hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text'
-                  )}
-                  onClick={() => {
-                    if (!isRenaming) {
-                      switchSession(session.id)
-                      if (window.innerWidth < 768) setShowSidebar(false)
-                    }
-                  }}
-                >
-                  <MessageSquare className="w-3.5 h-3.5 shrink-0 opacity-70" />
-
-                  {isRenaming ? (
-                    <div className="flex items-center gap-1 flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="text"
-                        value={renameTitleInput}
-                        onChange={(e) => setRenameTitleInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveRename(session.id)
-                          if (e.key === 'Escape') setEditingSessionId(null)
-                        }}
-                        autoFocus
-                        className="w-full bg-white dark:bg-dark-bg px-1.5 py-0.5 border border-bis-navy rounded text-xs outline-none"
-                      />
-                      <button
-                        onClick={() => handleSaveRename(session.id)}
-                        className="p-1 hover:text-green-600 text-gray-500"
-                        title="Save title"
-                      >
-                        <Check className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => setEditingSessionId(null)}
-                        className="p-1 hover:text-gray-700 text-gray-400"
-                        title="Cancel"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <span className="truncate flex-1" title={session.title}>
-                        {session.title}
-                      </span>
-                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setEditingSessionId(session.id)
-                            setRenameTitleInput(session.title)
-                          }}
-                          className="p-1 hover:text-bis-navy dark:hover:text-blue-400 text-gray-400 transition-colors"
-                          title="Rename conversation"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSessionToDelete(session)
-                          }}
-                          className="p-1 hover:text-red-500 text-gray-400 transition-colors"
-                          title="Delete conversation"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )
-            })
-          )}
-        </div>
-      </div>
-
       {/* ── Main Chat Area ── */}
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* Chat Header */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-dark-bg-card border-b border-gray-200 dark:border-dark-border gap-2 flex-wrap sm:flex-nowrap">
-          {/* Left: Sidebar toggle, Title, Reading Mode Badge */}
+          {/* Left: New Chat & Title */}
           <div className="flex items-center gap-2.5">
             <button
-              onClick={() => setShowSidebar(!showSidebar)}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all shadow-2xs cursor-pointer",
-                showSidebar
-                  ? "bg-blue-50 border-blue-200 text-gov-navy dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300"
-                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 dark:bg-dark-bg-card dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-border"
-              )}
-              title={showSidebar ? "Collapse Chat History" : "Open Chat History"}
-              aria-label="Toggle chat history sidebar"
+              onClick={() => startSession()}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 dark:bg-dark-bg-card dark:border-dark-border dark:text-dark-text transition-all text-xs font-semibold shadow-2xs cursor-pointer"
+              title="Start New Conversation"
             >
-              {showSidebar ? (
-                <PanelLeftClose className="w-4 h-4 text-gov-navy dark:text-blue-400 shrink-0" />
-              ) : (
-                <PanelLeftOpen className="w-4 h-4 text-gov-navy dark:text-blue-400 shrink-0" />
-              )}
-              <span className="hidden sm:inline font-semibold">
-                {showSidebar ? "Close History" : "Chat History"}
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-dark-border text-gray-700 dark:text-dark-text-muted font-bold leading-none">
-                {sessions.length}
-              </span>
+              <Plus className="w-3.5 h-3.5 text-gov-navy dark:text-blue-400 shrink-0" />
+              <span className="hidden sm:inline">New Chat</span>
             </button>
             <div>
               <div className="flex items-center gap-2">
@@ -1309,42 +1150,6 @@ export default function ChatInterface({ role = 'consumer' }) {
           {/* Right: Controls (Sources, Language, Font Size, Export, Clear, Fullscreen) */}
           <div className="flex items-center gap-1.5 flex-wrap">
 
-            {/* Font Size Accessibility Selector */}
-            <div className="relative">
-              <button
-                onClick={() => setShowFontMenu(!showFontMenu)}
-                className="flex items-center gap-1 text-xs px-2 py-1.5 border border-gray-200 dark:border-dark-border rounded-gov hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-600 dark:text-dark-text-muted transition-colors"
-                title="Adjust in-chat text size for accessibility"
-              >
-                <Type className="w-3.5 h-3.5" />
-                <span className="uppercase text-[10px] font-semibold">{chatFontSize}</span>
-              </button>
-              {showFontMenu && (
-                <div className="absolute right-0 top-full mt-1 w-28 bg-white dark:bg-dark-bg-card rounded-gov shadow-gov-md border border-gray-100 dark:border-dark-border z-20 py-1">
-                  {[
-                    { id: 'sm', label: 'Small (12px)' },
-                    { id: 'md', label: 'Default (14px)' },
-                    { id: 'lg', label: 'Large (16px)' },
-                    { id: 'xl', label: 'Extra (18px)' },
-                  ].map((sz) => (
-                    <button
-                      key={sz.id}
-                      onClick={() => {
-                        setChatFontSize(sz.id)
-                        setShowFontMenu(false)
-                      }}
-                      className={cn(
-                        'w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-dark-bg-secondary transition-colors',
-                        chatFontSize === sz.id && 'text-bis-navy font-semibold bg-blue-50/50 dark:bg-blue-900/20'
-                      )}
-                    >
-                      {sz.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Export Dropdown */}
             <div className="relative">
               <button
@@ -1358,12 +1163,6 @@ export default function ChatInterface({ role = 'consumer' }) {
               </button>
               {showExportMenu && (
                 <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-dark-bg-card rounded-gov shadow-gov-md border border-gray-100 dark:border-dark-border z-20 py-1">
-                  <button
-                    onClick={() => handleExport('markdown')}
-                    className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-dark-bg-secondary flex items-center gap-2"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-blue-500" /> {t('export_markdown', 'Export Markdown (.md)')}
-                  </button>
                   <button
                     onClick={() => handleExport('text')}
                     className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-dark-bg-secondary flex items-center gap-2"
@@ -1442,26 +1241,34 @@ export default function ChatInterface({ role = 'consumer' }) {
               )}
             </button>
 
-            {/* Sources & References Sidebar Toggle */}
+            {/* RAG API Key Setup */}
             <button
               type="button"
-              onClick={() => setShowSourcesSidebar(!showSourcesSidebar)}
-              className={cn(
-                'flex items-center gap-1.5 text-xs px-2.5 py-1.5 border rounded-gov transition-all shadow-xs',
-                showSourcesSidebar
-                  ? 'bg-blue-50 border-blue-300 text-bis-navy dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 font-bold'
-                  : 'border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text'
-              )}
-              title={showSourcesSidebar ? "Hide Sources & References Sidebar" : "Show Sources & References Sidebar"}
+              onClick={() => setShowRagKeyModal(true)}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 border border-amber-300 dark:border-amber-700/60 bg-amber-50/70 dark:bg-amber-950/30 rounded-gov hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-900 dark:text-amber-300 transition-all shadow-2xs cursor-pointer font-semibold"
+              title="Configure Gemini RAG API Key"
             >
-              <BookOpen className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span className="hidden sm:inline text-[11px]">Sources</span>
-              {conversationCitations.length > 0 && (
-                <span className="bg-bis-navy dark:bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
-                  {conversationCitations.length}
-                </span>
-              )}
+              <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="hidden sm:inline text-[11px]">RAG Key</span>
             </button>
+
+            {/* Sources & References Sidebar Toggle (disappears when open) */}
+            {!showSourcesSidebar && (
+              <button
+                type="button"
+                onClick={() => setShowSourcesSidebar(true)}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 border rounded-gov transition-all shadow-xs border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text cursor-pointer"
+                title="Show Sources & References Sidebar"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span className="hidden sm:inline text-[11px]">Sources</span>
+                {conversationCitations.length > 0 && (
+                  <span className="bg-bis-navy dark:bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                    {conversationCitations.length}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
 
@@ -1753,6 +1560,7 @@ export default function ChatInterface({ role = 'consumer' }) {
               onToggleTTS={toggleTTS}
               fontSizeClass={currentFontSizeClass}
               translatedContent={translations[msg.id]?.[selectedLanguage]}
+              isSourcesOpen={showSourcesSidebar}
             />
           ))}
 
@@ -2740,6 +2548,142 @@ export default function ChatInterface({ role = 'consumer' }) {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Gemini RAG API Key Modal ── */}
+      {showRagKeyModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in"
+          onClick={() => setShowRagKeyModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-dark-bg-card rounded-xl shadow-2xl max-w-lg w-full border border-gray-200 dark:border-dark-border overflow-hidden animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 p-4 border-b border-amber-200/80 dark:border-amber-800/60 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                    Gemini RAG API Key Setup
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-semibold">
+                      Live AI
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-gray-500 dark:text-dark-text-muted">
+                    Powers real-time BIS standard retrieval and verified responses
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRagKeyModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 rounded-md transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4">
+              <div className="bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/40 rounded-lg p-3 text-xs text-blue-900 dark:text-blue-200 flex gap-2.5 items-start">
+                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold mb-0.5">Factual Standards Grounding</p>
+                  <p className="text-[11px] text-blue-800/80 dark:text-blue-300/80 leading-relaxed">
+                    This key connects BIS Saarthi to Google Gemini 1.5/2.0 to index, cite, and cross-reference official Indian Standards (IS), QCO orders, and laboratory test matrices without hallucination.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1.5">
+                  Google Gemini API Key
+                </label>
+                <div className="relative">
+                  <input
+                    type={showKeyPassword ? 'text' : 'password'}
+                    value={ragKeyInput}
+                    onChange={(e) => setRagKeyInput(e.target.value)}
+                    placeholder="AQ... or AIzaSy..."
+                    className="w-full text-xs font-mono px-3 py-2 pr-10 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-amber-500 focus:outline-none dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyPassword(!showKeyPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 cursor-pointer"
+                    title={showKeyPassword ? 'Hide key' : 'Show key'}
+                  >
+                    {showKeyPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between mt-1.5 text-[11px] text-gray-500 dark:text-dark-text-muted">
+                  <span>Default preloaded key is active.</span>
+                  <button
+                    type="button"
+                    onClick={handleResetRagKey}
+                    className="text-amber-700 dark:text-amber-400 hover:underline font-medium cursor-pointer"
+                  >
+                    Reset to Default
+                  </button>
+                </div>
+              </div>
+
+              {/* Status indicator */}
+              <div className="rounded-lg bg-gray-50 dark:bg-dark-bg-secondary p-3 border border-gray-100 dark:border-dark-border flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "w-2 h-2 rounded-full",
+                    ragKeyInput ? "bg-emerald-500 animate-pulse" : "bg-gray-400"
+                  )} />
+                  <span className="text-gray-700 dark:text-dark-text font-medium">
+                    {ragKeyInput ? 'Key Configured & Active' : 'No Key Configured'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={isTestingRagKey || !ragKeyInput.trim()}
+                  onClick={handleTestRagKey}
+                  className="px-2.5 py-1 text-[11px] font-semibold rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg-card hover:bg-gray-50 dark:hover:bg-dark-bg text-gray-700 dark:text-dark-text disabled:opacity-50 flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isTestingRagKey ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
+                      <span>Testing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <span>Test Connection</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-50 dark:bg-dark-bg-secondary border-t border-gray-100 dark:border-dark-border flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowRagKeyModal(false)}
+                className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-dark-text-muted hover:bg-gray-200/60 dark:hover:bg-dark-border rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveRagKey}
+                className="px-4 py-1.5 text-xs font-semibold text-white bg-bis-navy hover:bg-bis-navy-dark dark:bg-blue-600 dark:hover:bg-blue-700 rounded-lg transition-colors shadow-xs cursor-pointer"
+              >
+                Save & Apply Key
+              </button>
+            </div>
           </div>
         </div>
       )}

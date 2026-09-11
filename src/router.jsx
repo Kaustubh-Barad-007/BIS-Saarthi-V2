@@ -106,9 +106,6 @@ export default function AppRouter() {
         element={<ProtectedRoute roles={[ROLES.MANUFACTURER]}><DashWrapper><ManufacturerNotifications /></DashWrapper></ProtectedRoute>}
       />
 
-      {/* Professional routes redirected */}
-      <Route path="/professional/*" element={<Navigate to={ROUTES.CONSUMER_DASHBOARD} replace />} />
-
       {/* Admin routes */}
       <Route path={ROUTES.ADMIN_DASHBOARD}
         element={<ProtectedRoute roles={[ROLES.ADMIN]}><DashWrapper><AdminDashboard /></DashWrapper></ProtectedRoute>}

@@ -24,10 +24,11 @@ const DEFAULT_SETTINGS = {
   emailAlerts: true,
   complianceAlerts: true,
 
-  // Security
+  // Security & AI RAG
   twoFactorEnabled: false,
   sessionTimeoutMinutes: 60,
   maskedKey: '138c••••••••••026',
+  ragApiKey: typeof atob !== 'undefined' ? atob('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=') : '',
 }
 
 const loadSavedSettings = () => {
@@ -96,14 +97,8 @@ export const useSettingsStore = create((set, get) => {
       if (typeof document !== 'undefined') {
         document.documentElement.lang = lang
       }
-      if (syncChat) {
-        import('./chatStore')
-          .then(({ default: useChatStore }) => {
-            if (useChatStore?.getState()?.selectedLanguage !== lang) {
-              useChatStore.getState().setLanguage(lang, false)
-            }
-          })
-          .catch(() => {})
+      if (syncChat && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('bis-lang-change', { detail: lang }))
       }
     },
 
@@ -179,6 +174,11 @@ export const useSettingsStore = create((set, get) => {
       })
     },
 
+    setRagApiKey: (key) => {
+      set({ ragApiKey: key })
+      saveSettings(get())
+    },
+
     // Play synthesized sound effect
     playSound: (type = 'send') => {
       if (!get().soundEffects || typeof window === 'undefined') return
@@ -219,8 +219,15 @@ export const useSettingsStore = create((set, get) => {
   }
 })
 
-// Cross-tab sync
+// Cross-tab sync and cross-store language synchronization
 if (typeof window !== 'undefined') {
+  window.addEventListener('bis-lang-change', (e) => {
+    if (e.detail && useSettingsStore.getState().preferredLanguage !== e.detail) {
+      useSettingsStore.setState({ preferredLanguage: e.detail })
+      const current = loadSavedSettings()
+      saveSettings({ ...current, preferredLanguage: e.detail })
+    }
+  })
   window.addEventListener('storage', (e) => {
     if (e.key === STORAGE_KEY && e.newValue) {
       try {

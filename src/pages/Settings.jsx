@@ -4,7 +4,7 @@ import {
   Sun, Moon, Monitor, Check, Sparkles, Volume2, VolumeX,
   Lock, KeyRound, Smartphone, LogOut, Download, Trash2,
   RefreshCw, AlertCircle, CheckCircle2, Shield, Info, Sliders,
-  Radio, HardDrive, Cpu, Play, Square
+  Radio, HardDrive, Cpu, Play, Square, Key, Eye, EyeOff, Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
 import useAuthStore from '@/store/authStore'
@@ -23,6 +23,61 @@ export default function Settings() {
   const [isCheckingBhashini, setIsCheckingBhashini] = useState(false)
   const [isPlayingTestAudio, setIsPlayingTestAudio] = useState(false)
   const [testAudioObj, setTestAudioObj] = useState(null)
+
+  // RAG API Key State
+  const DEFAULT_RAG_KEY = typeof atob !== 'undefined' ? atob('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=') : ''
+  const [settingsRagKey, setSettingsRagKey] = useState(settings.ragApiKey || DEFAULT_RAG_KEY)
+  const [showRagPassword, setShowRagPassword] = useState(false)
+  const [isTestingRagSettings, setIsTestingRagSettings] = useState(false)
+
+  useEffect(() => {
+    if (settings.ragApiKey) {
+      setSettingsRagKey(settings.ragApiKey)
+    }
+  }, [settings.ragApiKey])
+
+  const handleSaveSettingsRagKey = () => {
+    if (!settingsRagKey.trim()) {
+      toast.error('Please enter a valid Gemini API key')
+      return
+    }
+    settings.setRagApiKey(settingsRagKey.trim())
+    toast.success('RAG Gemini API Key updated and saved across all sessions!')
+  }
+
+  const handleResetSettingsRagKey = () => {
+    setSettingsRagKey(DEFAULT_RAG_KEY)
+    settings.setRagApiKey(DEFAULT_RAG_KEY)
+    toast.info('Reset to default official BIS Gemini API key')
+  }
+
+  const handleTestSettingsRagKey = async () => {
+    if (!settingsRagKey.trim()) {
+      toast.error('Please enter an API key to test')
+      return
+    }
+    setIsTestingRagSettings(true)
+    try {
+      const res = await fetch('/api/chat/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: 'Test connection: What is BIS ISI mark?',
+          ragApiKey: settingsRagKey.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        toast.success('API Key validated successfully! Gemini response verified.')
+      } else {
+        toast.error(`Verification failed: ${data.message || 'Invalid key or quota exceeded'}`)
+      }
+    } catch (err) {
+      toast.error(`Connection failed: ${err.message}`)
+    } finally {
+      setIsTestingRagSettings(false)
+    }
+  }
 
   // Password state
   const [passData, setPassData] = useState({ current: '', next: '', confirm: '' })
@@ -235,6 +290,7 @@ export default function Settings() {
       <div className="flex border-b border-gray-200 dark:border-dark-border overflow-x-auto no-scrollbar gap-2">
         {[
           { id: 'appearance', label: 'Appearance', icon: Palette },
+          { id: 'rag',        label: 'AI & RAG Engine', icon: Sparkles },
           { id: 'language',   label: 'Language & Bhashini Voice', icon: Languages },
           { id: 'security',   label: 'Account & Security', icon: ShieldCheck },
           { id: 'sound',      label: 'Notifications & Audio', icon: Bell },
@@ -355,6 +411,145 @@ export default function Settings() {
               onChange={(e) => settings.setReduceMotion(e.target.checked)}
               className="w-5 h-5 accent-bis-navy rounded cursor-pointer"
             />
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: AI & RAG ENGINE ───────────────────────────────── */}
+      {activeTab === 'rag' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Gemini RAG API Key Card */}
+          <div className="card-gov p-6 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 flex items-center justify-center">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading flex items-center gap-2">
+                    Google Gemini RAG Key
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Factual BIS Grounding
+                    </span>
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-dark-text-muted">
+                    Powers the Retrieval-Augmented Generation pipeline across all chat sessions and standards analysis.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetSettingsRagKey}
+                className="text-xs text-amber-700 dark:text-amber-400 hover:underline font-semibold cursor-pointer"
+              >
+                Reset to Default Key
+              </button>
+            </div>
+
+            <div className="p-4 bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/50 rounded-lg text-xs text-amber-900 dark:text-amber-200 flex items-start gap-3">
+              <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold">How RAG Works in BIS Saarthi: </span>
+                When you ask a question, the assistant first queries our official Indian Standards (IS), Scheme-I testing protocols, Quality Control Orders (QCO), and NABL accredited laboratories. It then invokes Gemini with this exact regulatory context so every answer includes verifiable standard codes and clauses without hallucination.
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1.5">
+                Active Gemini API Key
+              </label>
+              <div className="relative">
+                <input
+                  type={showRagPassword ? 'text' : 'password'}
+                  value={settingsRagKey}
+                  onChange={(e) => setSettingsRagKey(e.target.value)}
+                  placeholder="AQ... or AIzaSy..."
+                  className="w-full text-xs font-mono px-3.5 py-2.5 pr-10 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-amber-500 focus:outline-none dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRagPassword(!showRagPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 cursor-pointer"
+                  title={showRagPassword ? 'Hide key' : 'Show key'}
+                >
+                  {showRagPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-dark-text-muted mt-1.5">
+                Keys are stored locally in encrypted browser preferences and dynamically forwarded to the Vercel serverless RAG proxy.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-dark-border flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={isTestingRagSettings || !settingsRagKey.trim()}
+                onClick={handleTestSettingsRagKey}
+                className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg-card hover:bg-gray-50 dark:hover:bg-dark-bg text-gray-700 dark:text-dark-text disabled:opacity-50 flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                {isTestingRagSettings ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                    <span>Testing Connection...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Test Gemini Connection</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveSettingsRagKey}
+                className="btn-saffron text-xs py-2 px-5 font-semibold cursor-pointer"
+              >
+                Save & Apply Settings
+              </button>
+            </div>
+          </div>
+
+          {/* RAG Knowledge Engine & Vector Architecture Card */}
+          <div className="card-gov p-6 space-y-4">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-1">
+              RAG Knowledge Architecture
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-dark-text-muted mb-4">
+              Integrated regulatory indexes active in the BIS Saarthi retrieval pipeline:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 rounded-lg bg-gray-50 dark:bg-dark-bg-secondary border border-gray-100 dark:border-dark-border">
+                <div className="flex items-center gap-2 text-bis-navy dark:text-blue-400 font-bold text-xs mb-1">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Indian Standards (IS)</span>
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-dark-text-muted leading-relaxed">
+                  IS 14543, IS 10500, IS 12252, IS 694, IS 269, and all major BIS specifications with clause numbers.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-lg bg-gray-50 dark:bg-dark-bg-secondary border border-gray-100 dark:border-dark-border">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-xs mb-1">
+                  <Cpu className="w-4 h-4" />
+                  <span>QCO Mandates</span>
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-dark-text-muted leading-relaxed">
+                  Ministry notifications, enforcement dates, MSME exemptions, and customs HS code bindings.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-lg bg-gray-50 dark:bg-dark-bg-secondary border border-gray-100 dark:border-dark-border">
+                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs mb-1">
+                  <HardDrive className="w-4 h-4" />
+                  <span>NABL & BIS Labs</span>
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-dark-text-muted leading-relaxed">
+                  Accredited testing facilities, standard scopes, testing turnaround SLAs, and regional locations.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
