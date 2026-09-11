@@ -25,6 +25,42 @@ const loadManufacturerProfile = () => {
   return DEFAULT_MANUFACTURER_PROFILE
 }
 
+const SESSIONS_STORAGE_KEY = 'bis_chat_sessions_v2'
+const ACTIVE_SESSION_STORAGE_KEY = 'bis_active_session_v2'
+
+const loadSavedSessions = () => {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(SESSIONS_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed
+    }
+  } catch (_) {}
+  return []
+}
+
+const loadSavedActiveSessionId = (sessions) => {
+  if (typeof window === 'undefined') return null
+  try {
+    const active = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY)
+    if (active && sessions.some(s => s.id === active)) return active
+  } catch (_) {}
+  return sessions[0]?.id || null
+}
+
+const persistSessions = (sessions, activeId) => {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions))
+    if (activeId) {
+      localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, activeId)
+    } else {
+      localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY)
+    }
+  } catch (_) {}
+}
+
 const DEFAULT_FALLBACK_RAG_KEY = typeof atob !== 'undefined' ? atob('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=') : ''
 
 const getStoredRagApiKey = () => {
@@ -125,10 +161,16 @@ export const translateToTargetLanguage = async (text, targetLang) => {
 
 // Database-Driven System: Static mock responses have been permanently removed.
 
+const initialSessions = loadSavedSessions()
+const initialActiveSessionId = loadSavedActiveSessionId(initialSessions)
+const initialMessages = initialActiveSessionId
+  ? (initialSessions.find((s) => s.id === initialActiveSessionId)?.messages || [])
+  : []
+
 const useChatStore = create((set, get) => ({
-  sessions:        [],
-  currentSessionId:null,
-  messages:        [],
+  sessions:        initialSessions,
+  currentSessionId:initialActiveSessionId,
+  messages:        initialMessages,
   isLoading:       false,
   isStreaming:      false,
   error:           null,
@@ -175,11 +217,13 @@ const useChatStore = create((set, get) => ({
       createdAt: new Date().toISOString(),
       messages:  [],
     }
-    set((s) => ({
-      sessions:         [session, ...s.sessions],
+    const nextSessions = [session, ...get().sessions]
+    set({
+      sessions:         nextSessions,
       currentSessionId: sessionId,
       messages:         [],
-    }))
+    })
+    persistSessions(nextSessions, sessionId)
     return sessionId
   },
 
@@ -188,28 +232,37 @@ const useChatStore = create((set, get) => ({
     const session = get().sessions.find((s) => s.id === sessionId)
     if (!session) return
     set({ currentSessionId: sessionId, messages: session.messages || [] })
+    persistSessions(get().sessions, sessionId)
   },
 
   // Rename an existing session
   renameSession: (sessionId, newTitle) => {
     if (!newTitle?.trim()) return
-    set((s) => ({
-      sessions: s.sessions.map((sess) =>
-        sess.id === sessionId ? { ...sess, title: newTitle.trim() } : sess
-      ),
-    }))
+    const nextSessions = get().sessions.map((sess) =>
+      sess.id === sessionId ? { ...sess, title: newTitle.trim() } : sess
+    )
+    set({ sessions: nextSessions })
+    persistSessions(nextSessions, get().currentSessionId)
   },
 
   // Clear messages inside current active session
   clearCurrentMessages: () => {
     const { currentSessionId, sessions } = get()
     if (!currentSessionId) return
+    const nextSessions = sessions.map((s) =>
+      s.id === currentSessionId ? { ...s, messages: [] } : s
+    )
     set({
       messages: [],
-      sessions: sessions.map((s) =>
-        s.id === currentSessionId ? { ...s, messages: [] } : s
-      ),
+      sessions: nextSessions,
     })
+    persistSessions(nextSessions, currentSessionId)
+  },
+
+  // Clear all conversation history
+  clearAllHistory: () => {
+    set({ sessions: [], messages: [], currentSessionId: null })
+    persistSessions([], null)
   },
 
   // Stop active streaming/generation
@@ -317,6 +370,7 @@ const useChatStore = create((set, get) => ({
         isStreaming: false,
         sessions:   updatedSessions,
       }))
+      persistSessions(updatedSessions, sessionId)
     } catch (err) {
       set({ isStreaming: false, error: err.message })
     }
@@ -411,6 +465,7 @@ const useChatStore = create((set, get) => ({
         isStreaming: false,
         sessions:   updatedSessions,
       })
+      persistSessions(updatedSessions, currentSessionId)
     } catch (err) {
       set({ isStreaming: false, error: err.message })
     }
@@ -500,6 +555,7 @@ const useChatStore = create((set, get) => ({
         isStreaming: false,
         sessions:   updatedSessions,
       })
+      persistSessions(updatedSessions, currentSessionId)
     } catch (err) {
       set({ isStreaming: false, error: err.message })
     }
@@ -507,17 +563,21 @@ const useChatStore = create((set, get) => ({
 
   // Delete session
   deleteSession: (sessionId) => {
-    set((s) => {
-      const sessions = s.sessions.filter((x) => x.id !== sessionId)
-      const currentSessionId = s.currentSessionId === sessionId
-        ? sessions[0]?.id || null
-        : s.currentSessionId
-      return {
-        sessions,
-        currentSessionId,
-        messages: currentSessionId === sessionId ? (sessions[0]?.messages || []) : s.messages,
-      }
+    const { sessions, currentSessionId } = get()
+    const updatedSessions = sessions.filter((x) => x.id !== sessionId)
+    const nextCurrentSessionId = currentSessionId === sessionId
+      ? updatedSessions[0]?.id || null
+      : currentSessionId
+    const nextMessages = nextCurrentSessionId
+      ? (updatedSessions.find(s => s.id === nextCurrentSessionId)?.messages || [])
+      : []
+
+    set({
+      sessions: updatedSessions,
+      currentSessionId: nextCurrentSessionId,
+      messages: nextMessages,
     })
+    persistSessions(updatedSessions, nextCurrentSessionId)
   },
 
   // Language
@@ -536,7 +596,10 @@ const useChatStore = create((set, get) => ({
   clearFiles: ()      => set({ uploadedFiles: [] }),
 
   clearError: () => set({ error: null }),
-  clearChat:  () => set({ messages: [], currentSessionId: null }),
+  clearChat:  () => {
+    set({ messages: [], currentSessionId: null })
+    persistSessions(get().sessions, null)
+  },
 }))
 
 // Cross-store language synchronization

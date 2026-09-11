@@ -448,7 +448,7 @@ export default function ChatInterface({ role = 'consumer' }) {
 
   // Local UI states
   const [input, setInput]                           = useState('')
-  const [showSidebar, setShowSidebar]               = useState(false)
+  const [showSidebar, setShowSidebar]               = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : false)
   const [showLang, setShowLang]                     = useState(false)
   const [showExportMenu, setShowExportMenu]         = useState(false)
   const [showFontMenu, setShowFontMenu]             = useState(false)
@@ -530,62 +530,7 @@ export default function ChatInterface({ role = 'consumer' }) {
   const [feedbackReason, setFeedbackReason]         = useState('')
   const [showShortcuts, setShowShortcuts]           = useState(false)
 
-  // RAG API Key Modal State
-  const DEFAULT_RAG_KEY = typeof atob !== 'undefined' ? atob('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=') : ''
-  const [showRagKeyModal, setShowRagKeyModal] = useState(false)
-  const [ragKeyInput, setRagKeyInput]         = useState(settings.ragApiKey || DEFAULT_RAG_KEY)
-  const [isTestingRagKey, setIsTestingRagKey] = useState(false)
-  const [showKeyPassword, setShowKeyPassword] = useState(false)
 
-  useEffect(() => {
-    if (settings.ragApiKey) {
-      setRagKeyInput(settings.ragApiKey)
-    }
-  }, [settings.ragApiKey])
-
-  const handleSaveRagKey = () => {
-    if (!ragKeyInput.trim()) {
-      toast.error('Please enter a valid Gemini API key')
-      return
-    }
-    settings.setRagApiKey(ragKeyInput.trim())
-    setShowRagKeyModal(false)
-    toast.success('RAG Gemini API Key saved and active!')
-  }
-
-  const handleResetRagKey = () => {
-    setRagKeyInput(DEFAULT_RAG_KEY)
-    settings.setRagApiKey(DEFAULT_RAG_KEY)
-    toast.info('Reset to default Gemini RAG API key')
-  }
-
-  const handleTestRagKey = async () => {
-    if (!ragKeyInput.trim()) {
-      toast.error('Please enter an API key to test')
-      return
-    }
-    setIsTestingRagKey(true)
-    try {
-      const res = await fetch('/api/chat/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: 'Test connection: What is BIS ISI mark?',
-          ragApiKey: ragKeyInput.trim(),
-        }),
-      })
-      const data = await res.json()
-      if (res.ok && data.success) {
-        toast.success('API Key validated! Gemini response received successfully.')
-      } else {
-        toast.error(`Verification failed: ${data.message || 'Invalid key or quota exceeded'}`)
-      }
-    } catch (err) {
-      toast.error(`Connection failed: ${err.message}`)
-    } finally {
-      setIsTestingRagKey(false)
-    }
-  }
 
   // Right Sources & Regulatory References Sidebar State
   const [showSourcesSidebar, setShowSourcesSidebar]       = useState(false)
@@ -1117,21 +1062,269 @@ export default function ChatInterface({ role = 'consumer' }) {
       )}
     >
 
+      {/* ── Collapsed Left Sidebar Strip (Desktop) ── */}
+      {!showSidebar && (
+        <div className="hidden md:flex flex-col items-center justify-between py-3 px-1.5 bg-white dark:bg-dark-bg-card border-r border-gray-200 dark:border-dark-border shrink-0 z-30 w-12">
+          <div className="flex flex-col items-center gap-3">
+            <button
+              onClick={() => setShowSidebar(true)}
+              className="p-2 rounded-lg text-gray-500 hover:text-bis-navy dark:text-dark-text-muted dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-dark-border transition-colors cursor-pointer"
+              title="Expand Chat History Sidebar"
+              aria-label="Expand Chat History"
+            >
+              <PanelLeftOpen className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => startSession()}
+              className="p-2 rounded-lg text-white bg-bis-navy hover:bg-bis-navy-dark dark:bg-blue-600 dark:hover:bg-blue-700 transition-colors cursor-pointer shadow-xs"
+              title="New Conversation"
+              aria-label="New Conversation"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+
+          <button
+            onClick={() => setShowSidebar(true)}
+            className="flex flex-col items-center gap-2 text-gray-400 hover:text-bis-navy dark:hover:text-blue-400 transition-colors py-3 group cursor-pointer"
+            title="Click to open Chat History"
+          >
+            <History className="w-4 h-4 text-gray-400 group-hover:text-bis-navy dark:group-hover:text-blue-400 transition-colors" />
+            <span
+              className="text-[10px] font-bold tracking-widest uppercase text-gray-400 group-hover:text-bis-navy dark:group-hover:text-blue-400 transition-colors"
+              style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+            >
+              History ({sessions.length})
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Mobile backdrop when left sidebar is open */}
+      {showSidebar && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/40 z-30 backdrop-blur-2xs"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+
+      {/* ── Left Session & History Sidebar (Resizable) ── */}
+      <div
+        style={showSidebar && typeof window !== 'undefined' && window.innerWidth >= 768 ? { width: `${leftSidebarWidth}px` } : undefined}
+        className={cn(
+          'flex flex-col bg-white dark:bg-dark-bg-card border-r border-gray-200 dark:border-dark-border shrink-0 z-40 relative',
+          isDraggingLeft ? 'transition-none select-none' : 'transition-[width] duration-300',
+          showSidebar
+            ? 'max-md:fixed max-md:top-0 max-md:left-0 max-md:h-full max-md:w-72 max-md:shadow-2xl'
+            : 'w-0 overflow-hidden border-r-0'
+        )}
+      >
+        {/* Resize Handle for Left Sidebar (Desktop) */}
+        {showSidebar && (
+          <div
+            onMouseDown={startDraggingLeft}
+            className={cn(
+              'hidden md:flex absolute top-0 right-0 w-2 h-full cursor-col-resize z-50 items-center justify-center group select-none transition-colors -mr-1',
+              isDraggingLeft ? 'bg-blue-600' : 'hover:bg-blue-500/60'
+            )}
+            title="Drag to resize conversation history"
+          >
+            <div className="w-0.5 h-8 bg-gray-400/70 dark:bg-dark-border rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        )}
+
+        {/* Sidebar Header & New Chat Button */}
+        <div className="p-3 border-b border-gray-100 dark:border-dark-border space-y-2">
+          <div className="flex items-center justify-between gap-1 pb-1">
+            <div className="flex items-center gap-1.5">
+              <History className="w-4 h-4 text-bis-navy dark:text-blue-400" />
+              <span className="text-xs font-bold text-gray-800 dark:text-dark-text">Conversations</span>
+              <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                {sessions.length}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowSidebar(false)}
+              className="p-1 rounded-md text-gray-400 hover:text-gray-700 dark:text-dark-text-muted dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-border transition-colors flex items-center gap-1 text-xs cursor-pointer"
+              title="Collapse sidebar"
+              aria-label="Collapse sidebar"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+          </div>
+
+          <button
+            onClick={() => {
+              startSession()
+              if (window.innerWidth < 768) setShowSidebar(false)
+            }}
+            className="btn-gov w-full text-xs py-2 flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> New Conversation
+          </button>
+
+          {/* Search sessions input */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-text-muted" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search conversations..."
+              className="w-full bg-gray-50 dark:bg-dark-bg pl-8 pr-2.5 py-1.5 text-xs rounded-gov border border-gray-200 dark:border-dark-border outline-none text-gray-800 dark:text-dark-text placeholder-gray-400 dark:placeholder-dark-text-muted"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Session List */}
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {filteredSessions.length === 0 ? (
+            <div className="p-4 text-center text-xs text-gray-400 dark:text-dark-text-muted">
+              {searchQuery ? 'No matching conversations' : 'No saved conversations yet'}
+            </div>
+          ) : (
+            filteredSessions.map((session) => {
+              const isActive = session.id === currentSessionId
+              const isRenaming = editingSessionId === session.id
+
+              return (
+                <div
+                  key={session.id}
+                  className={cn(
+                    'group relative flex items-center justify-between p-2 rounded-gov text-xs transition-colors cursor-pointer',
+                    isActive
+                      ? 'bg-blue-50/80 dark:bg-blue-900/30 text-bis-navy dark:text-blue-300 font-medium border border-blue-200/80 dark:border-blue-800'
+                      : 'hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text'
+                  )}
+                  onClick={() => {
+                    if (!isRenaming) {
+                      switchSession(session.id)
+                      if (window.innerWidth < 768) setShowSidebar(false)
+                    }
+                  }}
+                >
+                  <MessageSquare className="w-3.5 h-3.5 shrink-0 opacity-70 mr-1.5" />
+
+                  {isRenaming ? (
+                    <div className="flex items-center gap-1 flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        value={renameTitleInput}
+                        onChange={(e) => setRenameTitleInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveRename(session.id)
+                          if (e.key === 'Escape') setEditingSessionId(null)
+                        }}
+                        className="w-full bg-white dark:bg-dark-bg px-2 py-0.5 text-xs rounded border border-blue-400 outline-none"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleSaveRename(session.id)}
+                        className="p-1 text-green-600 hover:text-green-700"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => setEditingSessionId(null)}
+                        className="p-1 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-col min-w-0 flex-1 pr-1">
+                        <span className="truncate" title={session.title}>
+                          {session.title}
+                        </span>
+                        {session.createdAt && (
+                          <span className="text-[10px] text-gray-400 dark:text-dark-text-muted mt-0.5">
+                            {new Date(session.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                            {session.messages?.length ? ` · ${session.messages.length} msgs` : ''}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingSessionId(session.id)
+                            setRenameTitleInput(session.title)
+                          }}
+                          className="p-1 hover:text-bis-navy dark:hover:text-blue-400 text-gray-400 transition-colors"
+                          title="Rename"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSessionToDelete(session)
+                          }}
+                          className="p-1 hover:text-red-500 text-gray-400 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </div>
+      </div>
+
       {/* ── Main Chat Area ── */}
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* Chat Header */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-dark-bg-card border-b border-gray-200 dark:border-dark-border gap-2 flex-wrap sm:flex-nowrap">
-          {/* Left: New Chat & Title */}
-          <div className="flex items-center gap-2.5">
+          {/* Left: Chat History Sidebar Toggle, New Chat, & Title */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSidebar(!showSidebar)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all shadow-2xs cursor-pointer",
+                showSidebar
+                  ? "bg-blue-50 border-blue-200 text-bis-navy dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300"
+                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 dark:bg-dark-bg-card dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-border"
+              )}
+              title={showSidebar ? "Collapse Chat History" : "Open Chat History"}
+              aria-label="Toggle chat history sidebar"
+            >
+              {showSidebar ? (
+                <PanelLeftClose className="w-4 h-4 text-bis-navy dark:text-blue-400 shrink-0" />
+              ) : (
+                <PanelLeftOpen className="w-4 h-4 text-bis-navy dark:text-blue-400 shrink-0" />
+              )}
+              <span className="hidden sm:inline">
+                {showSidebar ? "Close History" : "Chat History"}
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-dark-border text-gray-700 dark:text-dark-text-muted font-bold leading-none">
+                {sessions.length}
+              </span>
+            </button>
+
             <button
               onClick={() => startSession()}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 dark:bg-dark-bg-card dark:border-dark-border dark:text-dark-text transition-all text-xs font-semibold shadow-2xs cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-dark-bg-card dark:border-dark-border dark:text-dark-text transition-all text-xs font-semibold shadow-2xs cursor-pointer"
               title="Start New Conversation"
             >
-              <Plus className="w-3.5 h-3.5 text-gov-navy dark:text-blue-400 shrink-0" />
-              <span className="hidden sm:inline">New Chat</span>
+              <Plus className="w-3.5 h-3.5 text-bis-navy dark:text-blue-400 shrink-0" />
+              <span className="hidden md:inline">New</span>
             </button>
+
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-gray-900 dark:text-dark-text">{t('chat_header_title', 'BIS Saarthi AI')}</h2>
@@ -1239,17 +1432,6 @@ export default function ChatInterface({ role = 'consumer' }) {
                   <span className="hidden lg:inline text-[11px]">Full</span>
                 </>
               )}
-            </button>
-
-            {/* RAG API Key Setup */}
-            <button
-              type="button"
-              onClick={() => setShowRagKeyModal(true)}
-              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 border border-amber-300 dark:border-amber-700/60 bg-amber-50/70 dark:bg-amber-950/30 rounded-gov hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-900 dark:text-amber-300 transition-all shadow-2xs cursor-pointer font-semibold"
-              title="Configure Gemini RAG API Key"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-              <span className="hidden sm:inline text-[11px]">RAG Key</span>
             </button>
 
             {/* Sources & References Sidebar Toggle (disappears when open) */}
@@ -2552,136 +2734,44 @@ export default function ChatInterface({ role = 'consumer' }) {
         </div>
       )}
 
-      {/* ── Gemini RAG API Key Modal ── */}
-      {showRagKeyModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in"
-          onClick={() => setShowRagKeyModal(false)}
-        >
-          <div
-            className="bg-white dark:bg-dark-bg-card rounded-xl shadow-2xl max-w-lg w-full border border-gray-200 dark:border-dark-border overflow-hidden animate-scale-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 p-4 border-b border-amber-200/80 dark:border-amber-800/60 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                  <Key className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                    Gemini RAG API Key Setup
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-semibold">
-                      Live AI
-                    </span>
-                  </h3>
-                  <p className="text-[11px] text-gray-500 dark:text-dark-text-muted">
-                    Powers real-time BIS standard retrieval and verified responses
-                  </p>
-                </div>
+      {/* ── Delete Conversation Confirmation Dialog ── */}
+      {sessionToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white dark:bg-dark-bg-card rounded-gov-xl border border-gray-200 dark:border-dark-border shadow-2xl max-w-sm w-full p-6 animate-scale-in">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+                <Trash2 className="w-4 h-4" />
               </div>
-              <button
-                type="button"
-                onClick={() => setShowRagKeyModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 rounded-md transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-5 space-y-4">
-              <div className="bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/40 rounded-lg p-3 text-xs text-blue-900 dark:text-blue-200 flex gap-2.5 items-start">
-                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold mb-0.5">Factual Standards Grounding</p>
-                  <p className="text-[11px] text-blue-800/80 dark:text-blue-300/80 leading-relaxed">
-                    This key connects BIS Saarthi to Google Gemini 1.5/2.0 to index, cite, and cross-reference official Indian Standards (IS), QCO orders, and laboratory test matrices without hallucination.
-                  </p>
-                </div>
-              </div>
-
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1.5">
-                  Google Gemini API Key
-                </label>
-                <div className="relative">
-                  <input
-                    type={showKeyPassword ? 'text' : 'password'}
-                    value={ragKeyInput}
-                    onChange={(e) => setRagKeyInput(e.target.value)}
-                    placeholder="AQ... or AIzaSy..."
-                    className="w-full text-xs font-mono px-3 py-2 pr-10 border border-gray-300 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg focus:ring-2 focus:ring-amber-500 focus:outline-none dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowKeyPassword(!showKeyPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 cursor-pointer"
-                    title={showKeyPassword ? 'Hide key' : 'Show key'}
-                  >
-                    {showKeyPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between mt-1.5 text-[11px] text-gray-500 dark:text-dark-text-muted">
-                  <span>Default preloaded key is active.</span>
-                  <button
-                    type="button"
-                    onClick={handleResetRagKey}
-                    className="text-amber-700 dark:text-amber-400 hover:underline font-medium cursor-pointer"
-                  >
-                    Reset to Default
-                  </button>
-                </div>
-              </div>
-
-              {/* Status indicator */}
-              <div className="rounded-lg bg-gray-50 dark:bg-dark-bg-secondary p-3 border border-gray-100 dark:border-dark-border flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className={cn(
-                    "w-2 h-2 rounded-full",
-                    ragKeyInput ? "bg-emerald-500 animate-pulse" : "bg-gray-400"
-                  )} />
-                  <span className="text-gray-700 dark:text-dark-text font-medium">
-                    {ragKeyInput ? 'Key Configured & Active' : 'No Key Configured'}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  disabled={isTestingRagKey || !ragKeyInput.trim()}
-                  onClick={handleTestRagKey}
-                  className="px-2.5 py-1 text-[11px] font-semibold rounded-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg-card hover:bg-gray-50 dark:hover:bg-dark-bg text-gray-700 dark:text-dark-text disabled:opacity-50 flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  {isTestingRagKey ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
-                      <span>Testing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      <span>Test Connection</span>
-                    </>
-                  )}
-                </button>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white font-heading">
+                  Delete Conversation?
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-dark-text-muted">
+                  Cannot be undone
+                </p>
               </div>
             </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 bg-gray-50 dark:bg-dark-bg-secondary border-t border-gray-100 dark:border-dark-border flex items-center justify-end gap-2">
+            <p className="text-xs text-gray-600 dark:text-dark-text-muted mb-5 leading-relaxed">
+              Are you sure you want to delete <strong className="text-gray-900 dark:text-white">&ldquo;{sessionToDelete.title}&rdquo;</strong>? All messages in this conversation will be permanently removed.
+            </p>
+            <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setShowRagKeyModal(false)}
-                className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-dark-text-muted hover:bg-gray-200/60 dark:hover:bg-dark-border rounded-lg transition-colors cursor-pointer"
+                onClick={() => setSessionToDelete(null)}
+                className="btn-gov-outline text-xs py-1.5 px-3 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleSaveRagKey}
-                className="px-4 py-1.5 text-xs font-semibold text-white bg-bis-navy hover:bg-bis-navy-dark dark:bg-blue-600 dark:hover:bg-blue-700 rounded-lg transition-colors shadow-xs cursor-pointer"
+                onClick={() => {
+                  deleteSession(sessionToDelete.id)
+                  setSessionToDelete(null)
+                  toast.success('Conversation deleted')
+                }}
+                className="btn-gov bg-red-600 hover:bg-red-700 text-xs py-1.5 px-3 cursor-pointer"
               >
-                Save & Apply Key
+                Delete
               </button>
             </div>
           </div>
