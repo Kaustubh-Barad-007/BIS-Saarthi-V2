@@ -499,10 +499,10 @@ export default function ChatInterface({ role = 'consumer' }) {
 
   const handleFillSampleProfile = () => {
     setProfileFormData({
-      companyName: 'Apex Polymers Pvt. Ltd.',
-      productName: 'Packaged Drinking Water',
-      productCategory: 'Food & Agriculture Products',
-      isStandard: 'IS 14543:2016',
+      companyName: 'National Manufacturing Industries Ltd.',
+      productName: 'Consumer & Industrial Goods',
+      productCategory: 'Mechanical & Production Engineering',
+      isStandard: 'IS 10500',
       scale: 'small',
       udyamNumber: 'UDYAM-MH-12-0049281',
       factoryLocation: 'Pune, Maharashtra',
@@ -1544,7 +1544,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                         required
                         value={profileFormData.productName}
                         onChange={(e) => setProfileFormData({ ...profileFormData, productName: e.target.value })}
-                        placeholder="e.g., Packaged Drinking Water, LED Bulb"
+                        placeholder="e.g., Industrial Equipment, Domestic Appliances, Components"
                         className="w-full p-2.5 rounded bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text outline-none focus:border-bis-navy dark:focus:border-blue-500"
                       />
                     </div>
@@ -1558,7 +1558,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                         required
                         value={profileFormData.isStandard}
                         onChange={(e) => setProfileFormData({ ...profileFormData, isStandard: e.target.value })}
-                        placeholder="e.g., IS 14543:2016, IS 16102, IS 302"
+                        placeholder="e.g., IS 10500, IS 16102, IS 302, IS 269"
                         className="w-full p-2.5 rounded bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text outline-none focus:border-bis-navy dark:focus:border-blue-500 font-mono"
                       />
                     </div>
@@ -1572,7 +1572,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                         onChange={(e) => setProfileFormData({ ...profileFormData, productCategory: e.target.value })}
                         className="w-full p-2.5 rounded bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text outline-none focus:border-bis-navy dark:focus:border-blue-500"
                       >
-                        <option value="Food & Agriculture Products">Food & Agriculture (Drinking Water, Milk, etc.)</option>
+                        <option value="Food & Agriculture Products">Food & Agriculture Products</option>
                         <option value="Electrical & Electronics">Electrical & Electronics (Appliances, Cables, LED)</option>
                         <option value="Mechanical & Automotive">Mechanical & Automotive (Helmets, Valves, Pumps)</option>
                         <option value="Chemical & Petrochemical">Chemical & Petrochemical (Pipes, Paints, Polymers)</option>
@@ -1923,7 +1923,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                 </h4>
                 <p className="text-[11px] text-gray-500 dark:text-dark-text-muted mt-1 leading-relaxed">
                   {sourcesSearchQuery
-                    ? 'Try another search term like "IS 1417", "water", "hallmark", or "gold".'
+                    ? 'Try another search term like standard code (e.g. "IS 10500", "IS 1417"), or keyword (e.g. "cement", "hallmark", "steel").'
                     : 'Ask a question about BIS standards, hallmarking, testing procedures, or certification to see verified statutory citations extracted by RAG appear here in real time.'}
                 </p>
               </div>
@@ -1935,7 +1935,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                   </span>
                   {[
                     'What are the mandatory gold hallmarking standards (IS 1417)?',
-                    'Show test parameters for packaged drinking water under IS 14543',
+                    'How do I check if a product requires mandatory BIS certification (QCO)?',
                     'What are helmet safety requirements under IS 4151?',
                   ].map((sampleQuery, qIdx) => (
                     <button
@@ -2480,7 +2480,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                     value={profileFormData.companyName}
                     onChange={(e) => setProfileFormData({ ...profileFormData, companyName: e.target.value })}
                     className="input-gov text-xs"
-                    placeholder="e.g. Apex Polymers Pvt. Ltd."
+                    placeholder="e.g. ABC Manufacturing Industries Ltd."
                   />
                 </div>
                 <div>
@@ -2491,7 +2491,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                     value={profileFormData.productName}
                     onChange={(e) => setProfileFormData({ ...profileFormData, productName: e.target.value })}
                     className="input-gov text-xs"
-                    placeholder="e.g. Packaged Drinking Water"
+                    placeholder="e.g. Consumer & Industrial Goods"
                   />
                 </div>
                 <div>
@@ -2502,7 +2502,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                     value={profileFormData.isStandard}
                     onChange={(e) => setProfileFormData({ ...profileFormData, isStandard: e.target.value })}
                     className="input-gov text-xs font-mono"
-                    placeholder="e.g. IS 14543:2016"
+                    placeholder="e.g. IS 10500, IS 1417, IS 269"
                   />
                 </div>
                 <div>

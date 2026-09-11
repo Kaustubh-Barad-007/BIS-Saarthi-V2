@@ -350,7 +350,7 @@ export const useDataStore = create((set, get) => ({
       id: docData.id || `DOC-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
       name: docData.name,
       category: docData.category || 'Compliance Document',
-      standardCode: docData.standardCode || 'IS 14543:2024',
+      standardCode: docData.standardCode || 'IS 10500:2012',
       fileType: docData.fileType || 'PDF',
       size: docData.size || 1500000,
       version: docData.version || '1.0',

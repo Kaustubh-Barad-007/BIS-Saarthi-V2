@@ -61,15 +61,15 @@ export default function AdminNotifications() {
       setActionUrl('/manufacturer/certification')
       setSender('Bureau of Indian Standards Quality Order Cell')
       toast.success('MSME EV QCO template applied!')
-    } else if (type === 'water_advisory') {
+    } else if (type === 'enforcement_alert') {
       setTargetRole('consumer')
       setPriority('warning')
       setCategory('Quality Advisory')
-      setTitle('Public Safety Advisory: Uncertified 20-Litre Water Dispensers')
-      setMessage('State surveillance teams seized uncertified packaged drinking water jars lacking mandatory IS 14543 certification. Verify licence validity through the BIS Care App before accepting delivery.')
+      setTitle('Public Safety Advisory: Uncertified Domestic Goods Alert')
+      setMessage('State surveillance teams conducted market surveillance drives against sub-standard goods lacking mandatory BIS certification. Verify licence validity through the BIS Care App before purchase.')
       setActionUrl('/consumer/standards')
       setSender('BIS Citizen Protection & Enforcement Wing')
-      toast.success('Packaged Water advisory template applied!')
+      toast.success('Public Safety Advisory template applied!')
     } else if (type === 'msme_subsidy') {
       setTargetRole('manufacturer')
       setPriority('success')
@@ -461,10 +461,10 @@ export default function AdminNotifications() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => applyTemplate('water_advisory')}
+                  onClick={() => applyTemplate('enforcement_alert')}
                   className="px-2 py-1 rounded bg-white dark:bg-dark-bg text-[11px] border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 hover:bg-red-50 transition-colors font-medium"
                 >
-                  Packaged Water Warning
+                  Uncertified Goods Advisory
                 </button>
                 <button
                   type="button"

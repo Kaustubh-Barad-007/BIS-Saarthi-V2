@@ -9,7 +9,7 @@ const BHASHINI_INFERENCE_KEY = process.env.BHASHINI_INFERENCE_KEY
 const COMMON_REGIONAL_QUERIES = [
   { regional: /हॉलमार्क|हॉलमार्किंग|huid/i, english: 'What is gold hallmarking and how do I verify HUID?' },
   { regional: /आईएसआई|isi mark|isi/i, english: 'Is ISI Mark mandatory for this product and how to apply?' },
-  { regional: /पानी|water|drinking water/i, english: 'Is ISI certification mandatory for packaged drinking water?' },
+  { regional: /पानी|water|drinking water/i, english: 'What are the quality specifications and test parameters under BIS?' },
   { regional: /शिकायत|तक्रार|complaint/i, english: 'How can I file a complaint against substandard goods?' },
   { regional: /हेलमेट|helmet/i, english: 'What is the BIS standard and ISI mark requirement for two-wheeler helmets?' },
   { regional: /फीस|शुल्क|fee|cost/i, english: 'What are the application and renewal fees for BIS certification?' },

@@ -305,7 +305,7 @@ export default function Home() {
                   <div className="flex gap-2.5">
                     <div className="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center text-xs font-bold text-white shrink-0">U</div>
                     <div className="bg-white/20 dark:bg-slate-800/80 rounded-gov-lg px-3.5 py-2 text-xs text-white dark:text-slate-100 max-w-[85%] border border-transparent dark:border-slate-700/50">
-                      {t('preview_q', 'Is ISI Mark mandatory for packaged drinking water in India?')}
+                      {t('preview_q', 'How do I verify if a product requires mandatory BIS certification or has a valid ISI Mark?')}
                     </div>
                   </div>
 
@@ -315,10 +315,10 @@ export default function Home() {
                         <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> BIS Saarthi AI
                       </div>
                       <p className="leading-relaxed">
-                        {t('preview_a', 'Yes, ISI mark certification is strictly mandatory for packaged natural mineral water under IS 13428 and packaged drinking water under IS 14543. Sale without BIS certification is punishable under the BIS Act 2016.')}
+                        {t('preview_a', 'You can verify any product license in real time via the BIS Care App or Manakonline portal using its CM/L number. Products notified under Quality Control Orders (QCOs) cannot be manufactured, imported, or sold without a valid BIS license.')}
                       </p>
                       <div className="mt-2 pt-1.5 border-t border-white/10 dark:border-blue-800/40 text-xs text-blue-200/80 dark:text-blue-300/80 font-mono">
-                        📚 IS 14543:2016 &bull; FSSAI &amp; BIS Joint Gazette Notification
+                        {t('preview_ref', '📚 BIS Act 2016 • Quality Control Orders (QCO) Gazette')}
                       </div>
                     </div>
                     <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0 p-0.5 shadow-sm">

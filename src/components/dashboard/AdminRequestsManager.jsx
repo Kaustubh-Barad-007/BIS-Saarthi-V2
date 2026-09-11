@@ -546,7 +546,7 @@ export default function AdminRequestsManager({
                   rows={3}
                   value={adminNoteInput}
                   onChange={(e) => setAdminNoteInput(e.target.value)}
-                  placeholder="e.g., Factory inspection concluded on 08-Sep. Sample passed IS 14543 chemical parameters. Marking fee verified with 50% MSME concession."
+                  placeholder="e.g., Factory inspection concluded. Product sample passed all mandatory testing parameters. Marking fee verified with MSME concession."
                   className="w-full p-2.5 rounded bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text outline-none focus:border-bis-navy dark:focus:border-blue-500 text-xs"
                 />
               </div>

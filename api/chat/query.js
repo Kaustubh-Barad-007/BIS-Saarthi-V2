@@ -283,7 +283,7 @@ PERFECT FORMATTING INSTRUCTIONS:
 2. Structure the answer clearly:
    - **Direct Summary**: 1-2 sentence concise answer upfront.
    - **Key Requirements & Testing Specs**: 3-4 clean bullet points highlighting key safety rules, testing parameters, or compliance steps extracted from the records.
-   - **Applicable Standard**: Explicitly mention the Indian Standard code (e.g. IS 14543, IS 1417), scheme, and mandatory QCO gazette status.
+   - **Applicable Standard**: Explicitly mention the relevant Indian Standard code, certification scheme, and mandatory QCO gazette status.
 3. Avoid dense bureaucratic jargon, walls of legal text, and confusing nested tables.
 4. Keep the tone helpful, reassuring, and professional.
 
@@ -310,7 +310,7 @@ GENERAL ANSWER INSTRUCTIONS:
 2. Structure your answer:
    - **Direct Answer**: 1-2 simple sentences directly addressing the query.
    - **Key Points / Steps**: 3-4 clean, easy-to-read bullet points.
-   - **Official Verification**: Mention the official portal (Manakonline at services.bis.gov.in) or the BIS Care App, and encourage them to specify a product or Indian Standard code (e.g., IS 14543 for water, IS 1417 for gold) for exact technical requirements.
+   - **Official Verification**: Mention the official portal (Manakonline at services.bis.gov.in) or the BIS Care App, and invite them to specify any product name or Indian Standard number for exact technical parameters, licensing rules, and laboratory testing details.
 3. Keep it friendly, simple, and authoritative. Do NOT return dense legalese or say "database error".
 
 ${historyStr}User Query: ${userQuery}`
@@ -423,7 +423,7 @@ export default async function handler(req, res) {
     if (matches.length === 0) {
       // Step 2A: No specific standard extracted (or general inquiry) — Gemini generates normal general answer
       const geminiGeneral = await generateGeneralAnswerWithGemini(content, chatHistory, geminiApiKey)
-      finalContent = geminiGeneral || '### 📋 Bureau of Indian Standards Assistant\n\nNo specific standard code was matched in the database for your query. For official requirements, please specify an Indian Standard (e.g., `IS 14543`, `IS 1417`) or product keyword, or verify on [Manakonline](https://www.services.bis.gov.in).'
+      finalContent = geminiGeneral || '### 📋 Bureau of Indian Standards Assistant\n\nNo specific standard code was matched in the database for your query. For official requirements, please specify an Indian Standard (e.g., `IS 10500`, `IS 1417`, `IS 269`) or product keyword, or verify on [Manakonline](https://www.services.bis.gov.in).'
     } else {
       // Step 2B: Regulatory records extracted by RAG — Gemini performs perfect formatting
       const dbContext = buildContextString(matches)

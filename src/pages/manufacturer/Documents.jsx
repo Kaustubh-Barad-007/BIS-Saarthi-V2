@@ -19,12 +19,12 @@ const DOCUMENT_CATEGORIES = [
 ]
 
 const STANDARD_SUGGESTIONS = [
-  'IS 14543:2024',
-  'IS 269:2015',
-  'IS 12252:2018',
   'IS 10500:2012',
-  'IS 694:2010',
+  'IS 269:2015',
   'IS 16046:2018',
+  'IS 694:2010',
+  'IS 12252:2018',
+  'IS 1417:2016',
   'Scheme-I'
 ]
 
@@ -48,7 +48,7 @@ export default function Documents() {
   // Upload Form State
   const [formName, setFormName] = useState('')
   const [formCategory, setFormCategory] = useState('Quality Manual')
-  const [formStandard, setFormStandard] = useState('IS 14543:2024')
+  const [formStandard, setFormStandard] = useState('IS 10500:2012')
   const [formVersion, setFormVersion] = useState('1.0')
   const [formNotes, setFormNotes] = useState('')
   const [formValidity, setFormValidity] = useState('')
@@ -118,7 +118,7 @@ export default function Documents() {
         size: f.size,
         fileType: f.name.split('.').pop()?.toUpperCase() || 'PDF',
         category: 'Compliance Document',
-        standardCode: 'IS 14543:2024',
+        standardCode: 'IS 10500:2012',
         version: '1.0',
         status: 'pending',
         reviewNotes: 'Uploaded via Quick Drop; queued for official scrutiny',
@@ -140,7 +140,7 @@ export default function Documents() {
     addManufacturerDoc({
       name: formName.trim(),
       category: formCategory,
-      standardCode: formStandard.trim() || 'IS 14543:2024',
+      standardCode: formStandard.trim() || 'IS 10500:2012',
       version: formVersion.trim() || '1.0',
       size: fileSize,
       fileType,
@@ -327,7 +327,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                 size: f.size,
                 fileType: f.name.split('.').pop()?.toUpperCase() || 'PDF',
                 category: 'Compliance Document',
-                standardCode: 'IS 14543:2024',
+                standardCode: 'IS 10500:2012',
                 version: '1.0',
                 status: 'pending',
                 reviewNotes: 'Uploaded via file browser; queued for technical review',
@@ -350,7 +350,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by title, ID (e.g. DOC-2025), standard code (e.g. IS 14543), or notes..."
+              placeholder="Search by title, ID (e.g. DOC-2025), standard code (e.g. IS 10500), or notes..."
               className="input-gov pl-9 text-xs"
             />
             {search && (
@@ -749,7 +749,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="e.g. Factory In-House Quality Assurance Manual (IS 14543)"
+                  placeholder="e.g. Factory In-House Quality Assurance Manual"
                   className="input-gov text-xs"
                 />
               </div>
@@ -780,7 +780,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                     required
                     value={formStandard}
                     onChange={(e) => setFormStandard(e.target.value)}
-                    placeholder="e.g. IS 14543:2024"
+                    placeholder="e.g. IS 10500:2012, IS 269"
                     className="input-gov text-xs"
                   />
                 </div>
