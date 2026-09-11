@@ -1,19 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, BookOpen, ExternalLink, ChevronDown, ChevronUp, X, MessageSquare, CheckCircle2, ShieldCheck } from 'lucide-react'
+import { Search, BookOpen, ExternalLink, ChevronDown, ChevronUp, X, MessageSquare, CheckCircle2, ShieldCheck, Loader2 } from 'lucide-react'
 import { STANDARD_CATEGORIES, ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
-
-const MOCK_STANDARDS = [
-  { id: 'IS 302-2-1', title: 'Safety of Household and Similar Electrical Appliances - Part 2 Section 1: Irons', category: 'Electrotechnical', year: 2019, status: 'current', committee: 'ETD 29 (Domestic Electrothermic Equipment)', ics: '97.060', scope: 'Covers electrical safety, heating tolerances, drop tests, and insulation resistance for electric flat irons.' },
-  { id: 'IS 1417',    title: 'Methods of Sampling and Test for Gold and Gold Alloys', category: 'Chemical', year: 2016, status: 'current', committee: 'MTD 10 (Precious Metals)', ics: '39.060', scope: 'Prescribes cupellation fire-assay testing, minimum purity limits for 14K, 18K, 20K, 22K, 23K, 24K hallmarked gold.' },
-  { id: 'IS 14543',   title: 'Packaged Natural Mineral Water', category: 'Food & Agriculture', year: 2016, status: 'current', committee: 'FAD 14 (Drinks and Drinking Water)', ics: '13.060', scope: 'Mandatory certification parameters, microbiological testing, packaging norms, and toxic chemical limits for commercial packaged water.' },
-  { id: 'IS 16901',   title: 'Safety of Electronic Cigarettes', category: 'IT & Electronics', year: 2021, status: 'current', committee: 'LITD 08 (Electronics Hardware)', ics: '65.160', scope: 'Safety requirements for battery charging, heating elements, and vapor emission safety controls.' },
-  { id: 'IS 616',     title: 'Specification for Cycle Tyres and Tubes', category: 'Mechanical', year: 2019, status: 'current', committee: 'TED 07 (Bicycles & Light Vehicles)', ics: '83.160', scope: 'Tensile endurance, tread wear metrics, bead wire tensile strength, and mandatory ISI marking.' },
-  { id: 'IS 1200',    title: 'Method of Measurement of Building and Civil Engineering Works', category: 'Civil Engineering', year: 2018, status: 'current', committee: 'CED 44 (Methods of Measurement)', ics: '91.010', scope: 'Standardized Indian engineering measurement practices for earthwork, masonry, concrete, and finishing.' },
-  { id: 'IS 4688',    title: 'Safety of Electric Fans for Household and Similar Use', category: 'Electrotechnical', year: 2018, status: 'current', committee: 'ETD 29 (Domestic Electrothermic Equipment)', ics: '23.120', scope: 'Blade guarding, speed regulation, noise limits, electrical insulation, and energy efficiency ratings.' },
-  { id: 'IS 2062',    title: 'Hot Rolled Medium and High Tensile Structural Steel', category: 'Mechanical', year: 2011, status: 'reaffirmed', committee: 'MTD 04 (Wrought Steel)', ics: '77.140', scope: 'Chemical composition, tensile strength, yield stress, and weldability parameters for structural steel.' },
-]
 
 export default function Standards() {
   const navigate = useNavigate()
@@ -21,12 +10,30 @@ export default function Standards() {
   const [catFilter, setCat]   = useState('')
   const [expanded, setExpanded] = useState(null)
   const [selectedStandard, setSelectedStandard] = useState(null)
+  const [standards, setStandards] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const filtered = MOCK_STANDARDS.filter((s) => {
-    const q = search.toLowerCase()
-    const matchQ   = !q || s.id.toLowerCase().includes(q) || s.title.toLowerCase().includes(q)
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    const url = search ? `/api/standards?search=${encodeURIComponent(search)}` : '/api/standards'
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.standards) {
+          setStandards(data.standards)
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [search])
+
+  const filtered = standards.filter((s) => {
     const matchCat = !catFilter || s.category === catFilter
-    return matchQ && matchCat
+    return matchCat
   })
 
   return (

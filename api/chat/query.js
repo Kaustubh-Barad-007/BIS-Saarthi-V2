@@ -5,104 +5,252 @@ import { resolveDetailedCitation } from '../_lib/standardsReferences.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'bis-saarthi-dev-secret-2024'
 
-// Mock AI response generator
-function generateMockResponse(content, role, language = 'en', manufacturerProfile = null) {
-  const lower = content.toLowerCase()
+// Database record retrieval
+async function retrieveFromDB(sql, query) {
+  const matches = []
+  const citations = []
+  const cleanQ = (query || '').trim()
+  const lowerQ = cleanQ.toLowerCase()
 
-  // Manufacturer / MSME specific intelligence
-  if (role === 'manufacturer' || manufacturerProfile?.isProfileComplete) {
-    const profile = manufacturerProfile || {}
-    const isMicroOrSmall = profile.scale === 'micro' || profile.scale === 'small'
-    const company = profile.companyName || 'Your Enterprise'
-    const product = profile.productName || 'Industrial Product'
-    const std = profile.isStandard || 'Indian Standard'
-    const loc = profile.factoryLocation || 'Manufacturing Unit'
+  // 1. Match Indian Standard code (e.g. IS 14543, IS 383, IS 1417)
+  const stdMatch = cleanQ.match(/\b(?:IS|is)\s*:?\s*(\d+)/i)
+  if (stdMatch) {
+    const codeNum = stdMatch[1]
+    try {
+      const docRows = await sql`
+        SELECT standard_code, title, content
+        FROM bis_standard_documents
+        WHERE standard_code ILIKE ${'%' + codeNum + '%'}
+        LIMIT 3
+      `
+      if (docRows?.length > 0) {
+        matches.push({ type: 'standards', data: docRows })
+        docRows.forEach((d) => {
+          citations.push({
+            source: d.standard_code,
+            title: d.title,
+            clause: 'Database Standard Record',
+            version: 'Active Gazette',
+            type: 'standard',
+          })
+        })
+      }
 
-    if (lower.includes('fee') || lower.includes('cost') || lower.includes('concession') || lower.includes('price')) {
-      return {
-        content: `### Statutory Fee Structure & MSME Benefits for ${company}\n\nUnder Bureau of Indian Standards (Conformity Assessment) Regulations 2018 for **${product} (${std})**:\n\n1. **Application Fee**: ₹1,000 ${isMicroOrSmall ? '(Eligible for ₹800 after 20% MSME concession)' : ''}\n2. **Preliminary Inspection Charges**: ₹7,000 per man-day + actual travel expenses for factory verification in **${loc}**.\n3. **Annual License Fee**: ₹1,000 per operative license year.\n4. **Marking Fee Concession (Crucial for MSMEs)**:\n   - Because your enterprise is registered as an MSME, BIS grants a **50% concession on minimum annual marking fees** under Department of Consumer Affairs Notification.\n5. **Laboratory Testing Charges**: Billed at actuals based on Scheme of Inspection and Testing (SIT).\n\n*Estimated Total Initial Outlay: ₹25,000 – ₹45,000 (saves ~₹30,000+ under MSME concession).*`,
-        citations: [
-          { source: 'BIS Concession Circular', clause: 'MSME Benefits S.O. 2021', version: 'Active', type: 'circular' },
-          { source: 'Scheme-I Fee Schedule', clause: 'Annexure A (Marking Fees)', version: '2024', type: 'standard' }
-        ],
-        canVerify: true,
+      const masterRows = await sql`
+        SELECT product_name, standard_code, scheme_type, mandatory_qco, key_testing_parameters, official_source_link
+        FROM bis_standards_master
+        WHERE standard_code ILIKE ${'%' + codeNum + '%'}
+        LIMIT 2
+      `
+      if (masterRows?.length > 0) {
+        matches.push({ type: 'master', data: masterRows })
+        masterRows.forEach((m) => {
+          citations.push({
+            source: m.standard_code,
+            title: m.product_name,
+            clause: `Scheme: ${m.scheme_type}`,
+            version: m.mandatory_qco || 'QCO',
+            type: 'notification',
+          })
+        })
+      }
+    } catch (_) {}
+  }
+
+  // 2. Fees & MSME concessions query
+  if (lowerQ.includes('fee') || lowerQ.includes('cost') || lowerQ.includes('concession') || lowerQ.includes('charge') || lowerQ.includes('msme')) {
+    try {
+      const feeRows = await sql`
+        SELECT category, fee_type, enterprise_scale, amount_description
+        FROM bis_certification_fees
+        LIMIT 10
+      `
+      if (feeRows?.length > 0) {
+        matches.push({ type: 'fees', data: feeRows })
+        citations.push({
+          source: 'BIS Certification Fee Schedule',
+          title: 'Statutory Tariff & MSME Concessions',
+          clause: 'Conformity Assessment Regulations',
+          version: 'Active Schedule',
+          type: 'circular',
+        })
+      }
+    } catch (_) {}
+  }
+
+  // 3. Keyword / text search in bis_standards_master
+  if (matches.length === 0) {
+    try {
+      const words = lowerQ.split(/\s+/).filter((w) => w.length > 2)
+      for (const word of words.slice(0, 3)) {
+        const mRows = await sql`
+          SELECT product_name, standard_code, scheme_type, mandatory_qco, key_testing_parameters, official_source_link
+          FROM bis_standards_master
+          WHERE product_name ILIKE ${'%' + word + '%'} OR standard_code ILIKE ${'%' + word + '%'}
+          LIMIT 2
+        `
+        if (mRows?.length > 0) {
+          matches.push({ type: 'master', data: mRows })
+          mRows.forEach((m) => {
+            citations.push({
+              source: m.standard_code,
+              title: m.product_name,
+              clause: `Scheme: ${m.scheme_type}`,
+              version: m.mandatory_qco || 'QCO',
+              type: 'notification',
+            })
+          })
+          break
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 4. Keyword search in bis_standard_documents
+  if (matches.length === 0) {
+    try {
+      const cleanSearch = cleanQ.replace(/[^a-zA-Z0-9\s]/g, ' ').trim()
+      if (cleanSearch) {
+        const docRows = await sql`
+          SELECT standard_code, title, content
+          FROM bis_standard_documents
+          WHERE title ILIKE ${'%' + cleanSearch + '%'} OR content ILIKE ${'%' + cleanSearch + '%'}
+          LIMIT 2
+        `
+        if (docRows?.length > 0) {
+          matches.push({ type: 'standards', data: docRows })
+          docRows.forEach((d) => {
+            citations.push({
+              source: d.standard_code,
+              title: d.title,
+              clause: 'Database Standard Record',
+              version: 'Active Gazette',
+              type: 'standard',
+            })
+          })
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 5. Knowledge docs in DB
+  if (matches.length === 0) {
+    try {
+      const kdRows = await sql`
+        SELECT title, category, version, status
+        FROM knowledge_docs
+        WHERE title ILIKE ${'%' + cleanQ + '%'} OR category ILIKE ${'%' + cleanQ + '%'}
+        LIMIT 3
+      `
+      if (kdRows?.length > 0) {
+        matches.push({ type: 'knowledge_docs', data: kdRows })
+        kdRows.forEach((k) => {
+          citations.push({
+            source: k.title,
+            title: k.category,
+            clause: `Version ${k.version}`,
+            version: k.status,
+            type: 'standard',
+          })
+        })
+      }
+    } catch (_) {}
+  }
+
+  return { matches, citations }
+}
+
+function buildContextString(matches) {
+  let ctx = ''
+  for (const block of matches) {
+    if (block.type === 'standards') {
+      for (const d of block.data) {
+        ctx += `[Standard Code: ${d.standard_code} | Title: ${d.title}]\n${d.content}\n\n`
+      }
+    } else if (block.type === 'master') {
+      for (const m of block.data) {
+        ctx += `[Product: ${m.product_name} | Code: ${m.standard_code} | Scheme: ${m.scheme_type} | QCO: ${m.mandatory_qco}]\nTesting Specs: ${m.key_testing_parameters}\n\n`
+      }
+    } else if (block.type === 'fees') {
+      ctx += `[BIS Statutory Fee Schedule]\n`
+      for (const f of block.data) {
+        ctx += `- ${f.category} (${f.fee_type}) for ${f.enterprise_scale}: ${f.amount_description}\n`
+      }
+      ctx += '\n'
+    } else if (block.type === 'knowledge_docs') {
+      for (const k of block.data) {
+        ctx += `[Document: ${k.title} | Category: ${k.category} | Version: ${k.version}]\n`
       }
     }
+  }
+  return ctx.trim()
+}
 
-    if (lower.includes('doc') || lower.includes('paper') || lower.includes('require') || lower.includes('form') || lower.includes('apply')) {
-      return {
-        content: `### Mandatory Documentation Checklist for ${company}\n\nTo apply for **Scheme-I ISI Mark** on the BIS Manakonline portal for **${product} (${std})**, prepare the following dossier:\n\n1. **Proof of Factory Premises & Manufacturing Address** at **${loc}**.\n2. **Udyam MSME Registration Certificate** to claim 50% marking fee discount.\n3. **Manufacturing Machinery & Installed Capacity List** for ${product}.\n4. **Scheme of Inspection and Testing (SIT) Readiness** matching ${std} clauses.\n5. **Quality Control Personnel Qualifications & Appointment Letters**.\n6. **Raw Material Test Certificates & Source Traceability**.\n\n*All files must be submitted as self-attested PDFs via [Manakonline Portal](https://www.manakonline.in).*`,
-        citations: [
-          { source: 'Form-1 Application Checklist', clause: 'BIS Conformity Regs', version: '2024', type: 'circular' },
-          { source: std, clause: 'Section 4 - SIT Requirements', version: 'Current', type: 'standard' }
-        ],
-        canVerify: true,
+async function queryGemini(userQuery, dbContext) {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) return null
+
+  const prompt = `You are BIS Saarthi, an AI regulatory assistant for the Bureau of Indian Standards (BIS).
+Answer the user's query strictly and solely based on the official database records provided below.
+
+NON-NEGOTIABLE RULES:
+1. Answer ONLY using the facts present in the database records below.
+2. If the database records do not contain the answer, respond ONLY with:
+"The Bureau of Indian Standards database does not contain sufficient information to answer this query."
+3. Do NOT make up, assume, or invent standard codes, clauses, or numbers.
+4. Keep the answer professional, clear, and easy to read using clean bullet points and markdown.
+
+Database Records:
+${dbContext}
+
+User Query: ${userQuery}`
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || null
+  } catch (_) {
+    return null
+  }
+}
+
+function formatDirectResponse(matches) {
+  let text = ''
+  for (const block of matches) {
+    if (block.type === 'standards') {
+      for (const d of block.data) {
+        text += `### 📜 Standard: ${d.standard_code}\n\n`
+        text += `**Title**: *${d.title}*\n\n`
+        text += `${d.content}\n\n---\n\n`
       }
     }
-
-    if (lower.includes('lab') || lower.includes('test') || lower.includes('sit') || lower.includes('facility')) {
-      return {
-        content: `### Quality Testing & Laboratory Protocol for ${product}\n\n**Governing Specification**: ${std}\n\n1. **In-House Testing Setup Requirements**:\n- Under the BIS **Scheme of Inspection and Testing (SIT)**, your manufacturing unit in **${loc}** must maintain equipment for routine batch verification.\n2. **Factory Audit & Sample Drawing**:\n- Inspecting officer draws duplicate sealed samples from commercial production for testing at nearest BIS Regional or NABL-accredited partner lab.\n3. **Critical Compliance Criteria**:\n- Negative tolerance is strictly zero for safety and critical parameters. Calibration certificates must be NABL traceable.`,
-        citations: [
-          { source: std, clause: 'Scheme of Inspection & Testing (SIT)', version: 'Reaffirmed', type: 'standard' },
-          { source: 'NABL Directory 2024', clause: 'Accredited Lab Mapping', version: '2024', type: 'circular' }
-        ],
-        canVerify: true,
+    if (block.type === 'master') {
+      for (const m of block.data) {
+        text += `### 🏛️ BIS Certification Status: ${m.product_name}\n\n`
+        text += `- **Standard Code**: \`${m.standard_code}\`\n`
+        text += `- **Scheme**: ${m.scheme_type}\n`
+        text += `- **Mandatory QCO**: ${m.mandatory_qco}\n`
+        text += `- **Quality & Testing Requirements**: ${m.key_testing_parameters}\n\n`
       }
     }
-
-    return {
-      content: `### BIS Industrial Certification Guidance for ${company}\n\nHere is your regulatory compliance summary for **${product}** under standard **${std}**:\n\n1. **Quality Order Compliance**: Complying with BIS standards is mandatory for commercial sale and government procurement (GeM Portal) across India.\n2. **50% MSME Concession**: Micro and Small enterprises receive a 50% concession on annual marking fees and 20% on application charges.\n3. **Online Filing**: Submit Form-1 on [BIS Manakonline](https://www.manakonline.in) with factory layout in **${loc}** and in-house testing logs.\n4. **Surveillance & Validity**: Initial CM/L license is granted for 1–2 years upon passing independent laboratory testing.`,
-      citations: [
-        { source: 'BIS Product Certification Regulations 2018', clause: 'Regulation 7', version: 'Current', type: 'regulation' },
-        { source: std, clause: 'General Requirements', version: 'Latest', type: 'standard' },
-      ],
-      canVerify: true,
+    if (block.type === 'fees') {
+      text += `### 💰 Statutory BIS Certification Fee Schedule\n\n`
+      text += `| Category | Fee Type | Enterprise Scale | Prescribed Amount |\n`
+      text += `| :--- | :--- | :--- | :--- |\n`
+      for (const f of block.data) {
+        text += `| ${f.category} | ${f.fee_type} | **${f.enterprise_scale}** | ${f.amount_description} |\n`
+      }
+      text += `\n`
     }
   }
-
-  if (lower.includes('hallmark') || lower.includes('gold') || lower.includes('jewel') || lower.includes('huid')) {
-    return {
-      content: `**Hallmarking Guidance for Gold Jewellery (IS 1417):**\n\n✅ **Mandatory from June 2021** under the BIS (Hallmarking) Regulations, 2018.\n\n**Permitted Caratages:**\n- 24K → Fineness 999/995\n- 22K → Fineness 916\n- 18K → Fineness 750\n- 14K → Fineness 585\n\n**BIS Hallmark Components (4 marks):**\n1. **BIS Logo** (triangle) — Confirms BIS assaying\n2. **Purity/Fineness** — e.g., 916 for 22K\n3. **AHC Mark** — Assaying & Hallmarking Centre code\n4. **HUID** — 6-digit alphanumeric Hallmark Unique ID\n\n**Verification:** Use BIS Care App → "Verify Hallmark" → Enter HUID\n\n**Penalty for non-compliance:** ₹1 Lakh fine or 1 year imprisonment under BIS Act 2016, Section 29.`,
-      citations: [
-        { source: 'IS 1417:2016', clause: 'Clause 3.1', version: 'Reaffirmed 2022', type: 'standard' },
-        { source: 'BIS Hallmarking Regulations 2018', clause: 'Regulation 4', version: 'Amended June 2021', type: 'notification' },
-      ],
-      canVerify: true,
-    }
-  }
-
-  if (lower.includes('isi') || lower.includes('certification') || lower.includes('licence') || lower.includes('license')) {
-    return {
-      content: `**ISI Mark Certification Process (BIS Product Certification):**\n\n**Step-by-Step Guide:**\n\n1. **Identify Applicable Standard** — Check IS catalogue at bis.gov.in\n2. **Lab Testing** — Get product tested at NABL-accredited or BIS-recognized lab\n3. **Online Application** — Apply on BIS Connect (connect.bis.gov.in)\n4. **Document Submission:**\n   - Factory registration certificate\n   - Product specifications & drawings\n   - Lab test reports (not older than 1 year)\n   - Quality control manual\n5. **Factory Inspection** — BIS officer visits manufacturing unit\n6. **Grant of License (CM/L No.)** — Valid for 1 year, renewable\n7. **Annual Surveillance** — Mandatory periodic audits\n\n**Fee Structure:** Application fee ₹1,000 + marking fee (product-wise)\n\n**Timeline:** Approximately 60–90 working days from complete application.`,
-      citations: [
-        { source: 'BIS Product Certification Regulations 2018', clause: 'Regulation 7', version: 'Current', type: 'regulation' },
-        { source: 'IS 302-2-1:2019', clause: 'General Requirements', version: 'Amendment 2', type: 'standard' },
-      ],
-      canVerify: true,
-    }
-  }
-
-  if (lower.includes('export') || lower.includes('qco') || lower.includes('quality control order')) {
-    return {
-      content: `**Quality Control Orders (QCO) — Export Compliance:**\n\nQCOs mandate BIS certification for import/manufacture of specified products.\n\n**Key Active QCOs:**\n| Sector | QCO | Effective Date |\n|--------|-----|----------------|\n| Electronics | Electronics and IT QCO 2021 | Oct 2021 |\n| Toys | Toys (Quality Control) Order 2020 | Jan 2020 |\n| Footwear | Footwear QCO 2020 | Feb 2020 |\n| Chemicals | Fertilizer QCO 2021 | Apr 2021 |\n\n**For Export:** Indian goods exported abroad must meet destination country standards. BIS has MRAs with:\n- BSI (UK), DIN (Germany), SAI Global (Australia)\n- IECEE CB Scheme for electrical products\n\n**Contact:** exportcell@bis.gov.in for export-specific certification guidance.`,
-      citations: [
-        { source: 'Electronics QCO 2021', clause: 'Schedule I', version: 'October 2021', type: 'notification' },
-        { source: 'BIS Act 2016', clause: 'Section 16', version: 'Current', type: 'legislation' },
-      ],
-      canVerify: true,
-    }
-  }
-
-  // Default response
-  return {
-    content: `Based on the **BIS Knowledge Base**, here is relevant information for your query:\n\n> "${content}"\n\n**Summary:**\nBIS (Bureau of Indian Standards) is India's National Standards Body operating under the BIS Act 2016. It develops and publishes Indian Standards (IS), operates product certification schemes (ISI Mark), and regulates precious metals hallmarking.\n\n**Key Resources:**\n- 📚 Standards catalogue: bis.gov.in/standards\n- 🏭 BIS Connect (certification): connect.bis.gov.in\n- 📱 BIS Care App: Product verification & hallmark check\n- ☎️ Helpline: 1800-11-4000 (Toll Free)\n\nFor a more specific answer, please provide:\n1. Product name or IS standard number\n2. Your specific compliance requirement\n3. State/sector if applicable`,
-    citations: [
-      { source: 'BIS Act 2016', clause: 'Section 2', version: 'Current', type: 'legislation' },
-      { source: 'bis.gov.in', clause: 'Official Website', version: 'Live', type: 'reference' },
-    ],
-    canVerify: true,
-  }
+  return text.trim()
 }
 
 export default async function handler(req, res) {
@@ -129,17 +277,37 @@ export default async function handler(req, res) {
     }
   }
 
+  const sql = getDb()
+  if (!sql) {
+    return res.status(200).json({
+      content: '### ⚠️ Database Connection Not Configured\n\nPlease ensure the `DATABASE_URL` environment variable is active in your deployment settings.',
+      citations: [],
+      canVerify: false,
+    })
+  }
+
   try {
-    // Generate response
-    const effectiveRole = user.role || role || 'consumer'
-    const response = generateMockResponse(content, effectiveRole, language, manufacturerProfile)
-    if (response.citations) {
-      response.citations = response.citations.map(resolveDetailedCitation).filter(Boolean)
+    // 1. Retrieve matching records from Neon DB
+    const { matches, citations } = await retrieveFromDB(sql, content)
+
+    let finalContent = ''
+
+    if (matches.length === 0) {
+      finalContent = '### 📋 Bureau of Indian Standards — No Database Record Found\n\nNo records matching your query were found in the connected Bureau of Indian Standards database.\n\nPlease check the Indian Standard number (e.g., `IS 14543`, `IS 383`, `IS 1417`) or product keyword and try again.'
+    } else {
+      const dbContext = buildContextString(matches)
+      const geminiAnswer = await queryGemini(content, dbContext)
+      finalContent = geminiAnswer || formatDirectResponse(matches)
     }
 
-    // Save to DB if available
-    const sql = getDb()
-    if (sql && sessionId && user.id !== 'guest') {
+    const response = {
+      content: finalContent,
+      citations: matches.length > 0 ? citations : [],
+      canVerify: citations.length > 0,
+    }
+
+    // Save chat message to DB if session exists
+    if (sessionId && user.id !== 'guest') {
       try {
         await sql`
           INSERT INTO chat_messages (session_id, role, content, metadata)
@@ -150,8 +318,8 @@ export default async function handler(req, res) {
           VALUES (${sessionId}, 'assistant', ${response.content}, ${JSON.stringify({ citations: response.citations })}::jsonb)
         `
         await sql`
-          INSERT INTO audit_logs (user_id, action, resource)
-          VALUES (${user.id}, 'QUERY', ${`Chat session ${sessionId}`})
+          INSERT INTO audit_logs (user_id, user_email, action, resource)
+          VALUES (${user.id}, ${user.email}, 'QUERY', ${'Chat session ' + sessionId})
         `
       } catch (_) {}
     }
@@ -159,6 +327,6 @@ export default async function handler(req, res) {
     return res.status(200).json(response)
   } catch (err) {
     console.error('Chat query error:', err)
-    return res.status(500).json({ error: 'Query processing failed' })
+    return res.status(500).json({ error: 'Query processing failed: ' + err.message })
   }
 }

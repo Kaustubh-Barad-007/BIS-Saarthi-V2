@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { chatApi } from '@/lib/api'
-import { MOCK_RESPONSES } from '@/lib/constants'
 import { genId, sleep } from '@/lib/utils'
 import { resolveDetailedCitation } from '@/lib/standardsReferences'
 
@@ -110,182 +109,7 @@ export const translateToTargetLanguage = async (text, targetLang) => {
   return text
 }
 
-// Helper to generate tailored manufacturer context responses
-const getManufacturerContextResponse = (content, readingMode, profile) => {
-  const lower = content.toLowerCase()
-  const isMicroOrSmall = profile.scale === 'micro' || profile.scale === 'small'
-  const msmeBadge = isMicroOrSmall
-    ? '50% Concession on Minimum Marking Fees + 20% Application Fee Concession'
-    : 'Standard Statutory Assessment Fee'
-  
-  const headerContext = `> 🏭 **Tailored Manufacturer Context Applied**\n> **Enterprise**: ${profile.companyName || 'Registered Enterprise'} (${(profile.scale || 'MSME').toUpperCase()} MSME)\n> **Target Product**: ${profile.productName || 'Industrial Product'} — Standard: **${profile.isStandard || 'IS Code'}**\n> **Plant Location**: ${profile.factoryLocation || 'National'} | **Testing Readiness**: ${(profile.testingLabFacility || 'bis-recognized').toUpperCase()}\n> **Applicable Scheme**: ${profile.targetScheme || 'Scheme-I ISI Mark'} | **MSME Benefit**: ${msmeBadge}\n\n---\n\n`
-
-  if (lower.includes('fee') || lower.includes('cost') || lower.includes('concession') || lower.includes('price')) {
-    return {
-      content: `${headerContext}### Statutory Fee Structure for ${profile.companyName || 'your enterprise'}\n\nUnder Bureau of Indian Standards (Conformity Assessment) Regulations 2018 for **${profile.productName} (${profile.isStandard})**:\n\n1. **Application Fee**: ₹1,000 ${isMicroOrSmall ? '(Eligible for ₹800 after 20% MSME concession)' : ''}\n2. **Preliminary Inspection Charges**: ₹7,000 per man-day + actual travel expenses for factory verification in **${profile.factoryLocation}**.\n3. **Annual License Fee**: ₹1,000 per operative license year.\n4. **Marking Fee Concession (Crucial for MSMEs)**:\n   - Because your enterprise is registered as a **${profile.scale.toUpperCase()} MSME** (Udyam: ${profile.udyamNumber || 'Verified'}), BIS grants a **50% concession on minimum annual marking fees** under Department of Consumer Affairs Notification.\n5. **Laboratory Testing Charges**: Billed at actuals based on ${profile.testingLabFacility === 'in-house' ? 'in-house witnessed tests + BIS confirmation sample' : 'BIS recognized third-party laboratory tariff'}.\n\n*Estimated Total Initial Outlay: ₹25,000 – ₹45,000 (saves ~₹30,000+ under MSME concession).*`,
-      citations: [
-        { source: 'BIS Concession Circular', clause: 'MSME Benefits S.O. 2021', version: 'Active', type: 'circular' },
-        { source: 'Scheme-I Fee Schedule', clause: 'Annexure A (Marking Fees)', version: '2024', type: 'standard' }
-      ],
-      canVerify: true,
-    }
-  }
-
-  if (lower.includes('doc') || lower.includes('paper') || lower.includes('require') || lower.includes('form') || lower.includes('apply')) {
-    return {
-      content: `${headerContext}### Mandatory Documentation Checklist for ${profile.companyName || 'your enterprise'}\n\nTo apply for **${profile.targetScheme || 'Scheme-I'}** on the BIS Manakonline portal for **${profile.productName} (${profile.isStandard})**, prepare the following dossier:\n\n1. **Proof of Factory Premises & Manufacturing Address**:\n   - Registered lease deed, factory license, or pollution control consent for plant at **${profile.factoryLocation}**.\n2. **Udyam MSME Registration Certificate**:\n   - Copy of registration ${profile.udyamNumber ? `(${profile.udyamNumber})` : ''} to avail 50% marking fee concession.\n3. **Manufacturing Machinery & Capacity List**:\n   - Complete machinery inventory and daily installed capacity for ${profile.productName}.\n4. **Scheme of Inspection and Testing (SIT) Readiness**:\n   - Testing apparatus list matching ${profile.isStandard} test clauses.\n   - Calibration certificates (NABL traceable) for all measurement instruments.\n5. **Quality Personnel Competence**:\n   - Appointment letter and qualifications of technical QC personnel.\n6. **Raw Material Test Certificates & Source Traceability**:\n   - Specifications of inputs used in production.\n\n*All files must be uploaded as self-attested PDFs via [Manakonline Portal](https://www.manakonline.in).*`,
-      citations: [
-        { source: 'Form-1 Application Checklist', clause: 'BIS Conformity Regs', version: '2024', type: 'circular' },
-        { source: profile.isStandard || 'IS Specification', clause: 'Section 4 - SIT Requirements', version: 'Current', type: 'standard' }
-      ],
-      canVerify: true,
-    }
-  }
-
-  if (lower.includes('lab') || lower.includes('test') || lower.includes('sit') || lower.includes('parameter') || lower.includes('facility')) {
-    return {
-      content: `${headerContext}### Quality Testing & Laboratory Protocol for ${profile.productName}\n\n**Governing Specification**: ${profile.isStandard || 'Indian Standard'}\n\n#### 1. In-House Testing Setup Requirements (${(profile.testingLabFacility || 'bis-recognized').toUpperCase()})\n- Under the BIS **Scheme of Inspection and Testing (SIT)**, your manufacturing plant in **${profile.factoryLocation}** must be equipped to perform routine batch control tests.\n- Each production batch must have logged test results before applying the ISI mark.\n\n#### 2. Factory Audit & Independent Sample Testing\n- During the factory audit, the BIS inspecting officer will verify equipment calibration and seal 2 sets of duplicate samples.\n- Samples are dispatched to the nearest **BIS Regional Testing Laboratory** or NABL accredited partner laboratory servicing **${profile.factoryLocation}**.\n\n#### 3. Critical Compliance Criteria\n- Complete absence of negative tolerance in critical safety/quality clauses.\n- All test equipment must possess valid ISO/IEC 17025 calibration certificates.`,
-      citations: [
-        { source: profile.isStandard || 'IS Code', clause: 'Scheme of Inspection & Testing (SIT)', version: 'Reaffirmed', type: 'standard' },
-        { source: 'NABL Directory 2024', clause: 'Accredited Lab Mapping', version: '2024', type: 'circular' }
-      ],
-      canVerify: true,
-    }
-  }
-
-  // General or Technical response tailored with context
-  return {
-    content: `${headerContext}### Regulatory Compliance Roadmap for ${profile.companyName || 'your enterprise'}\n\nHere is your customized certification overview for **${profile.productName}** under **${profile.isStandard || 'Indian Standard'}**:\n\n1. **Standard Applicability & QCO Status**:\n   - ${profile.productName} is monitored under BIS quality frameworks. Meeting ${profile.isStandard || 'the notified standard'} is required for market access and government procurement (GeM portal).\n2. **Financial Incentive for ${(profile.scale || 'MSME').toUpperCase()} Enterprise**:\n   - You are entitled to a **50% concession on annual marking fee** and **20% on application fee**, significantly lowering your compliance overhead.\n3. **Application Protocol on Manakonline**:\n   - Submit Form-1 online under **${profile.targetScheme || 'Scheme-I'}**.\n   - Upload factory premises documents for **${profile.factoryLocation}** and testing logs.\n4. **Surveillance & Validity**:\n   - Initial CM/L license is granted for 1 to 2 years, renewable upon satisfactory market surveillance.`,
-    citations: [
-      { source: profile.isStandard || 'BIS Standard Registry', clause: 'Compliance Specifications', version: 'Current', type: 'standard' },
-      { source: 'BIS Manakonline Guidelines', clause: 'Scheme-I Process Guide', version: '2024', type: 'circular' },
-    ],
-    canVerify: true,
-  }
-}
-
-// Helper to generate AI responses tailored to readingMode, manufacturerProfile, and portal role
-const getMockResponseForPrompt = (content, readingMode, manufacturerProfile = null, role = 'consumer') => {
-  if (manufacturerProfile && manufacturerProfile.isProfileComplete) {
-    return getManufacturerContextResponse(content, readingMode, manufacturerProfile)
-  }
-
-  const lower = content.toLowerCase()
-
-  // If manufacturer assistant query (even without full profile setup)
-  if (role === 'manufacturer') {
-    if (lower.includes('fee') || lower.includes('cost') || lower.includes('concession') || lower.includes('price')) {
-      return {
-        content: `### Statutory Fee Structure & MSME Concessions (Scheme-I ISI Mark)\n\nUnder Bureau of Indian Standards (Conformity Assessment) Regulations 2018:\n\n1. **Application Fee**: ₹1,000 (Eligible for ₹800 after 20% MSME concession).\n2. **Preliminary Inspection Charges**: ₹7,000 per man-day + actual travel expenses for technical officer audit.\n3. **Annual License Fee**: ₹1,000 per operative license year.\n4. **Marking Fee Concession (Crucial for MSMEs)**:\n   - Micro and Small Enterprises receive a **50% concession on minimum annual marking fees** under Department of Consumer Affairs Notification.\n5. **Laboratory Testing Charges**: Billed at actuals based on Scheme of Inspection and Testing (SIT).\n\n*Estimated Total Initial Outlay: ₹25,000 – ₹45,000 (saves ~₹30,000+ under MSME concession).*\n\n*(Tip: Click "Update Profile Context" above to specify your product and IS code for personalized fee and clause calculations!)*`,
-        citations: [
-          { source: 'BIS Concession Circular', clause: 'MSME Benefits S.O. 2021', version: 'Active', type: 'circular' },
-          { source: 'Scheme-I Fee Schedule', clause: 'Annexure A (Marking Fees)', version: '2024', type: 'standard' }
-        ],
-        canVerify: true,
-      }
-    }
-
-    if (lower.includes('doc') || lower.includes('paper') || lower.includes('require') || lower.includes('apply')) {
-      return {
-        content: `### Mandatory Documentation Checklist for Manufacturers\n\nTo apply for **Scheme-I ISI Mark** on the BIS Manakonline portal, prepare the following dossier:\n\n1. **Proof of Factory Premises & Manufacturing Address** (registered lease deed or factory license).\n2. **Udyam MSME Registration Certificate** to claim 50% marking fee discount.\n3. **Manufacturing Machinery & Installed Capacity List**.\n4. **Scheme of Inspection and Testing (SIT) Readiness** matching product Indian Standard.\n5. **Quality Control Personnel Qualifications & Appointment Letters**.\n6. **Raw Material Test Certificates & Source Traceability**.\n\n*All files must be submitted as self-attested PDFs via [Manakonline Portal](https://www.manakonline.in).*`,
-        citations: [
-          { source: 'Form-1 Application Checklist', clause: 'BIS Conformity Regs', version: '2024', type: 'circular' },
-          { source: 'BIS Product Certification Scheme-I', clause: 'Documentation Norms', version: 'Current', type: 'standard' }
-        ],
-        canVerify: true,
-      }
-    }
-
-    if (lower.includes('lab') || lower.includes('test') || lower.includes('sit') || lower.includes('facility')) {
-      return {
-        content: `### Quality Testing & Laboratory Protocol (Scheme-I)\n\n1. **In-House Testing Setup Requirements**:\n- Under the BIS **Scheme of Inspection and Testing (SIT)**, manufacturing units must maintain equipment for routine batch verification.\n2. **Factory Audit & Sample Drawing**:\n- Inspecting officer draws duplicate sealed samples from commercial production for testing at nearest BIS Regional or NABL-accredited partner lab.\n3. **Critical Compliance Criteria**:\n- Negative tolerance is strictly zero for safety and critical parameters. Calibration certificates must be NABL traceable.`,
-        citations: [
-          { source: 'BIS Testing Norms', clause: 'Scheme of Inspection & Testing (SIT)', version: 'Reaffirmed', type: 'standard' },
-          { source: 'NABL Directory 2024', clause: 'Accredited Lab Mapping', version: '2024', type: 'circular' }
-        ],
-        canVerify: true,
-      }
-    }
-
-    return {
-      content: `### BIS Industrial Certification Guidance for Manufacturers\n\nHere is your regulatory compliance summary for Indian Standards & ISI Mark:\n\n1. **Quality Order Compliance**: Complying with BIS standards is mandatory for commercial sale and government procurement (GeM Portal) across India.\n2. **50% MSME Concession**: Micro and Small enterprises receive a 50% concession on annual marking fees and 20% on application charges.\n3. **Online Filing**: Submit Form-1 on [BIS Manakonline](https://www.manakonline.in) with factory layout and in-house testing logs.\n4. **Surveillance & Validity**: Initial CM/L license is granted for 1–2 years upon passing independent laboratory testing.\n\n*(Tip: Click "Update Profile Context" above to specify your product and IS code for personalized fee and clause calculations!)*`,
-      citations: [
-        { source: 'BIS Product Certification Regulations 2018', clause: 'Regulation 7', version: 'Current', type: 'regulation' },
-        { source: 'BIS Act 2016', clause: 'Section 16', version: 'Latest', type: 'legislation' },
-      ],
-      canVerify: true,
-    }
-  }
-  
-  // Hallmarking queries
-  if (lower.includes('hallmark') || lower.includes('gold') || lower.includes('jewel') || lower.includes('huid')) {
-    if (readingMode === 'technical') {
-      return {
-        content: `### BIS Technical Standards Report: Hallmarking of Precious Metals\n\n**Standard Reference**: IS 1417:2016 (Gold and Gold Alloys, Platings and Coatings — Fineness and Marking) & IS 2112:2014 (Silver)\n\n#### 1. Statutory Framework\n- **Mandatory Quality Order**: S.O. 2030(E) dated 15 January 2020, amended under BIS Hallmarking Regulations 2018 (Section 14 & 16 of BIS Act 2016).\n- **Applicability**: Mandatory 6-digit alphanumeric HUID (Hallmark Unique Identification) applied through BIS-recognized Assaying and Hallmarking Centres (AHCs).\n\n#### 2. Standard Fineness Grades (Caratage & Millesimal)\n| Karat | Millesimal Fineness | BIS Hallmark Grade Tag |\n| :--- | :--- | :--- |\n| 24K | 999 (99.9% min pure) | 24K999 |\n| 23K | 958 (95.8% min pure) | 23K958 |\n| 22K | 916 (91.6% min pure) | 22K916 |\n| 20K | 833 (83.3% min pure) | 20K833 |\n| 18K | 750 (75.0% min pure) | 18K750 |\n| 14K | 585 (58.5% min pure) | 14K585 |\n\n#### 3. Assaying Methodology & Tolerances\n- **Fire Assay (Cupellation)**: Executed strictly as per Clause 5.2 of IS 1417:2016.\n- **Permissible Tolerance**: Negative tolerance is **zero (0.00)**. No under-caratage tolerance permitted.\n- **Laser Inscription Requirements**: The 6-character HUID, BIS Triangular Logo, and Fineness stamp must have minimum depth of 0.015 mm.\n\n#### 4. Compliance & Penal Provisions\nUnder Section 29 of the BIS Act 2016, violation or selling unhallmarked notified jewellery carries imprisonment up to 1 year or a fine of minimum ₹1,00,000 up to five times the value of goods tested.`,
-        citations: [
-          { source: 'IS 1417:2016', clause: 'Clause 3 to 5.2', version: 'Reaffirmed 2022', type: 'standard' },
-          { source: 'BIS Hallmarking Reg. 2018', clause: 'Section 14-16', version: 'Gazette 2021', type: 'circular' },
-          { source: 'IS 15820:2009', clause: 'AHC Operating Requirements', version: 'Rev 1', type: 'standard' }
-        ],
-        canVerify: true,
-      }
-    } else {
-      return {
-        content: `**Hallmarking Guidance for Gold Jewellery & Consumers:**\n\n1. **Is it Mandatory?**\n   Yes! From June 2021, hallmarking of gold jewellery is legally mandatory across declared districts in India.\n\n2. **Look for 3 Official Signs on Gold Jewellery**:\n   - **BIS Logo**: The official triangular BIS stamp.\n   - **Purity / Fineness**: Clearly marked carat rating (e.g., **22K916** for 22 Karat, **18K750** for 18 Karat, **14K585** for 14 Karat).\n   - **HUID (Hallmark Unique Identification)**: A unique 6-digit alphanumeric code engraved on every individual piece.\n\n3. **How to Verify in 30 Seconds**:\n   - Download the free **BIS Care App** from Google Play Store or Apple App Store.\n   - Tap **"Verify HUID"** and enter the 6-digit code.\n   - Instantly see: Jeweller registration number, AHC testing centre name, article type, date of hallmarking, and tested purity.\n\n4. **If Gold Fails Purity**:\n   - The jeweller is legally obligated to refund the difference plus compensation of two times the shortage to the consumer.\n\n**Toll-Free Consumer Helpline**: 1800-11-4000`,
-        citations: [
-          { source: 'IS 1417:2016', clause: 'Consumer Marking', version: 'Current', type: 'standard' },
-          { source: 'BIS Care Portal Guidelines', clause: 'HUID Verification', version: '2024', type: 'notification' },
-        ],
-        canVerify: true,
-      }
-    }
-  }
-
-  // ISI Mark / Certification / Testing queries
-  if (lower.includes('isi') || lower.includes('certif') || lower.includes('standard') || lower.includes('test') || lower.includes('scheme')) {
-    if (readingMode === 'technical') {
-      return {
-        content: `### BIS Conformity Assessment & Product Certification (Scheme-I)\n\n**Governing Code**: Bureau of Indian Standards (Conformity Assessment) Regulations 2018, Scheme-I (Mark Scheme)\n\n#### 1. Technical Prerequisites\n- **In-House Laboratory Setup**: Must maintain testing equipment specified in the **Scheme of Inspection and Testing (SIT)** corresponding to the specific Indian Standard (e.g. IS 302-2-1 for appliances, IS 1293 for plugs, IS 694 for PVC cables).\n- **Quality Personnel**: Qualified technical personnel dedicated to rigorous batch-testing and quality logging.\n- **Calibration Traceability**: All measurement gauges and test benches must have valid NABL-traceable calibration certificates.\n\n#### 2. Verification & Testing Protocol\n- **Sample Drawing**: BIS inspecting officer draws sealed duplicate samples from continuous commercial production (IS 2500 Part 1 / ISO 2859).\n- **Independent Lab Testing**: Sent to BIS Central Laboratory (Sahibabad) or accredited Third-Party Labs (NABL accredited under ISO/IEC 17025).\n- **Passing Criteria**: 100% compliance across all critical safety, dielectric, thermal, and mechanical clauses.\n\n#### 3. License Issuance & Fee Structure\n- **Application Fee**: ₹1,000 (Non-refundable).\n- **Preliminary Inspection Charge**: ₹7,000 per man-day + travel.\n- **Annual License Fee**: ₹1,000 per year.\n- **Marking Fee**: Calculated per unit produced, subject to minimum annual marking fee (50% concession for MSMEs/startups).`,
-        citations: [
-          { source: 'BIS Conformity Assessment Reg. 2018', clause: 'Scheme-I, Schedule II', version: 'Amend. 2023', type: 'circular' },
-          { source: 'ISO/IEC 17025:2017', clause: 'Testing Competence', version: 'Current', type: 'standard' },
-          { source: 'IS 2500-1:2000', clause: 'Sampling Inspection', version: 'Reaffirmed 2021', type: 'standard' }
-        ],
-        canVerify: true,
-      }
-    } else {
-      return {
-        content: `### How to Obtain an ISI Mark License (Simple 5-Step Guide)\n\nGetting a BIS ISI Mark for your product is straightforward when following these steps:\n\n1. **Identify Your Standard**:\n   Find the Indian Standard (IS code) applicable to your product category on the BIS portal.\n\n2. **Setup In-House Quality Testing**:\n   Ensure your manufacturing plant has basic testing equipment to verify quality parameters according to the BIS Scheme of Inspection.\n\n3. **Submit Online Application (Manakonline)**:\n   Visit the official [BIS Manakonline Portal](https://www.manakonline.in) and submit Form-1 along with factory layout, test equipment list, and manufacturing details.\n\n4. **Factory Inspection by BIS Officer**:\n   A designated BIS technical officer will inspect your factory premises, witness live testing, and draw independent sealed samples for lab testing.\n\n5. **Grant of License (CM/L Number)**:\n   Once independent test reports pass, BIS grants your **CM/L (Certification Marks License) number**, allowing you to imprint the prestigious ISI mark on your product and packaging!\n\n> **MSME Benefit**: Micro, Small & Medium Enterprises enjoy 50% concession on minimum marking fees and 20% concession on application charges!`,
-        citations: [
-          { source: 'BIS Scheme-I Guidelines', clause: 'Manakonline Process', version: '2024', type: 'circular' },
-          { source: 'MSME Concession Circular', clause: 'Dept of Consumer Affairs', version: 'Active', type: 'notification' },
-        ],
-        canVerify: true,
-      }
-    }
-  }
-
-  // Default response
-  if (readingMode === 'technical') {
-    return {
-      content: `### BIS Technical Standards Assessment\n\n**Applicable Standards Group**: Bureau of Indian Standards Mandatory Quality Orders & Technical Regulations.\n\n#### Key Specifications & Verification Clauses:\n1. **Harmonized Standards Compliance**: All products manufactured, stored, or distributed within the Republic of India must adhere to Section 16 of BIS Act, 2016.\n2. **Laboratory Verification Protocol**: Testing must be executed at BIS-recognized facilities under ISO/IEC 17025 accreditation protocols.\n3. **Quality Audits & Surveillance**: Licensees are subject to periodic unannounced factory surveillance audits and marketplace sample picking under Section 18.\n\n#### Recommended Actions:\n- Consult the relevant Sectional Committee (e.g. LITD, ETD, CHD, CED) documentation for clause-specific testing routines.\n- Ensure calibration records for testing equipment are maintained with continuous calibration logs.\n\n**Verification Status**: Corroborated with BIS Knowledge Base standards database.`,
-      citations: [
-        { source: 'BIS Act 2016', clause: 'Section 16 & 18', version: 'Act No. 11 of 2016', type: 'standard' },
-        { source: 'BIS Circular No. 15/2024', clause: 'Clause 4.3.2', version: 'Current', type: 'circular' }
-      ],
-      canVerify: true,
-    }
-  } else {
-    return {
-      content: `Based on official Bureau of Indian Standards (BIS) guidelines, here is what you need to know:\n\n**Key Takeaways**:\n1. **Quality & Safety First**: BIS standards ensure that goods produced or sold in India meet strict safety, durability, and health specifications.\n2. **Consumer Protection**: Look for the official ISI mark, Hallmarking logo on gold, and CRS (Compulsory Registration Scheme) registration on electronics.\n3. **Quick Verification**: You can verify any manufacturer's license number (CM/L) or gold HUID code instantly via the free **BIS Care App**.\n\n**Need Help?**\nYou can file a complaint or request further assistance through the BIS National Consumer Care toll-free line at **1800-11-4000**.`,
-      citations: [
-        { source: 'BIS Citizen Charter', clause: 'Consumer Rights & Verification', version: '2024', type: 'standard' },
-        { source: 'BIS Portal', clause: 'General Standards Registry', version: 'Current', type: 'circular' }
-      ],
-      canVerify: true,
-    }
-  }
-}
+// Database-Driven System: Static mock responses have been permanently removed.
 
 const useChatStore = create((set, get) => ({
   sessions:        [],
@@ -408,12 +232,9 @@ const useChatStore = create((set, get) => ({
       // Check if user stopped streaming during the wait
       if (!get().isStreaming) return
 
-      // Determine response based on prompt, reading mode, manufacturer context, and portal role
-      let mockData = getMockResponseForPrompt(content, readingMode, manufacturerProfile, role)
-
-      let aiContent = mockData.content
-      let citations = mockData.citations
-      let canVerify = mockData.canVerify
+      let aiContent = ''
+      let citations = []
+      let canVerify = false
 
       try {
         const apiRes = await chatApi.query({
@@ -426,11 +247,13 @@ const useChatStore = create((set, get) => ({
         })
         if (apiRes?.content) {
           aiContent = apiRes.content
-          citations = apiRes.citations || mockData.citations
-          canVerify = apiRes.canVerify ?? mockData.canVerify
+          citations = apiRes.citations || []
+          canVerify = apiRes.canVerify ?? (citations.length > 0)
+        } else {
+          aiContent = '### ⚠️ No Database Response\n\nThe Bureau of Indian Standards database did not return any records for this query.'
         }
-      } catch (_) {
-        // Fall back gracefully to curated BIS mock
+      } catch (err) {
+        aiContent = '### ⚠️ Database Connection Error\n\nUnable to retrieve records from the connected BIS database. Please check connection and try again.'
       }
 
       // Contextual follow-up suggestions
@@ -509,10 +332,32 @@ const useChatStore = create((set, get) => ({
       await sleep(750)
       if (!get().isStreaming) return
 
-      const { readingMode, selectedLanguage, manufacturerProfile, currentRole } = get()
-      const mockData = getMockResponseForPrompt(lastUserMsg.content, readingMode, manufacturerProfile, currentRole)
+      const { readingMode, selectedLanguage, manufacturerProfile, currentRole, currentSessionId } = get()
+      let aiContent = ''
+      let citations = []
+      let canVerify = false
+
+      try {
+        const apiRes = await chatApi.query({
+          sessionId: currentSessionId,
+          content: lastUserMsg.content,
+          language: selectedLanguage,
+          mode: readingMode,
+          role: currentRole,
+          manufacturerProfile,
+        })
+        if (apiRes?.content) {
+          aiContent = apiRes.content
+          citations = apiRes.citations || []
+          canVerify = apiRes.canVerify ?? (citations.length > 0)
+        } else {
+          aiContent = '### ⚠️ No Database Response\n\nThe Bureau of Indian Standards database did not return any records for this query.'
+        }
+      } catch (err) {
+        aiContent = '### ⚠️ Database Connection Error\n\nUnable to retrieve records from the connected BIS database.'
+      }
+
       let followUps = getSuggestedFollowUps(lastUserMsg.content, readingMode, manufacturerProfile, currentRole)
-      let aiContent = mockData.content
 
       if (selectedLanguage && selectedLanguage !== 'en') {
         aiContent = await translateToTargetLanguage(aiContent, selectedLanguage)
@@ -530,14 +375,14 @@ const useChatStore = create((set, get) => ({
         id:        genId('msg'),
         role:      'assistant',
         content:   aiContent,
-        citations: (mockData.citations || []).map(resolveDetailedCitation).filter(Boolean),
-        canVerify: mockData.canVerify,
+        citations: (citations || []).map(resolveDetailedCitation).filter(Boolean),
+        canVerify,
         followUps,
         readingMode,
         timestamp: new Date().toISOString(),
       }
 
-      const { currentSessionId, sessions } = get()
+      const { sessions } = get()
       const updatedSessions = sessions.map((s) =>
         s.id === currentSessionId
           ? { ...s, messages: [...trimmedMessages, aiMessage] }
@@ -575,10 +420,32 @@ const useChatStore = create((set, get) => ({
       await sleep(800)
       if (!get().isStreaming) return
 
-      const { readingMode, selectedLanguage, manufacturerProfile, currentRole } = get()
-      const mockData = getMockResponseForPrompt(newContent, readingMode, manufacturerProfile, currentRole)
+      const { readingMode, selectedLanguage, manufacturerProfile, currentRole, currentSessionId } = get()
+      let aiContent = ''
+      let citations = []
+      let canVerify = false
+
+      try {
+        const apiRes = await chatApi.query({
+          sessionId: currentSessionId,
+          content: newContent,
+          language: selectedLanguage,
+          mode: readingMode,
+          role: currentRole,
+          manufacturerProfile,
+        })
+        if (apiRes?.content) {
+          aiContent = apiRes.content
+          citations = apiRes.citations || []
+          canVerify = apiRes.canVerify ?? (citations.length > 0)
+        } else {
+          aiContent = '### ⚠️ No Database Response\n\nThe Bureau of Indian Standards database did not return any records for this query.'
+        }
+      } catch (err) {
+        aiContent = '### ⚠️ Database Connection Error\n\nUnable to retrieve records from the connected BIS database.'
+      }
+
       let followUps = getSuggestedFollowUps(newContent, readingMode, manufacturerProfile, currentRole)
-      let aiContent = mockData.content
 
       if (selectedLanguage && selectedLanguage !== 'en') {
         aiContent = await translateToTargetLanguage(aiContent, selectedLanguage)
@@ -596,14 +463,14 @@ const useChatStore = create((set, get) => ({
         id:        genId('msg'),
         role:      'assistant',
         content:   aiContent,
-        citations: mockData.citations,
-        canVerify: mockData.canVerify,
+        citations: (citations || []).map(resolveDetailedCitation).filter(Boolean),
+        canVerify,
         followUps,
         readingMode,
         timestamp: new Date().toISOString(),
       }
 
-      const { currentSessionId, sessions } = get()
+      const { sessions } = get()
       const updatedSessions = sessions.map((s) =>
         s.id === currentSessionId
           ? { ...s, messages: [...newHistory, aiMessage] }

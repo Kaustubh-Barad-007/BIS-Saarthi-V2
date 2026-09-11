@@ -175,25 +175,7 @@ export const CHAT_OUTPUT_OPTIONS = [
   { id: 'export',        label: 'Export PDF',          icon: 'Download'      },
 ]
 
-// Mock AI Responses
-export const MOCK_RESPONSES = {
-  default: {
-    content: `Based on the BIS Knowledge Base, here is the relevant information:\n\n**Standard Reference**: IS 302 Part 2 Section 1\n\n**Key Requirements**:\n1. Product must undergo mandatory testing at BIS recognized laboratory\n2. Apply for ISI Mark license through BIS Connect portal\n3. Maintain production quality records for minimum 5 years\n\n**Source**: BIS Circular No. 15/2024, Clause 4.3.2\n\n> This response is based on verified BIS documentation and guidelines.`,
-    citations: [
-      { source: 'IS 302-2-1:2019', clause: '4.3.2', version: 'Amendment 2, 2023', type: 'standard' },
-      { source: 'BIS Circular 15/2024', clause: 'Annex A', version: 'Current', type: 'circular'  },
-    ],
-    canVerify: true,
-  },
-  hallmarking: {
-    content: `**Hallmarking Guidance for Gold Jewellery:**\n\n1. **Mandatory**: From June 2021, hallmarking of gold jewellery is mandatory in India\n2. **Permitted caratages**: 14K, 18K, 20K, 22K, 23K, 24K\n3. **BIS Hallmark Components**:\n   - BIS Logo (triangle)\n   - Purity/Fineness (e.g., 750 for 18K)\n   - Assaying & Hallmarking Centre mark\n   - HUID (6-digit alphanumeric)\n\n4. **Process**: Jeweller must be BIS registered → Article sent to AHC → Hallmark applied\n\n**Contact**: 1800-11-4000 (BIS Helpline)`,
-    citations: [
-      { source: 'IS 1417:2016', clause: 'Clause 3', version: 'Reaffirmed 2022', type: 'standard' },
-      { source: 'Ministry of Consumer Affairs Notification', clause: 'Para 2', version: 'June 2021', type: 'notification' },
-    ],
-    canVerify: true,
-  },
-}
+// Database-Driven System: Static mock responses have been permanently removed.
 
 // Compliance steps for manufacturers
 export const COMPLIANCE_STEPS = [

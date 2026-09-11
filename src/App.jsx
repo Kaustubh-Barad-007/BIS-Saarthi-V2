@@ -7,6 +7,7 @@ import Footer  from '@/components/layout/Footer'
 import AppRouter from '@/router'
 import useAuthStore from '@/store/authStore'
 import useThemeStore from '@/store/themeStore'
+import { useDataStore } from '@/store/dataStore'
 import { PageLoader } from '@/components/common/LoadingSpinner'
 import ScrollToTop from '@/components/common/ScrollToTop'
 import { cn } from '@/lib/utils'
@@ -76,7 +77,10 @@ export default function App() {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    fetchMe().finally(() => setReady(true))
+    fetchMe().finally(() => {
+      useDataStore.getState().syncWithDb()
+      setReady(true)
+    })
   }, [])
 
   if (!ready) return <PageLoader text="Initializing BIS Saarthi..." />
