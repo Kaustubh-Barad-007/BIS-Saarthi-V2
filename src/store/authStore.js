@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { authApi } from '@/lib/api'
 import { DASHBOARD_BY_ROLE } from '@/lib/constants'
+import useChatStore from '@/store/chatStore'
 
 const useAuthStore = create(
   persist(
@@ -21,6 +22,7 @@ const useAuthStore = create(
           localStorage.setItem('bis_token', token)
           localStorage.setItem('bis_user', JSON.stringify(user))
           set({ user, token, isLoading: false, error: null })
+          useChatStore.getState().syncWithUser(user).catch(() => {})
           return { user, token }
         } catch (err) {
           set({ isLoading: false, error: err.message })
@@ -37,6 +39,7 @@ const useAuthStore = create(
           localStorage.setItem('bis_token', token)
           localStorage.setItem('bis_user', JSON.stringify(user))
           set({ user, token, isLoading: false, error: null })
+          useChatStore.getState().syncWithUser(user).catch(() => {})
           return { user, token }
         } catch (err) {
           set({ isLoading: false, error: err.message })
@@ -49,6 +52,7 @@ const useAuthStore = create(
         localStorage.removeItem('bis_token')
         localStorage.removeItem('bis_user')
         set({ user: null, token: null, error: null })
+        useChatStore.getState().syncWithUser(null).catch(() => {})
         try {
           authApi.logout().catch(() => {})
         } catch (_) {}
@@ -64,10 +68,12 @@ const useAuthStore = create(
         try {
           const data = await authApi.me()
           set({ user: data.user, token, isHydrated: true })
+          useChatStore.getState().syncWithUser(data.user).catch(() => {})
         } catch (_) {
           localStorage.removeItem('bis_token')
           localStorage.removeItem('bis_user')
           set({ user: null, token: null, isHydrated: true })
+          useChatStore.getState().syncWithUser(null).catch(() => {})
         }
       },
 

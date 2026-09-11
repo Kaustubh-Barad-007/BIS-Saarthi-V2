@@ -207,6 +207,80 @@ export default async function handler(req, res) {
       return res.status(200).json({ standards: rows || [] })
     }
 
+    // 7. Chat Sessions & Messages (RBAC & User Sign-in Scoped)
+    if (type === 'chat_sessions') {
+      if (!user) {
+        return res.status(200).json({ sessions: [] })
+      }
+      const numericUserId = parseInt(user.id, 10)
+      if (isNaN(numericUserId)) {
+        return res.status(200).json({ sessions: [] })
+      }
+
+      if (req.method === 'GET') {
+        let rows = []
+        if (user.role === 'admin' && req.query?.all === 'true') {
+          // Admin RBAC: can inspect all user sessions with user details
+          rows = await sql`
+            SELECT s.id, s.user_id as "userId", u.name as "userName", u.email as "userEmail", u.role as "userRole",
+                   s.title, s.created_at as "createdAt", s.updated_at as "updatedAt"
+            FROM chat_sessions s
+            LEFT JOIN users u ON u.id = s.user_id
+            ORDER BY s.updated_at DESC
+            LIMIT 100
+          `
+        } else {
+          // Strict User Sign-in RBAC: users only ever retrieve their own sessions
+          rows = await sql`
+            SELECT s.id, s.user_id as "userId", s.title, s.created_at as "createdAt", s.updated_at as "updatedAt"
+            FROM chat_sessions s
+            WHERE s.user_id = ${numericUserId}
+            ORDER BY s.updated_at DESC
+            LIMIT 50
+          `
+        }
+
+        // For each session, fetch its messages
+        const sessionsWithMessages = await Promise.all(
+          (rows || []).map(async (sess) => {
+            const msgs = await sql`
+              SELECT id, role, content, metadata, created_at as "timestamp"
+              FROM chat_messages
+              WHERE session_id = ${sess.id}
+              ORDER BY created_at ASC
+            `
+            return {
+              id: sess.id,
+              title: sess.title,
+              createdAt: sess.createdAt,
+              updatedAt: sess.updatedAt,
+              messages: (msgs || []).map((m) => ({
+                id: `msg-${m.id}`,
+                role: m.role,
+                content: m.content,
+                citations: m.metadata?.citations || [],
+                timestamp: m.timestamp,
+              })),
+            }
+          })
+        )
+
+        return res.status(200).json({ sessions: sessionsWithMessages })
+      }
+
+      if (req.method === 'DELETE') {
+        const sessId = req.query?.sessionId || req.body?.sessionId
+        if (!sessId) return res.status(400).json({ error: 'Session ID is required' })
+
+        if (user.role === 'admin') {
+          await sql`DELETE FROM chat_sessions WHERE id = ${sessId}`
+        } else {
+          await sql`DELETE FROM chat_sessions WHERE id = ${sessId} AND user_id = ${numericUserId}`
+        }
+        return res.status(200).json({ success: true })
+      }
+    }
+
     return res.status(400).json({ error: 'Invalid data type requested' })
   } catch (err) {
     console.error('Data API error:', err)

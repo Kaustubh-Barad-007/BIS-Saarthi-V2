@@ -365,27 +365,47 @@ export default async function handler(req, res) {
       canVerify: citations.length > 0,
     }
 
-    // Save chat message to DB if session exists — store ONLY lean metadata, no bulky payloads!
+    // Save chat session & messages to DB if user is authenticated — store ONLY lean metadata as per user sign-in & RBAC!
     if (sessionId && user.id !== 'guest') {
       try {
-        const leanCitations = (response.citations || []).map((c) => ({
-          source: c.source,
-          title: c.title,
-          clause: c.clause,
-        }))
-        await sql`
-          INSERT INTO chat_messages (session_id, role, content, metadata)
-          VALUES (${sessionId}, 'user', ${content}, ${JSON.stringify({ language })}::jsonb)
-        `
-        await sql`
-          INSERT INTO chat_messages (session_id, role, content, metadata)
-          VALUES (${sessionId}, 'assistant', ${response.content}, ${JSON.stringify({ citations: leanCitations })}::jsonb)
-        `
-        await sql`
-          INSERT INTO audit_logs (user_id, user_email, action, resource)
-          VALUES (${user.id}, ${user.email}, 'QUERY', ${'Chat session ' + sessionId})
-        `
-      } catch (_) {}
+        const numericUserId = parseInt(user.id, 10)
+        if (!isNaN(numericUserId)) {
+          const sessionTitle = content.slice(0, 45).trim() || 'BIS Query'
+
+          // 1. Upsert chat_sessions table for this specific user
+          await sql`
+            INSERT INTO chat_sessions (id, user_id, title, updated_at)
+            VALUES (${sessionId}, ${numericUserId}, ${sessionTitle}, NOW())
+            ON CONFLICT (id) DO UPDATE SET updated_at = NOW()
+          `
+
+          const leanCitations = (response.citations || []).map((c) => ({
+            source: c.source,
+            title: c.title,
+            clause: c.clause,
+          }))
+
+          // 2. Insert user message
+          await sql`
+            INSERT INTO chat_messages (session_id, role, content, metadata)
+            VALUES (${sessionId}, 'user', ${content}, ${JSON.stringify({ language, userRole: user.role, userId: numericUserId })}::jsonb)
+          `
+
+          // 3. Insert assistant response
+          await sql`
+            INSERT INTO chat_messages (session_id, role, content, metadata)
+            VALUES (${sessionId}, 'assistant', ${response.content}, ${JSON.stringify({ citations: leanCitations, userRole: user.role })}::jsonb)
+          `
+
+          // 4. Audit log with user and role for RBAC
+          await sql`
+            INSERT INTO audit_logs (user_id, user_email, action, resource, details)
+            VALUES (${numericUserId}, ${user.email}, 'CHAT_QUERY', ${'Chat session ' + sessionId}, ${JSON.stringify({ role: user.role, standard: leanCitations[0]?.source || null })}::jsonb)
+          `
+        }
+      } catch (dbErr) {
+        console.error('Failed to store chat session/message in DB:', dbErr)
+      }
     }
 
     return res.status(200).json(response)

@@ -25,13 +25,35 @@ const loadManufacturerProfile = () => {
   return DEFAULT_MANUFACTURER_PROFILE
 }
 
-const SESSIONS_STORAGE_KEY = 'bis_chat_sessions_v2'
-const ACTIVE_SESSION_STORAGE_KEY = 'bis_active_session_v2'
+const getActiveUserFromStorage = () => {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem('bis_user')
+    if (raw) return JSON.parse(raw)
+  } catch (_) {}
+  return null
+}
 
-const loadSavedSessions = () => {
+const getUserStorageKeys = (user = null) => {
+  const u = user || getActiveUserFromStorage()
+  if (u?.id) {
+    const role = u.role || 'consumer'
+    return {
+      sessionsKey: `bis_chat_sessions_u${u.id}_${role}`,
+      activeKey: `bis_active_session_u${u.id}_${role}`,
+    }
+  }
+  return {
+    sessionsKey: 'bis_chat_sessions_guest',
+    activeKey: 'bis_active_session_guest',
+  }
+}
+
+const loadSavedSessions = (user = null) => {
   if (typeof window === 'undefined') return []
   try {
-    const raw = localStorage.getItem(SESSIONS_STORAGE_KEY)
+    const { sessionsKey } = getUserStorageKeys(user)
+    const raw = localStorage.getItem(sessionsKey)
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed)) {
@@ -48,18 +70,20 @@ const loadSavedSessions = () => {
   return []
 }
 
-const loadSavedActiveSessionId = (sessions) => {
+const loadSavedActiveSessionId = (sessions, user = null) => {
   if (typeof window === 'undefined') return null
   try {
-    const active = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY)
-    if (active && sessions.some(s => s.id === active)) return active
+    const { activeKey } = getUserStorageKeys(user)
+    const active = localStorage.getItem(activeKey)
+    if (active && sessions.some((s) => s.id === active)) return active
   } catch (_) {}
   return sessions[0]?.id || null
 }
 
-const persistSessions = (sessions, activeId) => {
+const persistSessions = (sessions, activeId, user = null) => {
   if (typeof window === 'undefined') return
   try {
+    const { sessionsKey, activeKey } = getUserStorageKeys(user)
     // Sanitize sessions: store ONLY lean chat history, timestamps, and minimal citation tags.
     // No raw bulky document dumps, schemas, or heavy payloads are stored.
     const leanSessions = (sessions || []).map((s) => ({
@@ -81,11 +105,11 @@ const persistSessions = (sessions, activeId) => {
       })),
     }))
 
-    localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(leanSessions))
+    localStorage.setItem(sessionsKey, JSON.stringify(leanSessions))
     if (activeId) {
-      localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, activeId)
+      localStorage.setItem(activeKey, activeId)
     } else {
-      localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY)
+      localStorage.removeItem(activeKey)
     }
   } catch (_) {}
 }
@@ -190,8 +214,9 @@ export const translateToTargetLanguage = async (text, targetLang) => {
 
 // Database-Driven System: Static mock responses have been permanently removed.
 
-const initialSessions = loadSavedSessions()
-const initialActiveSessionId = loadSavedActiveSessionId(initialSessions)
+const initialUser = getActiveUserFromStorage()
+const initialSessions = loadSavedSessions(initialUser)
+const initialActiveSessionId = loadSavedActiveSessionId(initialSessions, initialUser)
 const initialMessages = initialActiveSessionId
   ? (initialSessions.find((s) => s.id === initialActiveSessionId)?.messages || [])
   : []
@@ -200,11 +225,76 @@ const useChatStore = create((set, get) => ({
   sessions:        initialSessions,
   currentSessionId:initialActiveSessionId,
   messages:        initialMessages,
+  currentUserId:   initialUser?.id || null,
+  currentUserRole: initialUser?.role || 'consumer',
   isLoading:       false,
   isStreaming:      false,
   error:           null,
   selectedLanguage:'en',
   uploadedFiles:   [],
+
+  // Sync sessions when user logs in, switches accounts, or logs out
+  syncWithUser: async (user) => {
+    const targetUser = user || getActiveUserFromStorage()
+    const localSessions = loadSavedSessions(targetUser)
+    let activeId = loadSavedActiveSessionId(localSessions, targetUser) || localSessions[0]?.id || null
+
+    set({
+      currentUserId: targetUser?.id || null,
+      currentUserRole: targetUser?.role || 'consumer',
+      currentRole: targetUser?.role || 'consumer',
+      sessions: localSessions,
+      currentSessionId: activeId,
+      messages: localSessions.find((s) => s.id === activeId)?.messages || [],
+    })
+
+    // If user is authenticated, sync with PostgreSQL NeonDB under proper RBAC
+    if (targetUser?.id && targetUser.id !== 'guest') {
+      try {
+        const token = localStorage.getItem('bis_token')
+        if (token) {
+          const res = await fetch('/api/data?type=chat_sessions', {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (res.ok) {
+            const data = await res.json()
+            if (Array.isArray(data.sessions)) {
+              const dbSessions = data.sessions.map((s) => ({
+                ...s,
+                messages: (s.messages || []).map((m) => ({
+                  ...m,
+                  citations: (m.citations || []).map(resolveDetailedCitation).filter(Boolean),
+                })),
+              }))
+
+              // Merge local + DB sessions (local takes precedence if matching id)
+              const sessionMap = new Map()
+              localSessions.forEach((s) => sessionMap.set(s.id, s))
+              dbSessions.forEach((s) => {
+                if (!sessionMap.has(s.id)) {
+                  sessionMap.set(s.id, s)
+                }
+              })
+
+              const merged = Array.from(sessionMap.values())
+              const validActiveId = activeId && merged.some((s) => s.id === activeId)
+                ? activeId
+                : merged[0]?.id || null
+
+              set({
+                sessions: merged,
+                currentSessionId: validActiveId,
+                messages: merged.find((s) => s.id === validActiveId)?.messages || [],
+              })
+              persistSessions(merged, validActiveId, targetUser)
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Chat DB sync error:', err.message)
+      }
+    }
+  },
 
   // Manufacturer Intake Profile & Continuous Context
   currentRole:     'consumer',
@@ -620,7 +710,21 @@ const useChatStore = create((set, get) => ({
       currentSessionId: nextCurrentSessionId,
       messages: nextMessages,
     })
-    persistSessions(updatedSessions, nextCurrentSessionId)
+    const activeUser = getActiveUserFromStorage()
+    persistSessions(updatedSessions, nextCurrentSessionId, activeUser)
+
+    // Delete in PostgreSQL DB if user is signed in
+    if (activeUser?.id && activeUser.id !== 'guest') {
+      try {
+        const token = localStorage.getItem('bis_token')
+        if (token) {
+          fetch(`/api/data?type=chat_sessions&sessionId=${sessionId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          }).catch(() => {})
+        }
+      } catch (_) {}
+    }
   },
 
   // Language

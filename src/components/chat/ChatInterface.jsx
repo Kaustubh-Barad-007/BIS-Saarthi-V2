@@ -439,7 +439,7 @@ export default function ChatInterface({ role = 'consumer' }) {
     chatFontSize, setChatFontSize, stopStreaming, regenerateLastResponse,
     editAndResendMessage,
     manufacturerProfile, setManufacturerProfile, resetManufacturerProfile,
-    setRole,
+    setRole, syncWithUser,
   } = useChatStore()
 
   const { user } = useAuthStore()
@@ -460,10 +460,11 @@ export default function ChatInterface({ role = 'consumer' }) {
   const [audioPlayer, setAudioPlayer]               = useState(null)
   const [gatewayDismissed, setGatewayDismissed]     = useState(false)
   
-  // Set current role in chat store
+  // Set current role and synchronize user-scoped chat sessions on sign-in / user change
   useEffect(() => {
     if (setRole) setRole(role)
-  }, [role, setRole])
+    if (syncWithUser) syncWithUser(user)
+  }, [role, user?.id, user?.role, setRole, syncWithUser])
   
   // Manufacturer Profile & Continuous Context State
   const [showProfileModal, setShowProfileModal]     = useState(false)
@@ -1290,31 +1291,19 @@ export default function ChatInterface({ role = 'consumer' }) {
         
         {/* Chat Header */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-dark-bg-card border-b border-gray-200 dark:border-dark-border gap-2 flex-wrap sm:flex-nowrap">
-          {/* Left: Chat History Sidebar Toggle, New Chat, & Title */}
+          {/* Left: Title & Subtitle */}
           <div className="flex items-center gap-2">
             {!showSidebar && (
               <button
                 onClick={() => setShowSidebar(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 dark:bg-dark-bg-card dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-border text-xs font-semibold transition-all shadow-2xs cursor-pointer"
-                title="Open Chat History"
-                aria-label="Open chat history sidebar"
+                className="md:hidden p-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-dark-bg-card dark:border-dark-border dark:text-dark-text text-xs cursor-pointer shrink-0"
+                title="Open Conversations"
+                aria-label="Open Conversations"
               >
-                <PanelLeftOpen className="w-4 h-4 text-bis-navy dark:text-blue-400 shrink-0" />
-                <span className="hidden sm:inline">Chat History</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-dark-border text-gray-700 dark:text-dark-text-muted font-bold leading-none">
-                  {sessions.length}
-                </span>
+                <PanelLeftOpen className="w-4 h-4 text-bis-navy dark:text-blue-400" />
               </button>
             )}
 
-            <button
-              onClick={() => startSession()}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-dark-bg-card dark:border-dark-border dark:text-dark-text transition-all text-xs font-semibold shadow-2xs cursor-pointer"
-              title="Start New Conversation"
-            >
-              <Plus className="w-3.5 h-3.5 text-bis-navy dark:text-blue-400 shrink-0" />
-              <span className="hidden md:inline">New</span>
-            </button>
 
             <div>
               <div className="flex items-center gap-2">
