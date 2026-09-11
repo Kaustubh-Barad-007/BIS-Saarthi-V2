@@ -122,92 +122,9 @@ export default async function handler(req, res) {
       }
     }
 
-    // 4. Knowledge Base Documents
-    if (type === 'documents') {
-      if (req.method === 'GET') {
-        const rows = await sql`
-          SELECT id, title, category, version, size, status, chunks, uploaded_at as "uploaded"
-          FROM knowledge_docs
-          ORDER BY uploaded_at DESC
-        `
-        return res.status(200).json({ documents: rows || [] })
-      }
-      if (req.method === 'POST') {
-        const { title, category = 'Standard', version = '1.0', size = 500000, status = 'published', chunks = 10 } = req.body || {}
-        const [newRow] = await sql`
-          INSERT INTO knowledge_docs (title, category, version, size, status, chunks)
-          VALUES (${title}, ${category}, ${version}, ${size}, ${status}, ${chunks})
-          RETURNING id, title, category, version, size, status, chunks, uploaded_at as "uploaded"
-        `
-        return res.status(201).json({ document: newRow })
-      }
-      if (req.method === 'DELETE') {
-        const id = req.query?.id || req.body?.id
-        await sql`DELETE FROM knowledge_docs WHERE id = ${id}`
-        return res.status(200).json({ message: 'Deleted' })
-      }
-    }
-
-    // 4b. Manufacturer Statutory Documents
-    if (type === 'manufacturer-documents') {
-      if (req.method === 'GET') {
-        let rows = []
-        if (user?.role === 'admin') {
-          rows = await sql`
-            SELECT id, user_email as "userEmail", name, category, standard_code as "standardCode", file_type as "fileType", file_size as "size", version, status, review_notes as "reviewNotes", checksum, uploaded_at as "uploaded", valid_until as "validUntil"
-            FROM manufacturer_documents
-            ORDER BY uploaded_at DESC
-          `
-        } else {
-          const userEmail = user?.email || 'msme@bis.gov.in'
-          rows = await sql`
-            SELECT id, user_email as "userEmail", name, category, standard_code as "standardCode", file_type as "fileType", file_size as "size", version, status, review_notes as "reviewNotes", checksum, uploaded_at as "uploaded", valid_until as "validUntil"
-            FROM manufacturer_documents
-            WHERE user_email = ${userEmail} OR user_email IS NULL
-            ORDER BY uploaded_at DESC
-          `
-        }
-        return res.status(200).json({ documents: rows || [] })
-      }
-      if (req.method === 'POST') {
-        const {
-          name,
-          category = 'Compliance Document',
-          standardCode = 'IS 14543:2024',
-          fileType = 'PDF',
-          size = 1500000,
-          version = '1.0',
-          status = 'pending',
-          reviewNotes = 'Uploaded by manufacturer; queued for scrutiny',
-          checksum = `SHA256:${Math.random().toString(36).substring(2, 12)}`,
-          validUntil = null
-        } = req.body || {}
-        if (!name) return res.status(400).json({ error: 'Document name is required' })
-        const docId = `DOC-${new Date().getFullYear()}-${category.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`
-        const userEmail = user?.email || 'msme@bis.gov.in'
-        const userId = user?.id || null
-        const [newRow] = await sql`
-          INSERT INTO manufacturer_documents (id, user_id, user_email, name, category, standard_code, file_type, file_size, version, status, review_notes, checksum, valid_until)
-          VALUES (${docId}, ${userId}, ${userEmail}, ${name}, ${category}, ${standardCode}, ${fileType}, ${size}, ${version}, ${status}, ${reviewNotes}, ${checksum}, ${validUntil})
-          RETURNING id, user_email as "userEmail", name, category, standard_code as "standardCode", file_type as "fileType", file_size as "size", version, status, review_notes as "reviewNotes", checksum, uploaded_at as "uploaded", valid_until as "validUntil"
-        `
-        return res.status(201).json({ document: newRow })
-      }
-      if (req.method === 'PUT') {
-        const { id, status, reviewNotes } = req.body || {}
-        const [updated] = await sql`
-          UPDATE manufacturer_documents
-          SET status = COALESCE(${status}, status), review_notes = COALESCE(${reviewNotes}, review_notes)
-          WHERE id = ${id}
-          RETURNING id, user_email as "userEmail", name, category, standard_code as "standardCode", file_type as "fileType", file_size as "size", version, status, review_notes as "reviewNotes", checksum, uploaded_at as "uploaded", valid_until as "validUntil"
-        `
-        return res.status(200).json({ document: updated })
-      }
-      if (req.method === 'DELETE') {
-        const id = req.query?.id || req.body?.id
-        await sql`DELETE FROM manufacturer_documents WHERE id = ${id}`
-        return res.status(200).json({ message: 'Deleted' })
-      }
+    // 4. Documents endpoints (knowledge_docs and manufacturer_documents removed)
+    if (type === 'documents' || type === 'manufacturer-documents') {
+      return res.status(200).json({ documents: [] })
     }
 
     // 5. Audit logs
@@ -232,41 +149,22 @@ export default async function handler(req, res) {
       }
     }
 
-    // 6. Standards search
+    // 6. Standards search (served from regulatory standards registry)
     if (type === 'standards') {
-      let rows = []
+      const { STANDARDS_REGISTRY } = await import('./_lib/standardsReferences.js')
+      let list = Object.values(STANDARDS_REGISTRY).map((s) => ({
+        id: s.source,
+        title: s.title,
+        category: s.type === 'guidelines' ? 'Guidelines' : 'Standard',
+        year: 2023,
+        status: 'current',
+        scope: s.summary,
+      }))
       if (search && search.trim()) {
-        const term = `%${search.trim()}%`
-        try {
-          rows = await sql`
-            SELECT standard_code as id, title, 'Standard' as category, 2023 as year, 'current' as status, content as scope
-            FROM bis_standard_documents
-            WHERE standard_code ILIKE ${term} OR title ILIKE ${term}
-            LIMIT 50
-          `
-        } catch (_) {}
-
-        if (!rows || rows.length === 0) {
-          try {
-            rows = await sql`
-              SELECT standard_code as id, product_name as title, scheme_type as category, 2023 as year, 'current' as status, key_testing_parameters as scope
-              FROM bis_standards_master
-              WHERE standard_code ILIKE ${term} OR product_name ILIKE ${term}
-              LIMIT 50
-            `
-          } catch (_) {}
-        }
-      } else {
-        try {
-          rows = await sql`
-            SELECT standard_code as id, title, 'Standard' as category, 2023 as year, 'current' as status, content as scope
-            FROM bis_standard_documents
-            ORDER BY id ASC
-            LIMIT 50
-          `
-        } catch (_) {}
+        const q = search.trim().toLowerCase()
+        list = list.filter((s) => s.id.toLowerCase().includes(q) || s.title.toLowerCase().includes(q) || s.scope.toLowerCase().includes(q))
       }
-      return res.status(200).json({ standards: rows || [] })
+      return res.status(200).json({ standards: list.slice(0, 50) })
     }
 
     // 7. Chat Sessions & Messages (RBAC & User Sign-in Scoped)

@@ -44,7 +44,7 @@ export default function ManufacturerDashboard() {
         <StatCard label="Active Licenses"       value={activeCerts}  delta="+1"  color="green"  icon={BadgeCheck}  />
         <StatCard label="Pending Applications"  value={pendingCerts} delta={pendingCerts > 0 ? `+${pendingCerts}` : '0'} color="orange" icon={Clock}       />
         <StatCard label="Lab Reports Filed"     value={8}            delta="+3"  color="blue"   icon={FlaskConical} />
-        <StatCard label="Documents Uploaded"    value={manufacturerDocs.length} delta={`+${manufacturerDocs.length}`} color="purple" icon={FileText}    />
+        <StatCard label="Compliance Inquiries"  value="Direct AI"    delta="Live"  color="purple" icon={MessageSquare} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">

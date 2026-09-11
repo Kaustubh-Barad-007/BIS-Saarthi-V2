@@ -95,7 +95,6 @@ export const SIDEBAR_NAV = {
     { label: 'BIS Saarthi AI',    path: ROUTES.MANUFACTURER_CHAT,           icon: 'MessageSquare' },
     { label: 'Certifications',    path: ROUTES.MANUFACTURER_CERTIFICATION,   icon: 'BadgeCheck' },
     { label: 'Compliance Roadmap',path: ROUTES.MANUFACTURER_COMPLIANCE,      icon: 'Map' },
-    { label: 'Documents',         path: ROUTES.MANUFACTURER_DOCUMENTS,       icon: 'FileText' },
     { label: 'Notifications',     path: ROUTES.MANUFACTURER_NOTIFICATIONS,   icon: 'Bell' },
   ],
   [ROLES.ADMIN]: [
@@ -104,7 +103,6 @@ export const SIDEBAR_NAV = {
     { label: 'Complaints',     path: ROUTES.ADMIN_COMPLAINTS,     icon: 'AlertTriangle' },
     { label: 'Certifications', path: ROUTES.ADMIN_CERTIFICATIONS, icon: 'BadgeCheck' },
     { label: 'User Management',path: ROUTES.ADMIN_USERS,          icon: 'Users' },
-    { label: 'Knowledge Base', path: ROUTES.ADMIN_KNOWLEDGE,      icon: 'Database' },
     { label: 'Audit Log',      path: ROUTES.ADMIN_AUDIT,          icon: 'ClipboardList' },
     { label: 'Analytics',      path: ROUTES.ADMIN_ANALYTICS,      icon: 'BarChart3' },
   ],

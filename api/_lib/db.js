@@ -102,68 +102,8 @@ export async function initDb(sql) {
       created_at  TIMESTAMP DEFAULT NOW()
     )
   `
-  await sql`
-    CREATE TABLE IF NOT EXISTS knowledge_docs (
-      id          SERIAL PRIMARY KEY,
-      title       TEXT NOT NULL,
-      category    TEXT NOT NULL DEFAULT 'Standard',
-      version     TEXT DEFAULT '1.0',
-      size        INTEGER DEFAULT 100000,
-      status      TEXT DEFAULT 'published',
-      chunks      INTEGER DEFAULT 1,
-      uploaded_at TIMESTAMP DEFAULT NOW()
-    )
-  `
-  await sql`
-    CREATE TABLE IF NOT EXISTS bis_standards_master (
-      id                      SERIAL PRIMARY KEY,
-      product_name            TEXT NOT NULL,
-      standard_code           TEXT NOT NULL,
-      scheme_type             TEXT NOT NULL,
-      mandatory_qco           TEXT NOT NULL,
-      key_testing_parameters  TEXT,
-      official_source_link    TEXT,
-      created_at              TIMESTAMP DEFAULT NOW()
-    )
-  `
-  await sql`
-    CREATE TABLE IF NOT EXISTS bis_certification_fees (
-      id                 SERIAL PRIMARY KEY,
-      category           TEXT NOT NULL,
-      fee_type           TEXT NOT NULL,
-      enterprise_scale   TEXT NOT NULL,
-      amount_description TEXT NOT NULL,
-      details            JSONB,
-      created_at         TIMESTAMP DEFAULT NOW()
-    )
-  `
-  await sql`
-    CREATE TABLE IF NOT EXISTS bis_standard_documents (
-      id            SERIAL PRIMARY KEY,
-      standard_code TEXT NOT NULL,
-      title         TEXT NOT NULL,
-      content       TEXT NOT NULL,
-      created_at    TIMESTAMP DEFAULT NOW()
-    )
-  `
-  await sql`
-    CREATE TABLE IF NOT EXISTS manufacturer_documents (
-      id            TEXT PRIMARY KEY,
-      user_id       INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      user_email    TEXT,
-      name          TEXT NOT NULL,
-      category      TEXT NOT NULL,
-      standard_code TEXT,
-      file_type     TEXT DEFAULT 'PDF',
-      file_size     INTEGER DEFAULT 1200000,
-      version       TEXT DEFAULT '1.0',
-      status        TEXT DEFAULT 'pending',
-      review_notes  TEXT,
-      checksum      TEXT,
-      uploaded_at   TIMESTAMP DEFAULT NOW(),
-      valid_until   TIMESTAMP
-    )
-  `
+  // Note: Document tables (knowledge_docs, bis_standards_master, bis_standard_documents, manufacturer_documents)
+  // have been completely removed from the database as requested.
 
   // Ensure missing columns exist in existing tables
   try {
@@ -235,37 +175,7 @@ export async function initDb(sql) {
     }
   } catch (_) {}
 
-  // Seed knowledge docs if empty
-  try {
-    const [{ count }] = await sql`SELECT count(*)::int as count FROM knowledge_docs`
-    if (count === 0) {
-      await sql`
-        INSERT INTO knowledge_docs (title, category, version, size, status, chunks)
-        VALUES 
-          ('IS 14543:2024 Packaged Drinking Water Specification', 'Standard', '2024.1', 450000, 'published', 14),
-          ('IS 269:2015 Ordinary Portland Cement Specifications', 'Standard', '2015.3', 620000, 'published', 22),
-          ('BIS Act 2016 & Conformity Assessment Rules', 'Gazette', '2018.1', 890000, 'published', 35)
-      `
-    }
-  } catch (_) {}
-
-  // Seed manufacturer compliance documents if empty
-  try {
-    const [{ count }] = await sql`SELECT count(*)::int as count FROM manufacturer_documents`
-    if (count === 0) {
-      await sql`
-        INSERT INTO manufacturer_documents (id, user_email, name, category, standard_code, file_type, file_size, version, status, review_notes, checksum, valid_until)
-        VALUES 
-          ('DOC-2025-QMS-001', 'msme@bis.gov.in', 'Quality Management System Manual (Scheme-I)', 'Quality Manual', 'IS 14543:2024', 'PDF', 2850000, '3.2', 'approved', 'Technical scrutiny passed by BIS Northern Regional Office', 'SHA256:8f4c2e5b927a4d1e8c046a', NOW() + INTERVAL '365 days'),
-          ('DOC-2025-LAB-014', 'msme@bis.gov.in', 'NABL Form-VI Independent Water Purity Test Report', 'Lab Test Report', 'IS 14543:2024', 'PDF', 4120000, '1.0', 'approved', 'Tested at Central Laboratory Sahibabad; Microbiological & Chemical parameters compliant', 'SHA256:1a9d3e7c046b8f4c2e5b92', NOW() + INTERVAL '180 days'),
-          ('DOC-2025-MCH-022', 'msme@bis.gov.in', 'Manufacturing Flowchart & Reverse Osmosis Machinery List', 'Process & Machinery', 'IS 14543:2024', 'PDF', 1840000, '2.0', 'approved', 'Verified during initial factory audit', 'SHA256:d481f25b921a9d3e7c046b', NOW() + INTERVAL '730 days'),
-          ('DOC-2025-RAW-009', 'msme@bis.gov.in', 'Raw Material Food-Grade Polycarbonate Preform MTC', 'Raw Material MTC', 'IS 12252:2018', 'PDF', 980000, '1.1', 'review', 'Under verification for food-grade polymer migration test certificate', 'SHA256:7e21a89f118f4c2e5b927a', NOW() + INTERVAL '90 days'),
-          ('DOC-2025-CAL-035', 'msme@bis.gov.in', 'Spectrophotometer & pH Meter Calibration Certificate', 'Calibration Certificate', 'IS 10500:2012', 'PDF', 720000, '1.0', 'approved', 'Annual calibration certified by NABL Accredited Laboratory', 'SHA256:4b55c11e887c046b8f4c2e', NOW() + INTERVAL '240 days'),
-          ('DOC-2025-UND-003', 'msme@bis.gov.in', 'BIS Form IX Statutory Declaration & Undertaking', 'Statutory Undertaking', 'Scheme-I', 'PDF', 510000, '1.0', 'approved', 'Duly signed by Authorized Managing Director', 'SHA256:3c88a92d471a9d3e7c046b', NOW() + INTERVAL '1095 days')
-        ON CONFLICT (id) DO NOTHING
-      `
-    }
-  } catch (_) {}
+  // (knowledge_docs and manufacturer_documents seeding removed)
 }
 
 // CORS headers for all API responses

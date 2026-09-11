@@ -6,7 +6,7 @@ import { resolveDetailedCitation } from '../_lib/standardsReferences.js'
 const JWT_SECRET = process.env.JWT_SECRET || 'bis-saarthi-dev-secret-2024'
 
 // ── 1. EXTERNAL RAG EXTRACTION ENGINE ──
-// Uses the dedicated External RAG API Key and statutory database to extract grounded documents
+// Uses the dedicated External RAG API Key, statutory standards registry, and fee schedules
 async function extractRAGGroundingData(sql, query, ragApiKey) {
   const matches = []
   const citations = []
@@ -46,161 +46,71 @@ async function extractRAGGroundingData(sql, query, ragApiKey) {
     } catch (_) {}
   }
 
-  // 1. Match Indian Standard code (e.g. IS 14543, IS 383, IS 1417)
+  // 1. Check statutory standards registry
+  const { STANDARDS_REGISTRY } = await import('../_lib/standardsReferences.js')
   const stdMatch = cleanQ.match(/\b(?:IS|is)\s*:?\s*(\d+)/i)
   if (stdMatch) {
     const codeNum = stdMatch[1]
-    try {
-      const docRows = await sql`
-        SELECT standard_code, title, content
-        FROM bis_standard_documents
-        WHERE standard_code ILIKE ${'%' + codeNum + '%'}
-        LIMIT 3
-      `
-      if (docRows?.length > 0) {
-        matches.push({ type: 'standards', data: docRows })
-        docRows.forEach((d) => {
-          citations.push({
-            source: d.standard_code,
-            title: d.title,
-            clause: 'Database Standard Record',
-            version: 'Active Gazette',
-            type: 'standard',
-            extractedVia: 'External RAG Engine',
-            ragGrounded: true,
-          })
-        })
-      }
-
-      const masterRows = await sql`
-        SELECT product_name, standard_code, scheme_type, mandatory_qco, key_testing_parameters, official_source_link
-        FROM bis_standards_master
-        WHERE standard_code ILIKE ${'%' + codeNum + '%'}
-        LIMIT 2
-      `
-      if (masterRows?.length > 0) {
-        matches.push({ type: 'master', data: masterRows })
-        masterRows.forEach((m) => {
-          citations.push({
-            source: m.standard_code,
-            title: m.product_name,
-            clause: `Scheme: ${m.scheme_type}`,
-            version: m.mandatory_qco || 'QCO',
-            type: 'notification',
-            extractedVia: 'External RAG Engine',
-            ragGrounded: true,
-          })
-        })
-      }
-    } catch (_) {}
+    const matchedEntry = Object.entries(STANDARDS_REGISTRY).find(([k]) => k.includes(codeNum))
+    if (matchedEntry) {
+      const [key, std] = matchedEntry
+      matches.push({ type: 'registry_standard', data: [std] })
+      citations.push({
+        source: std.source,
+        title: std.title,
+        clause: std.clause,
+        version: std.version,
+        type: std.type,
+        extractedVia: 'External RAG Engine',
+        ragGrounded: true,
+      })
+    }
   }
 
   // 2. Fees & MSME concessions query
   if (lowerQ.includes('fee') || lowerQ.includes('cost') || lowerQ.includes('concession') || lowerQ.includes('charge') || lowerQ.includes('msme')) {
     try {
-      const feeRows = await sql`
-        SELECT category, fee_type, enterprise_scale, amount_description
-        FROM bis_certification_fees
-        LIMIT 10
-      `
-      if (feeRows?.length > 0) {
-        matches.push({ type: 'fees', data: feeRows })
-        citations.push({
-          source: 'BIS Certification Fee Schedule',
-          title: 'Statutory Tariff & MSME Concessions',
-          clause: 'Conformity Assessment Regulations',
-          version: 'Active Schedule',
-          type: 'circular',
-          extractedVia: 'External RAG Engine',
-          ragGrounded: true,
-        })
-      }
-    } catch (_) {}
-  }
-
-  // 3. Keyword / text search in bis_standards_master
-  if (matches.length === 0) {
-    try {
-      const words = lowerQ.split(/\s+/).filter((w) => w.length > 2)
-      for (const word of words.slice(0, 3)) {
-        const mRows = await sql`
-          SELECT product_name, standard_code, scheme_type, mandatory_qco, key_testing_parameters, official_source_link
-          FROM bis_standards_master
-          WHERE product_name ILIKE ${'%' + word + '%'} OR standard_code ILIKE ${'%' + word + '%'}
-          LIMIT 2
+      if (sql) {
+        const feeRows = await sql`
+          SELECT category, fee_type, enterprise_scale, amount_description
+          FROM bis_certification_fees
+          LIMIT 10
         `
-        if (mRows?.length > 0) {
-          matches.push({ type: 'master', data: mRows })
-          mRows.forEach((m) => {
-            citations.push({
-              source: m.standard_code,
-              title: m.product_name,
-              clause: `Scheme: ${m.scheme_type}`,
-              version: m.mandatory_qco || 'QCO',
-              type: 'notification',
-              extractedVia: 'External RAG Engine',
-              ragGrounded: true,
-            })
-          })
-          break
-        }
-      }
-    } catch (_) {}
-  }
-
-  // 4. Keyword search in bis_standard_documents
-  if (matches.length === 0) {
-    try {
-      const cleanSearch = cleanQ.replace(/[^a-zA-Z0-9\s]/g, ' ').trim()
-      if (cleanSearch) {
-        const docRows = await sql`
-          SELECT standard_code, title, content
-          FROM bis_standard_documents
-          WHERE title ILIKE ${'%' + cleanSearch + '%'} OR content ILIKE ${'%' + cleanSearch + '%'}
-          LIMIT 2
-        `
-        if (docRows?.length > 0) {
-          matches.push({ type: 'standards', data: docRows })
-          docRows.forEach((d) => {
-            citations.push({
-              source: d.standard_code,
-              title: d.title,
-              clause: 'Database Standard Record',
-              version: 'Active Gazette',
-              type: 'standard',
-              extractedVia: 'External RAG Engine',
-              ragGrounded: true,
-            })
-          })
-        }
-      }
-    } catch (_) {}
-  }
-
-  // 5. Knowledge docs in DB
-  if (matches.length === 0) {
-    try {
-      const kdRows = await sql`
-        SELECT title, category, version, status
-        FROM knowledge_docs
-        WHERE title ILIKE ${'%' + cleanQ + '%'} OR category ILIKE ${'%' + cleanQ + '%'}
-        LIMIT 3
-      `
-      if (kdRows?.length > 0) {
-        matches.push({ type: 'knowledge_docs', data: kdRows })
-        kdRows.forEach((k) => {
+        if (feeRows?.length > 0) {
+          matches.push({ type: 'fees', data: feeRows })
           citations.push({
-            source: k.title,
-            title: k.category,
-            clause: `Version ${k.version}`,
-            version: k.status,
-            type: 'standard',
+            source: 'BIS Certification Fee Schedule',
+            title: 'Statutory Tariff & MSME Concessions',
+            clause: 'Conformity Assessment Regulations',
+            version: 'Active Schedule',
+            type: 'circular',
             extractedVia: 'External RAG Engine',
             ragGrounded: true,
           })
-        })
+        }
       }
     } catch (_) {}
+  }
+
+  // 3. Keyword search in regulatory registry
+  if (matches.length === 0) {
+    const words = lowerQ.split(/\s+/).filter((w) => w.length > 3)
+    for (const [key, std] of Object.entries(STANDARDS_REGISTRY)) {
+      const targetStr = `${key} ${std.title} ${std.summary} ${std.committee}`.toLowerCase()
+      if (words.some((w) => targetStr.includes(w))) {
+        matches.push({ type: 'registry_standard', data: [std] })
+        citations.push({
+          source: std.source,
+          title: std.title,
+          clause: std.clause,
+          version: std.version,
+          type: std.type,
+          extractedVia: 'External RAG Engine',
+          ragGrounded: true,
+        })
+        break
+      }
+    }
   }
 
   return { matches, citations }
@@ -213,13 +123,13 @@ function buildContextString(matches) {
       for (const d of block.data) {
         ctx += `[RAG Extracted: ${d.title || d.source || 'Standard Document'}]\n${d.content || d.text || ''}\n\n`
       }
-    } else if (block.type === 'standards') {
-      for (const d of block.data) {
-        ctx += `[Standard Code: ${d.standard_code} | Title: ${d.title}]\n${d.content}\n\n`
-      }
-    } else if (block.type === 'master') {
-      for (const m of block.data) {
-        ctx += `[Product: ${m.product_name} | Code: ${m.standard_code} | Scheme: ${m.scheme_type} | QCO: ${m.mandatory_qco}]\nTesting Specs: ${m.key_testing_parameters}\n\n`
+    } else if (block.type === 'registry_standard') {
+      for (const s of block.data) {
+        ctx += `[Standard: ${s.source} | Title: ${s.title}]\nSummary: ${s.summary}\nClause: ${s.clause}\nStatus: ${s.status}\nKey Points:\n`
+        if (Array.isArray(s.keyPoints)) {
+          s.keyPoints.forEach((kp) => { ctx += `- ${kp}\n` })
+        }
+        ctx += '\n'
       }
     } else if (block.type === 'fees') {
       ctx += `[BIS Statutory Fee Schedule]\n`
@@ -227,10 +137,6 @@ function buildContextString(matches) {
         ctx += `- ${f.category} (${f.fee_type}) for ${f.enterprise_scale}: ${f.amount_description}\n`
       }
       ctx += '\n'
-    } else if (block.type === 'knowledge_docs') {
-      for (const k of block.data) {
-        ctx += `[Document: ${k.title} | Category: ${k.category} | Version: ${k.version}]\n`
-      }
     }
   }
   return ctx.trim()
@@ -243,7 +149,6 @@ async function callGeminiApi(promptText, apiKeyOverride) {
   const apiKey = (apiKeyOverride || process.env.GEMINI_API_KEY || DEFAULT_GEMINI_KEY).trim()
   if (!apiKey) return null
 
-  // gemini-2.5-flash is current generation; fallback to gemini-flash-latest
   const models = ['gemini-2.5-flash', 'gemini-flash-latest']
   for (const model of models) {
     try {
@@ -268,24 +173,53 @@ async function callGeminiApi(promptText, apiKeyOverride) {
   return null
 }
 
-// Gemini Formatting: Formats RAG-extracted statutory data into perfect, structured, citizen-friendly response
-async function formatRAGResponseWithGemini(userQuery, dbContext, chatHistory, geminiKey) {
-  let historyStr = ''
-  if (Array.isArray(chatHistory) && chatHistory.length > 0) {
-    historyStr = 'Recent Conversation History:\n' + chatHistory.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n') + '\n\n'
+function buildPersonaString(role, manufacturerProfile) {
+  if (role === 'manufacturer') {
+    let profileDetails = ''
+    if (manufacturerProfile && typeof manufacturerProfile === 'object') {
+      const p = manufacturerProfile
+      const parts = []
+      if (p.companyName) parts.push(`Company: ${p.companyName}`)
+      if (p.productName) parts.push(`Product: ${p.productName}`)
+      if (p.isStandard) parts.push(`Standard: ${p.isStandard}`)
+      if (p.scale) parts.push(`Scale: ${p.scale.toUpperCase()} (eligible for MSME fee concessions)`)
+      if (p.factoryLocation) parts.push(`Location: ${p.factoryLocation}`)
+      if (p.targetScheme) parts.push(`Target Scheme: ${p.targetScheme}`)
+      if (parts.length > 0) {
+        profileDetails = `\nManufacturer Enterprise Profile:\n${parts.map(x => `* ${x}`).join('\n')}`
+      }
+    }
+    return `TARGET USER: Indian Manufacturer / MSME Entrepreneur.${profileDetails}
+TAILORING GUIDANCE: Provide clear, actionable compliance advice. Focus on factory quality control (SIT), testing laboratory requirements, documentation needed on Manakonline, MSME fee concessions (80% for Micro, 50% for Small), and step-by-step licensing under Scheme-I / CRS.`
   }
 
+  return `TARGET USER: Indian Citizen / Consumer.
+TAILORING GUIDANCE: Provide clear, accessible, and protective advice. Focus on how to identify genuine ISI / BIS Hallmarking, checking 6-digit HUID on the BIS Care App, consumer rights under the BIS Act 2016, and how to report fake or substandard goods.`
+}
+
+// Gemini Formatting: Formats RAG-extracted statutory data into perfect, structured, citizen-friendly response
+async function formatRAGResponseWithGemini(userQuery, dbContext, chatHistory, geminiKey, role = 'consumer', manufacturerProfile = null) {
+  let historyStr = ''
+  if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+    historyStr = 'Recent Conversation History (use this context to maintain continuity):\n' + chatHistory.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n') + '\n\n'
+  }
+
+  const personaGuidance = buildPersonaString(role, manufacturerProfile)
+
   const prompt = `You are BIS Saarthi, the AI assistant for the Bureau of Indian Standards (BIS), Ministry of Consumer Affairs, Government of India.
-Regulatory records have been extracted by the External RAG Engine. Your role is to perform PERFECT FORMATTING of this regulatory data into a crystal-clear, structured response.
+Regulatory records have been extracted by the External RAG Engine. Your role is to personalize and perfectly format this regulatory data into a crystal-clear, structured response.
+
+${personaGuidance}
 
 PERFECT FORMATTING INSTRUCTIONS:
-1. Make the response simple, direct, and easy to understand for any citizen or manufacturer.
-2. Structure the answer clearly:
-   - **Direct Summary**: 1-2 sentence concise answer upfront.
-   - **Key Requirements & Testing Specs**: 3-4 clean bullet points highlighting key safety rules, testing parameters, or compliance steps extracted from the records.
-   - **Applicable Standard**: Explicitly mention the relevant Indian Standard code, certification scheme, and mandatory QCO gazette status.
-3. Avoid dense bureaucratic jargon, walls of legal text, and confusing nested tables.
-4. Keep the tone helpful, reassuring, and professional.
+1. Personalize the tone and focus for the target user (citizen consumer vs manufacturer).
+2. Maintain continuous conversation context using the chat history.
+3. Structure the answer clearly:
+   - **Direct Summary**: 1-2 sentence concise answer upfront tailored to their role.
+   - **Key Requirements & Testing Specs**: 3-4 clean bullet points highlighting key safety rules, testing parameters, or compliance steps.
+   - **Applicable Standard / Scheme**: Explicitly mention the relevant Indian Standard code, certification scheme, and mandatory QCO gazette status.
+4. Avoid dense bureaucratic jargon, walls of legal text, and confusing nested tables.
+5. Keep the tone helpful, reassuring, and professional.
 
 ${historyStr}External RAG Extracted Records:
 ${dbContext}
@@ -295,22 +229,26 @@ User Query: ${userQuery}`
   return await callGeminiApi(prompt, geminiKey)
 }
 
-// Gemini General Answers: Handles general questions, greetings, portal guidance, and consumer rights
-async function generateGeneralAnswerWithGemini(userQuery, chatHistory, geminiKey) {
+// Gemini General Answers: Handles general questions, greetings, portal guidance, and consumer/manufacturer rights
+async function generateGeneralAnswerWithGemini(userQuery, chatHistory, geminiKey, role = 'consumer', manufacturerProfile = null) {
   let historyStr = ''
   if (Array.isArray(chatHistory) && chatHistory.length > 0) {
-    historyStr = 'Recent Conversation History:\n' + chatHistory.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n') + '\n\n'
+    historyStr = 'Recent Conversation History (use this context to maintain continuity):\n' + chatHistory.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n') + '\n\n'
   }
 
+  const personaGuidance = buildPersonaString(role, manufacturerProfile)
+
   const prompt = `You are BIS Saarthi, the official AI assistant for the Bureau of Indian Standards (BIS), Government of India.
-The user has asked a general question about BIS standards, certification schemes (ISI Mark, CRS, Hallmarking), consumer rights, or quality guidelines.
+The user has asked a general question about BIS standards, certification schemes (ISI Mark, CRS, Hallmarking), consumer rights, or manufacturer quality guidelines.
+
+${personaGuidance}
 
 GENERAL ANSWER INSTRUCTIONS:
-1. Explain the answer in simple, crystal-clear, and easy-to-understand language.
+1. Explain the answer in simple, crystal-clear, and personalized language for the user's role.
 2. Structure your answer:
-   - **Direct Answer**: 1-2 simple sentences directly addressing the query.
+   - **Direct Answer**: 1-2 simple sentences directly addressing the query in context of the conversation.
    - **Key Points / Steps**: 3-4 clean, easy-to-read bullet points.
-   - **Official Verification**: Mention the official portal (Manakonline at services.bis.gov.in) or the BIS Care App, and invite them to specify any product name or Indian Standard number for exact technical parameters, licensing rules, and laboratory testing details.
+   - **Official Verification**: Mention the official portal (Manakonline at services.bis.gov.in) or the BIS Care App, and invite them to ask about any specific product, Indian Standard, or scheme.
 3. Keep it friendly, simple, and authoritative. Do NOT return dense legalese or say "database error".
 
 ${historyStr}User Query: ${userQuery}`
@@ -421,13 +359,13 @@ export default async function handler(req, res) {
     let finalContent = ''
 
     if (matches.length === 0) {
-      // Step 2A: No specific standard extracted (or general inquiry) — Gemini generates normal general answer
-      const geminiGeneral = await generateGeneralAnswerWithGemini(content, chatHistory, geminiApiKey)
-      finalContent = geminiGeneral || '### 📋 Bureau of Indian Standards Assistant\n\nNo specific standard code was matched in the database for your query. For official requirements, please specify an Indian Standard (e.g., `IS 10500`, `IS 1417`, `IS 269`) or product keyword, or verify on [Manakonline](https://www.services.bis.gov.in).'
+      // Step 2A: No specific standard extracted (or general inquiry) — Gemini generates personalized general answer
+      const geminiGeneral = await generateGeneralAnswerWithGemini(content, chatHistory, geminiApiKey, role, manufacturerProfile)
+      finalContent = geminiGeneral || '### 📋 Bureau of Indian Standards Assistant\n\nNo specific standard code was matched for your query. For official requirements, please specify an Indian Standard (e.g., `IS 10500`, `IS 1417`, `IS 269`) or product keyword, or verify on [Manakonline](https://www.services.bis.gov.in).'
     } else {
-      // Step 2B: Regulatory records extracted by RAG — Gemini performs perfect formatting
+      // Step 2B: Regulatory records extracted by RAG — Gemini performs personalized formatting
       const dbContext = buildContextString(matches)
-      const geminiFormatted = await formatRAGResponseWithGemini(content, dbContext, chatHistory, geminiApiKey)
+      const geminiFormatted = await formatRAGResponseWithGemini(content, dbContext, chatHistory, geminiApiKey, role, manufacturerProfile)
       finalContent = geminiFormatted || formatDirectResponse(matches)
     }
 

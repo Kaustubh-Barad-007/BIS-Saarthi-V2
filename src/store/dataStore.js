@@ -534,10 +534,10 @@ export const useDataStore = create((set, get) => ({
     const { users, knowledgeDocs, queryCount } = get()
     const activeUsers = users.filter((u) => u.status === 'active').length
     return [
-      { label: 'Total Users',     value: users.length,         delta: '+12%', color: 'blue',   icon: 'Users' },
-      { label: 'Active Sessions', value: activeUsers,          delta: '+5%',  color: 'green',  icon: 'Activity' },
-      { label: 'Queries Today',   value: queryCount,           delta: '+18%', color: 'purple', icon: 'MessageSquare' },
-      { label: 'Documents in KB', value: knowledgeDocs.length, delta: '+3%',  color: 'orange', icon: 'Database' },
+      { label: 'Total Users',      value: users.length,  delta: '+12%', color: 'blue',   icon: 'Users' },
+      { label: 'Active Sessions',  value: activeUsers,   delta: '+5%',  color: 'green',  icon: 'Activity' },
+      { label: 'Queries Logged',   value: queryCount,    delta: '+18%', color: 'purple', icon: 'MessageSquare' },
+      { label: 'Active Standards', value: '22,000+',     delta: 'Live', color: 'orange', icon: 'Database' },
     ]
   },
 
