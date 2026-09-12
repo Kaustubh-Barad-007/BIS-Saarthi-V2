@@ -28,13 +28,15 @@ async function extractRAGGroundingData(sql, query, ragApiKey) {
       })
       if (extRes.ok) {
         const extData = await extRes.json()
-        if (Array.isArray(extData?.documents) && extData.documents.length > 0) {
-          matches.push({ type: 'external_rag', data: extData.documents })
-          extData.documents.forEach((doc) => {
+        const ragDocs = extData.sources || extData.citations || extData.documents || extData.results || extData.data || extData.matches || (Array.isArray(extData) ? extData : []);
+        if (Array.isArray(ragDocs) && ragDocs.length > 0) {
+          matches.push({ type: 'external_rag', data: ragDocs })
+          ragDocs.forEach((doc) => {
             citations.push({
-              source: doc.source || doc.standard_code || 'External RAG Source',
-              title: doc.title || 'Statutory Regulatory Document',
-              clause: doc.clause || 'RAG Grounding Document',
+              source: doc.standard || doc.source || doc.standard_code || doc.id || 'External RAG Source',
+              title: doc.title || doc.name || 'Regulatory Document',
+              clause: doc.section || doc.clause || 'RAG Grounding Document',
+              summary: doc.text || '', // Include actual text from RAG!
               version: doc.version || 'Active Gazette',
               type: 'standard',
               extractedVia: 'External RAG Engine',
@@ -44,73 +46,6 @@ async function extractRAGGroundingData(sql, query, ragApiKey) {
         }
       }
     } catch (_) {}
-  }
-
-  // 1. Check statutory standards registry
-  const { STANDARDS_REGISTRY } = await import('../_lib/standardsReferences.js')
-  const stdMatch = cleanQ.match(/\b(?:IS|is)\s*:?\s*(\d+)/i)
-  if (stdMatch) {
-    const codeNum = stdMatch[1]
-    const matchedEntry = Object.entries(STANDARDS_REGISTRY).find(([k]) => k.includes(codeNum))
-    if (matchedEntry) {
-      const [key, std] = matchedEntry
-      matches.push({ type: 'registry_standard', data: [std] })
-      citations.push({
-        source: std.source,
-        title: std.title,
-        clause: std.clause,
-        version: std.version,
-        type: std.type,
-        extractedVia: 'External RAG Engine',
-        ragGrounded: true,
-      })
-    }
-  }
-
-  // 2. Fees & MSME concessions query
-  if (lowerQ.includes('fee') || lowerQ.includes('cost') || lowerQ.includes('concession') || lowerQ.includes('charge') || lowerQ.includes('msme')) {
-    try {
-      if (sql) {
-        const feeRows = await sql`
-          SELECT category, fee_type, enterprise_scale, amount_description
-          FROM bis_certification_fees
-          LIMIT 10
-        `
-        if (feeRows?.length > 0) {
-          matches.push({ type: 'fees', data: feeRows })
-          citations.push({
-            source: 'BIS Certification Fee Schedule',
-            title: 'Statutory Tariff & MSME Concessions',
-            clause: 'Conformity Assessment Regulations',
-            version: 'Active Schedule',
-            type: 'circular',
-            extractedVia: 'External RAG Engine',
-            ragGrounded: true,
-          })
-        }
-      }
-    } catch (_) {}
-  }
-
-  // 3. Keyword search in regulatory registry
-  if (matches.length === 0) {
-    const words = lowerQ.split(/\s+/).filter((w) => w.length > 3)
-    for (const [key, std] of Object.entries(STANDARDS_REGISTRY)) {
-      const targetStr = `${key} ${std.title} ${std.summary} ${std.committee}`.toLowerCase()
-      if (words.some((w) => targetStr.includes(w))) {
-        matches.push({ type: 'registry_standard', data: [std] })
-        citations.push({
-          source: std.source,
-          title: std.title,
-          clause: std.clause,
-          version: std.version,
-          type: std.type,
-          extractedVia: 'External RAG Engine',
-          ragGrounded: true,
-        })
-        break
-      }
-    }
   }
 
   return { matches, citations }
@@ -145,28 +80,35 @@ function buildContextString(matches) {
 // ── 2. GEMINI ENGINE (PERFECT FORMATTING & GENERAL ANSWERS) ──
 const DEFAULT_GEMINI_KEY = Buffer.from('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=', 'base64').toString('utf-8')
 
-async function callGeminiApi(promptText, apiKeyOverride) {
+async function callGeminiApi(promptText, apiKeyOverride, isJson = false) {
   const apiKey = (apiKeyOverride || process.env.GEMINI_API_KEY || DEFAULT_GEMINI_KEY).trim()
   if (!apiKey) return null
 
-  const models = ['gemini-2.5-flash', 'gemini-flash-latest']
+  const models = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-pro-latest']
   for (const model of models) {
     try {
+      const config = {
+        temperature: 0.2,
+        maxOutputTokens: 8192,
+      }
+      if (isJson) {
+        config.responseMimeType = "application/json"
+      }
+
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptText }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 1024,
-          },
+          generationConfig: config,
         }),
       })
       if (res.ok) {
         const data = await res.json()
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text
         if (text) return text.trim()
+      } else {
+        console.error('Gemini API Error:', model, res.status, await res.text())
       }
     } catch (_) {}
   }
@@ -206,27 +148,54 @@ async function formatRAGResponseWithGemini(userQuery, dbContext, chatHistory, ge
 
   const personaGuidance = buildPersonaString(role, manufacturerProfile)
 
-  const prompt = `You are BIS Saarthi, the AI assistant for the Bureau of Indian Standards (BIS), Ministry of Consumer Affairs, Government of India.
-Regulatory records have been extracted by the External RAG Engine. Your role is to personalize and perfectly format this regulatory data into a crystal-clear, structured response.
+  const prompt = `You are a core backend engine operating in a strict Retrieval-Augmented Generation (RAG) architecture. Your job is to process the user's latest query while fully incorporating the history of previous queries and their responses as active conversational context.
+
+Strict Operational Rules:
+
+1. CONTEXTUAL AWARENESS (ChatGPT Style)
+   - Read and analyze the provided conversation history (previous user queries and assistant responses) to understand the user's ongoing intent and current focus.
+   - Blend this context with the globally scanned project files to maintain a continuous, coherent conversational thread.
+
+2. SOURCE EXCLUSIVITY (100% RAG Grounding)
+   - Every single claim, fact, data point, and code snippet in your response MUST originate directly from the scanned project files.
+   - Absolutely NO outside knowledge or training data assumptions are permitted. If information is missing from the scanned files, explicitly state: "Information not found in the project files."
+
+3. SOURCE ATTRIBUTION
+   - You must cite the exact file name and location (e.g., line numbers or section headings) for every piece of data, statement, or snippet extracted.
+
+4. DYNAMIC FOLLOW-UP QUESTION GENERATION
+   - At the very end of your response, generate 2-3 logical follow-up questions the user might want to ask next based on the current context.
+   - CRITICAL: You must ONLY suggest follow-up questions whose exact answers are fully available inside the scanned project files (RAG). Do not suggest a question if the files cannot answer it.
+
+5. GEMINI ROLE: FRONTEND FORMATTING ONLY
+   - Use Gemini's capabilities EXCLUSIVELY to structure, clean, and format the extracted content and generated follow-up questions into a beautiful, UI-friendly layout (e.g., clean JSON or component-ready structures).
+   - Gemini must NOT inject, infer, or hallucinate text. It acts purely as a presentation layer for the raw RAG-retrieved data.
+
+JSON OUTPUT REQUIREMENT:
+You MUST output a valid JSON object strictly adhering to this schema:
+{
+  "formattedContent": "Your beautifully formatted answer here, including source attributions",
+  "sources": ["source 1 (e.g., filename/line)", "source 2"],
+  "suggestedFollowUpQuestions": ["Follow up 1?", "Follow up 2?"]
+}
 
 ${personaGuidance}
 
-PERFECT FORMATTING INSTRUCTIONS:
-1. Personalize the tone and focus for the target user (citizen consumer vs manufacturer).
-2. Maintain continuous conversation context using the chat history.
-3. Structure the answer clearly:
-   - **Direct Summary**: 1-2 sentence concise answer upfront tailored to their role.
-   - **Key Requirements & Testing Specs**: 3-4 clean bullet points highlighting key safety rules, testing parameters, or compliance steps.
-   - **Applicable Standard / Scheme**: Explicitly mention the relevant Indian Standard code, certification scheme, and mandatory QCO gazette status.
-4. Avoid dense bureaucratic jargon, walls of legal text, and confusing nested tables.
-5. Keep the tone helpful, reassuring, and professional.
-
-${historyStr}External RAG Extracted Records:
+${historyStr}Scanned Project Files / Extracted Records:
 ${dbContext}
 
 User Query: ${userQuery}`
 
-  return await callGeminiApi(prompt, geminiKey)
+  const jsonStr = await callGeminiApi(prompt, geminiKey, true)
+  if (!jsonStr) return null
+
+  try {
+    const data = JSON.parse(jsonStr)
+    return data // Returns object with { formattedContent, sources, suggestedFollowUpQuestions }
+  } catch (err) {
+    console.error('Failed to parse Gemini JSON:', err)
+    return { formattedContent: jsonStr, suggestedFollowUpQuestions: [] } // Fallback
+  }
 }
 
 // Gemini General Answers: Handles general questions, greetings, portal guidance, and consumer/manufacturer rights
@@ -238,22 +207,54 @@ async function generateGeneralAnswerWithGemini(userQuery, chatHistory, geminiKey
 
   const personaGuidance = buildPersonaString(role, manufacturerProfile)
 
-  const prompt = `You are BIS Saarthi, the official AI assistant for the Bureau of Indian Standards (BIS), Government of India.
-The user has asked a general question about BIS standards, certification schemes (ISI Mark, CRS, Hallmarking), consumer rights, or manufacturer quality guidelines.
+  const prompt = `You are a core backend engine operating in a strict Retrieval-Augmented Generation (RAG) architecture. Your job is to process the user's latest query while fully incorporating the history of previous queries and their responses as active conversational context.
+
+Strict Operational Rules:
+
+1. CONTEXTUAL AWARENESS (ChatGPT Style)
+   - Read and analyze the provided conversation history (previous user queries and assistant responses) to understand the user's ongoing intent and current focus.
+   - Blend this context with the globally scanned project files to maintain a continuous, coherent conversational thread.
+
+2. SOURCE EXCLUSIVITY (100% RAG Grounding)
+   - Every single claim, fact, data point, and code snippet in your response MUST originate directly from the scanned project files.
+   - Absolutely NO outside knowledge or training data assumptions are permitted. If information is missing from the scanned files, explicitly state: "Information not found in the project files."
+
+3. SOURCE ATTRIBUTION
+   - You must cite the exact file name and location (e.g., line numbers or section headings) for every piece of data, statement, or snippet extracted.
+
+4. DYNAMIC FOLLOW-UP QUESTION GENERATION
+   - At the very end of your response, generate 2-3 logical follow-up questions the user might want to ask next based on the current context.
+   - CRITICAL: You must ONLY suggest follow-up questions whose exact answers are fully available inside the scanned project files (RAG). Do not suggest a question if the files cannot answer it.
+
+5. GEMINI ROLE: FRONTEND FORMATTING ONLY
+   - Use Gemini's capabilities EXCLUSIVELY to structure, clean, and format the extracted content and generated follow-up questions into a beautiful, UI-friendly layout (e.g., clean JSON or component-ready structures).
+   - Gemini must NOT inject, infer, or hallucinate text. It acts purely as a presentation layer for the raw RAG-retrieved data.
+
+JSON OUTPUT REQUIREMENT:
+You MUST output a valid JSON object strictly adhering to this schema:
+{
+  "formattedContent": "Your beautifully formatted answer here, including source attributions",
+  "sources": ["source 1 (e.g., filename/line)", "source 2"],
+  "suggestedFollowUpQuestions": ["Follow up 1?", "Follow up 2?"]
+}
 
 ${personaGuidance}
 
-GENERAL ANSWER INSTRUCTIONS:
-1. Explain the answer in simple, crystal-clear, and personalized language for the user's role.
-2. Structure your answer:
-   - **Direct Answer**: 1-2 simple sentences directly addressing the query in context of the conversation.
-   - **Key Points / Steps**: 3-4 clean, easy-to-read bullet points.
-   - **Official Verification**: Mention the official portal (Manakonline at services.bis.gov.in) or the BIS Care App, and invite them to ask about any specific product, Indian Standard, or scheme.
-3. Keep it friendly, simple, and authoritative. Do NOT return dense legalese or say "database error".
+${historyStr}Scanned Project Files / Extracted Records:
+(No project files or records were found/scanned for this query. Follow Rule #2 strictly.)
 
-${historyStr}User Query: ${userQuery}`
+User Query: ${userQuery}`
 
-  return await callGeminiApi(prompt, geminiKey)
+  const jsonStr = await callGeminiApi(prompt, geminiKey, true)
+  if (!jsonStr) return null
+
+  try {
+    const data = JSON.parse(jsonStr)
+    return data // Returns object with { formattedContent, sources, suggestedFollowUpQuestions }
+  } catch (err) {
+    console.error('Failed to parse Gemini JSON:', err)
+    return { formattedContent: jsonStr, suggestedFollowUpQuestions: [] } // Fallback
+  }
 }
 
 function formatDirectResponse(matches) {
@@ -347,6 +348,7 @@ export default async function handler(req, res) {
   const sql = getDb()
   let matches = []
   let citations = []
+  const startTime = Date.now()
 
   try {
     if (sql) {
@@ -357,23 +359,55 @@ export default async function handler(req, res) {
     }
 
     let finalContent = ''
+    let dynamicFollowUps = []
 
     if (matches.length === 0) {
       // Step 2A: No specific standard extracted (or general inquiry) — Gemini generates personalized general answer
       const geminiGeneral = await generateGeneralAnswerWithGemini(content, chatHistory, geminiApiKey, role, manufacturerProfile)
-      finalContent = geminiGeneral || '### 📋 Bureau of Indian Standards Assistant\n\nNo specific standard code was matched for your query. For official requirements, please specify an Indian Standard (e.g., `IS 10500`, `IS 1417`, `IS 269`) or product keyword, or verify on [Manakonline](https://www.services.bis.gov.in).'
+      if (geminiGeneral && typeof geminiGeneral === 'object' && geminiGeneral.formattedContent) {
+        finalContent = geminiGeneral.formattedContent
+        dynamicFollowUps = geminiGeneral.suggestedFollowUpQuestions || []
+      } else if (geminiGeneral && typeof geminiGeneral === 'object' && geminiGeneral.answer) {
+        // Fallback for old schema if it somehow happens
+        finalContent = geminiGeneral.answer
+        dynamicFollowUps = geminiGeneral.follow_ups || []
+      } else {
+        finalContent = geminiGeneral || '### 📋 Bureau of Indian Standards Assistant\n\nNo specific standard code was matched for your query. For official requirements, please specify an Indian Standard (e.g., `IS 10500`, `IS 1417`, `IS 269`) or product keyword, or verify on [Manakonline](https://www.services.bis.gov.in).'
+      }
     } else {
       // Step 2B: Regulatory records extracted by RAG — Gemini performs personalized formatting
       const dbContext = buildContextString(matches)
       const geminiFormatted = await formatRAGResponseWithGemini(content, dbContext, chatHistory, geminiApiKey, role, manufacturerProfile)
-      finalContent = geminiFormatted || formatDirectResponse(matches)
+      if (geminiFormatted && typeof geminiFormatted === 'object' && geminiFormatted.formattedContent) {
+        finalContent = geminiFormatted.formattedContent
+        dynamicFollowUps = geminiFormatted.suggestedFollowUpQuestions || []
+        if (Array.isArray(geminiFormatted.sources) && geminiFormatted.sources.length > 0) {
+          geminiFormatted.sources.forEach(src => {
+            citations.push({
+              source: src,
+              title: 'RAG Extracted Source',
+              type: 'standard',
+              ragGrounded: true
+            })
+          })
+        }
+      } else if (geminiFormatted && typeof geminiFormatted === 'object' && geminiFormatted.answer) {
+        finalContent = geminiFormatted.answer
+        dynamicFollowUps = geminiFormatted.follow_ups || []
+      } else {
+        finalContent = geminiFormatted || formatDirectResponse(matches)
+      }
     }
+
+    const latencyMs = Date.now() - startTime
 
     const response = {
       content: finalContent,
       citations: matches.length > 0 ? citations : [],
+      followUps: dynamicFollowUps,
       canVerify: citations.length > 0,
       ragExtracted: matches.length > 0,
+      latency: `${Math.round(latencyMs)}ms`,
     }
 
     // Save chat session & messages to DB if user is authenticated — store ONLY lean metadata as per user sign-in & RBAC!
