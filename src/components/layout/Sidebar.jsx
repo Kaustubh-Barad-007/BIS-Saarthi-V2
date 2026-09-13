@@ -116,10 +116,10 @@ export default function Sidebar({ mobile = false, onClose }) {
         {mobile ? (
           <button
             onClick={onClose}
-            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors"
+            className="p-2 -mr-1 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors"
             aria-label="Close sidebar"
           >
-            <X className="w-4 h-4 text-gray-500 dark:text-dark-text-muted" />
+            <X className="w-5 h-5 text-gray-500 dark:text-dark-text-muted" />
           </button>
         ) : (
           <button

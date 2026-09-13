@@ -29,14 +29,14 @@ export default function ManufacturerDashboard() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Welcome banner */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-gov-xl p-6 flex items-center justify-between shadow-gov-md">
+      <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-gov-xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-gov-md">
         <div>
           <h1 className="text-xl font-bold font-heading mb-1">{t('Welcome', 'Welcome')}, {user?.name?.split(' ')[0]}!</h1>
           <p className="text-orange-100 text-sm">
             {user?.organization || t('enterprise_portal_sub', 'Your Enterprise Portal · MSME / Manufacturer (Real-Time Database Live)')}
           </p>
         </div>
-        <Link to={ROUTES.MANUFACTURER_CHAT} className="bg-white dark:bg-dark-bg-card text-orange-600 dark:text-orange-400 font-semibold text-sm px-4 py-2.5 rounded-gov hover:bg-orange-50 dark:hover:bg-dark-bg-secondary transition-colors hidden sm:inline-flex items-center gap-2 shadow-xs">
+        <Link to={ROUTES.MANUFACTURER_CHAT} className="bg-white dark:bg-dark-bg-card text-orange-600 dark:text-orange-400 font-semibold text-sm px-4 py-2 rounded-gov hover:bg-orange-50 dark:hover:bg-dark-bg-secondary transition-colors inline-flex items-center justify-center gap-2 shadow-xs shrink-0 self-start sm:self-auto">
           <MessageSquare className="w-4 h-4" /> {t('ask_bis_saarthi', 'Ask BIS Saarthi')}
         </Link>
       </div>

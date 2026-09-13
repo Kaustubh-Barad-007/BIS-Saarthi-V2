@@ -36,7 +36,7 @@ export default function ConsumerDashboard() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Welcome banner */}
-      <div className="bg-gov-gradient text-white rounded-gov-xl p-6 flex items-center justify-between shadow-gov-md">
+      <div className="bg-gov-gradient text-white rounded-gov-xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-gov-md">
         <div>
           <h1 className="text-xl font-bold font-heading mb-1">
             {t('welcome_citizen', 'Welcome, Citizen!')} 👋
@@ -45,7 +45,7 @@ export default function ConsumerDashboard() {
             {t('citizen_guide_sub', 'Your official AI-powered guide to Indian Standards and consumer protection.')}
           </p>
         </div>
-        <Link to={ROUTES.CONSUMER_CHAT} className="btn-saffron text-sm hidden sm:inline-flex shadow-xs">
+        <Link to={ROUTES.CONSUMER_CHAT} className="btn-saffron text-sm inline-flex items-center justify-center shadow-xs shrink-0 self-start sm:self-auto">
           <MessageSquare className="w-4 h-4" /> {t('ask_bis_saarthi', 'Ask BIS Saarthi')}
         </Link>
       </div>

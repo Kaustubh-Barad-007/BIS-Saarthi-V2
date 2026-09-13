@@ -152,7 +152,7 @@ function MessageBubble({
         </div>
       )}
 
-      <div className={cn('max-w-[85%] sm:max-w-[75%]', isUser ? 'items-end' : 'items-start')} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div className={cn('max-w-[95%] sm:max-w-[78%]', isUser ? 'items-end' : 'items-start')} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         
         {/* Inline User Prompt Editing Mode */}
         {isUser && isEditing ? (
@@ -187,7 +187,7 @@ function MessageBubble({
         ) : (
           /* Normal Message Bubble */
           <div className={cn(
-            'px-4 py-3 rounded-gov-xl leading-relaxed transition-all',
+            'px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-gov-xl leading-relaxed transition-all',
             fontSizeClass,
             isUser
               ? 'bg-bis-navy text-white rounded-tr-none'
@@ -198,7 +198,7 @@ function MessageBubble({
                 <p className="whitespace-pre-wrap">{message.content}</p>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-white/70 hover:text-white rounded hover:bg-white/10 shrink-0"
+                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 text-white/70 hover:text-white rounded hover:bg-white/10 shrink-0"
                   title="Edit prompt"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
@@ -243,7 +243,7 @@ function MessageBubble({
 
         {/* Output actions (AI only) */}
         {!isUser && (
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity mt-1 flex-wrap">
+          <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1 flex-wrap">
             {/* Audio Read-Aloud / TTS button */}
             <button
               onClick={() => onToggleTTS(showOriginal ? message.content : (translatedContent || message.content), message.id)}
@@ -663,7 +663,9 @@ export default function ChatInterface({ role = 'consumer' }) {
     if (messages.length > 0) {
       const lastMsg = messages[messages.length - 1]
       if (lastMsg.role === 'assistant' && lastMsg.citations?.length > 0) {
-        setShowSourcesSidebar(true)
+        if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+          setShowSourcesSidebar(true)
+        }
         if (lastMsg.citations[0]?.source) {
           setHighlightedSourceKey(lastMsg.citations[0].source)
         }
@@ -1103,7 +1105,7 @@ export default function ChatInterface({ role = 'consumer' }) {
         'flex bg-slate-50 dark:bg-dark-bg transition-all duration-200 overflow-hidden relative',
         isFullscreen
           ? 'fixed inset-0 z-50 w-screen h-screen rounded-none shadow-2xl border-0'
-          : 'h-[calc(100dvh-125px)] md:h-[calc(100vh-80px)] rounded-gov-xl shadow-gov border border-gray-200 dark:border-dark-border'
+          : 'h-[calc(100dvh-98px)] md:h-[calc(100vh-80px)] rounded-gov-xl shadow-gov border border-gray-200 dark:border-dark-border'
       )}
     >
 
@@ -1190,7 +1192,7 @@ export default function ChatInterface({ role = 'consumer' }) {
             </div>
             <button
               onClick={() => setShowSidebar(false)}
-              className="p-1 rounded-md text-gray-400 hover:text-gray-700 dark:text-dark-text-muted dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-border transition-colors flex items-center gap-1 text-xs cursor-pointer"
+              className="p-2 -mr-1 rounded-md text-gray-400 hover:text-gray-700 dark:text-dark-text-muted dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-border transition-colors flex items-center gap-1 text-xs cursor-pointer"
               title="Collapse sidebar"
               aria-label="Collapse sidebar"
             >
@@ -1805,12 +1807,12 @@ export default function ChatInterface({ role = 'consumer' }) {
         )}
 
         {/* Input Area */}
-        <div className="px-4 py-3 bg-white dark:bg-dark-bg-card border-t border-gray-200 dark:border-dark-border">
-          <div className="flex items-end gap-2 bg-gray-50 dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-border rounded-gov-xl px-3 py-2">
+        <div className="px-2.5 py-2 sm:px-4 sm:py-3 bg-white dark:bg-dark-bg-card border-t border-gray-200 dark:border-dark-border">
+          <div className="flex items-end gap-1.5 sm:gap-2 bg-gray-50 dark:bg-dark-bg-secondary border border-gray-200 dark:border-dark-border rounded-gov-xl px-2.5 sm:px-3 py-1.5 sm:py-2">
             {/* File upload */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="p-1.5 text-gray-400 dark:text-dark-text-muted hover:text-bis-navy dark:hover:text-blue-400 transition-colors shrink-0 mb-1"
+              className="p-2 text-gray-400 dark:text-dark-text-muted hover:text-bis-navy dark:hover:text-blue-400 transition-colors shrink-0 mb-0.5 min-w-[36px] min-h-[36px] flex items-center justify-center"
               title="Attach PDF or document"
             >
               <Paperclip className="w-4 h-4" />
@@ -1825,7 +1827,7 @@ export default function ChatInterface({ role = 'consumer' }) {
               onKeyDown={handleKeyDown}
               rows={1}
               placeholder={t('input_placeholder', 'Ask about BIS standards, certifications, hallmarking...')}
-              className="flex-1 bg-transparent text-sm text-gray-800 dark:text-dark-text placeholder-gray-400 dark:placeholder-dark-text-muted resize-none outline-none py-1 max-h-32"
+              className="flex-1 bg-transparent text-sm text-gray-800 dark:text-dark-text placeholder-gray-400 dark:placeholder-dark-text-muted resize-none outline-none py-1.5 max-h-32 leading-snug"
               style={{ minHeight: '36px' }}
             />
 
@@ -1833,7 +1835,7 @@ export default function ChatInterface({ role = 'consumer' }) {
             <button
               onClick={toggleVoiceInput}
               className={cn(
-                "p-1.5 rounded transition-all shrink-0 mb-1",
+                "p-2 rounded transition-all shrink-0 mb-0.5 min-w-[36px] min-h-[36px] flex items-center justify-center",
                 isListening
                   ? "text-red-500 bg-red-100 dark:bg-red-900/40 animate-pulse"
                   : "text-gray-400 dark:text-dark-text-muted hover:text-bis-navy dark:hover:text-blue-400"
@@ -1847,7 +1849,7 @@ export default function ChatInterface({ role = 'consumer' }) {
             {isStreaming ? (
               <button
                 onClick={() => stopStreaming()}
-                className="p-2 rounded-gov bg-red-600 text-white shrink-0 mb-1 hover:bg-red-700 transition-all flex items-center justify-center shadow-xs"
+                className="p-2 rounded-gov bg-red-600 text-white shrink-0 mb-0.5 hover:bg-red-700 transition-all flex items-center justify-center shadow-xs min-w-[36px] min-h-[36px]"
                 title="Stop generation"
               >
                 <Square className="w-4 h-4 fill-white" />
@@ -1857,7 +1859,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                 onClick={handleSend}
                 disabled={!input.trim() && uploadedFiles.length === 0}
                 className={cn(
-                  'p-2 rounded-gov bg-bis-navy text-white shrink-0 mb-1 transition-all shadow-xs',
+                  'p-2 rounded-gov bg-bis-navy text-white shrink-0 mb-0.5 transition-all shadow-xs min-w-[36px] min-h-[36px] flex items-center justify-center',
                   (!input.trim() && uploadedFiles.length === 0)
                     ? 'opacity-40 cursor-not-allowed'
                     : 'hover:bg-bis-navy-dark active:scale-95'
@@ -1944,10 +1946,10 @@ export default function ChatInterface({ role = 'consumer' }) {
           <button
             type="button"
             onClick={() => setShowSourcesSidebar(false)}
-            className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded hover:bg-gray-100 dark:hover:bg-dark-border transition-colors shrink-0 cursor-pointer"
+            className="p-2 -mr-1 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-dark-border transition-colors shrink-0 cursor-pointer"
             title="Close Sources Sidebar"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
