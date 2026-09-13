@@ -52,14 +52,16 @@ export default async function handler(req, res) {
         return res.status(200).json({ complaints: rows || [] })
       }
       if (req.method === 'POST') {
-        const { id, subject, product, location = 'New Delhi', description = '', status = 'pending', userEmail: bodyEmail } = req.body || {}
+        const { id, subject: rawSubject, product, location = 'New Delhi', description = '', details = '', status = 'pending', userEmail: bodyEmail } = req.body || {}
+        const subject = rawSubject || (product ? `Issue with ${product}` : '')
+        const finalDesc = description || details || ''
         if (!subject || !product) return res.status(400).json({ error: 'Subject and product are required' })
         const compId = id || `COMP-${Date.now().toString().slice(-6)}`
         const userId = user?.id ? parseInt(user.id, 10) : null
         const userEmail = bodyEmail || user?.email || 'consumer@bis.gov.in'
         const [newRow] = await sql`
           INSERT INTO complaints (id, user_id, user_email, subject, product, location, description, status, remarks, date, updated)
-          VALUES (${compId}, ${userId}, ${userEmail}, ${subject}, ${product}, ${location}, ${description}, ${status}, '', NOW(), NOW())
+          VALUES (${compId}, ${userId}, ${userEmail}, ${subject}, ${product}, ${location}, ${finalDesc}, ${status}, '', NOW(), NOW())
           RETURNING id, user_id as "userId", user_email as "userEmail", subject, product,
                     location, description, status, remarks, date, updated
         `
