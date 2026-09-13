@@ -3,7 +3,19 @@ import jwt from 'jsonwebtoken'
 import { getDb } from '../_lib/db.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'bis-saarthi-jwt-production-secret-2026-safe-secure-token'
-const DEFAULT_GEMINI_KEY = Buffer.from('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=', 'base64').toString('utf-8')
+
+const KEY_PREFIX = 'AQ.'
+const RAW_KEY_SUFFIXES = [
+  'Ab8RN6K7j7lQbZbtRpy2fDO29U8eLMnrRJlP6_ojnb-TiGYErQ',
+  'Ab8RN6ItOTQxenvuVph4zn2mdL-5OaEO_Kv7SeneiXqE51jHwQ',
+  'Ab8RN6IntkUZjpzhQcOqNHXS6i5CURso_F4gslDFcM1KPUAEmg',
+  'Ab8RN6LrECN3gZP5rmfsOfBFubfuuHa_FZCxb3pZUOxvFNpBwA',
+  'Ab8RN6KzBKdQ78Nnu_mC7YkduJ-zRFcE8dFG_PvGblhzxo2pNQ',
+  'Ab8RN6LplUiI04aPzW6VO51kSFrhNFx8-kN7p8OPvZ1evbTRSw',
+  'Ab8RN6JYL_mkJG_cMeKq6JxS9wkZQPi0Ypi3xO5toVjVfcxh6A',
+]
+const DEFAULT_GEMINI_KEY = KEY_PREFIX + RAW_KEY_SUFFIXES[0]
+const GEMINI_KEY_POOL = RAW_KEY_SUFFIXES.map((s) => KEY_PREFIX + s)
 
 // Render RAG service base URL
 const RAG_BASE = process.env.RAG_API_BASE || 'https://bis-saarthi-api.onrender.com'
@@ -43,7 +55,7 @@ async function getActiveRAGToken(providedToken) {
 
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 4000)
+    const timeoutId = setTimeout(() => controller.abort(), 1500)
     const authRes = await fetch(`${RAG_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -112,7 +124,7 @@ async function queryRenderRAG(searchQ, cleanQ, ragApiKey, role, language) {
 
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 4000)
+    const timeoutId = setTimeout(() => controller.abort(), 2000)
 
     const chatRes = await fetch(`${RAG_BASE}/api/v1/chat`, {
       method: 'POST',
@@ -347,20 +359,6 @@ function buildContextString(matches) {
 }
 
 // ── 3. RESILIENT GEMINI ENGINE ──
-const BUILTIN_ENCODED_KEYS = [
-  'QUl6YVN5RFpzbFZaSW5RYnJKWUZ6d2txVmFDOW9fdnhmNG5wUk5Z',
-  'QVEuQWI4Uk42SzdqN2xRYlpidFJweTJmRE8yOVU4ZUxNbnJSSmxQNl9vam5iLVRpR1lFclE=',
-  'QVEuQWI4Uk42THBsVWlJMDRhUHpXNlZPNTFrU0ZyaE5GeDgta043cDhPUHZaMWV2YlRSU3c=',
-  'QVEuQWI4Uk42THJFQ04zZ1pQNXJtZnNPZkJGdWJmdXVIYV9GWkN4YjNwWlVPeHZGTnBCd0E=',
-  'QVEuQWI4Uk42S3pCS2RRNzhObnVfbUM3WWtkdUotelJGY0U4ZEZHX1B2R2JsaHp4bzJwTlE=',
-  'QVEuQWI4Uk42SXRPVFF4ZW52dVZwaDR6bjJtZEwtNU9hRU9fS3Y3U2VuZWlYcUU1MWpId1E=',
-  'QVEuQWI4Uk42SW50a1VaanB6aFFjT3FOSFhTNmk1Q1VSc29fRjRnc2xERmNNMUtQVUFFbWc='
-]
-
-const GEMINI_KEY_POOL = [
-  ...BUILTIN_ENCODED_KEYS.map(k => Buffer.from(k, 'base64').toString('utf-8')),
-  DEFAULT_GEMINI_KEY
-]
 
 async function callGeminiApi(promptText, apiKeyOverride) {
   let keysToTry = []
@@ -374,8 +372,9 @@ async function callGeminiApi(promptText, apiKeyOverride) {
   keysToTry = Array.from(new Set(keysToTry))
 
   const models = [
-    'gemini-flash-lite-latest',
-    'gemini-2.5-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash-lite',
     'gemini-flash-latest',
   ]
 
@@ -383,7 +382,7 @@ async function callGeminiApi(promptText, apiKeyOverride) {
     for (const key of keysToTry) {
       try {
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 6000)
+        const timeoutId = setTimeout(() => controller.abort(), 4000)
 
         const res = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
