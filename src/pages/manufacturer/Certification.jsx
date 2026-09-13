@@ -3,6 +3,7 @@ import { BadgeCheck, Plus, Search, FlaskConical, Clock, CheckCircle2, AlertTrian
 import { toast } from 'sonner'
 import { cn, formatDate } from '@/lib/utils'
 import useDataStore from '@/store/dataStore'
+import { useTranslation } from '@/lib/i18n'
 
 const LABS = [
   { name: 'NABL Accredited Lab, Pune',    city: 'Pune',        state: 'Maharashtra', type: 'Electrotechnical', phone: '+91 20 2567 1122' },
@@ -19,6 +20,7 @@ const STATUS_BADGE = {
 }
 
 export default function Certification() {
+  const { t } = useTranslation()
   const { certifications, applyCertification } = useDataStore()
   const [tab, setTab]               = useState('mine')
   const [showApply, setShowApply]   = useState(false)
@@ -62,33 +64,33 @@ export default function Certification() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">BIS Certifications</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('BIS Certifications', 'BIS Certifications')}</h1>
           <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-            Manage ISI Mark, CRS, and other BIS certifications for your manufacturing line.
+            {t('Manage ISI Mark, CRS, and other BIS certifications for your manufacturing line.', 'Manage ISI Mark, CRS, and other BIS certifications for your manufacturing line.')}
           </p>
         </div>
         <button onClick={() => setShowApply(true)} className="btn-saffron text-sm shadow-xs">
-          <Plus className="w-4 h-4" /> Apply for Certification
+          <Plus className="w-4 h-4" /> {t('Apply for New License', 'Apply for Certification')}
         </button>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 dark:border-dark-border">
         {[
-          { id: 'mine', label: `My Certifications (${certifications.length})` },
-          { id: 'labs', label: 'Lab Lookup Directory' },
-        ].map((t) => (
+          { id: 'mine', label: `${t('My Certifications', 'My Certifications')} (${certifications.length})` },
+          { id: 'labs', label: t('Lab Lookup Directory', 'Lab Lookup Directory') },
+        ].map((tabItem) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+            key={tabItem.id}
+            onClick={() => setTab(tabItem.id)}
             className={cn(
               'px-5 py-2.5 text-sm font-medium border-b-2 transition-colors',
-              tab === t.id
+              tab === tabItem.id
                 ? 'border-orange-500 text-orange-600 dark:text-orange-400 font-semibold'
                 : 'border-transparent text-gray-500 dark:text-dark-text-muted hover:text-gray-700 dark:hover:text-dark-text'
             )}
           >
-            {t.label}
+            {tabItem.label}
           </button>
         ))}
       </div>
@@ -121,11 +123,11 @@ export default function Certification() {
                       </div>
                       <h3 className="font-semibold text-sm text-gray-800 dark:text-dark-text">{cert.product}</h3>
                       <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-500 dark:text-dark-text-muted flex-wrap">
-                        <span>Standard: <strong className="text-gray-700 dark:text-dark-text font-mono">{cert.standard || 'IS 374'}</strong></span>
+                        <span>{t('Standard', 'Standard')}: <strong className="text-gray-700 dark:text-dark-text font-mono">{cert.standard || 'IS 374'}</strong></span>
                         <span>·</span>
-                        <span>Testing Lab: {cert.lab}</span>
+                        <span>{t('Testing Lab', 'Testing Lab')}: {cert.lab}</span>
                         <span>·</span>
-                        <span>Applied: {formatDate(cert.applied)}</span>
+                        <span>{t('Applied Date', 'Applied')}: {formatDate(cert.applied)}</span>
                       </div>
                     </div>
                   </div>
@@ -135,13 +137,13 @@ export default function Certification() {
                       onClick={() => setSelectedCert(cert)}
                       className="btn-gov-outline text-xs py-1.5 px-3 flex items-center gap-1"
                     >
-                      <Eye className="w-3.5 h-3.5" /> Details
+                      <Eye className="w-3.5 h-3.5" /> {t('Details', 'Details')}
                     </button>
                     <button
-                      onClick={() => toast.success(`Generating official certificate PDF for ${cert.id}...`)}
+                      onClick={() => toast.success(t(`Generating official certificate PDF for ${cert.id}...`, `Generating official certificate PDF for ${cert.id}...`))}
                       className="btn-gov text-xs py-1.5 px-3 flex items-center gap-1"
                     >
-                      <Download className="w-3.5 h-3.5" /> Acknowledgement
+                      <Download className="w-3.5 h-3.5" /> {t('Acknowledgement', 'Acknowledgement')}
                     </button>
                   </div>
                 </div>
@@ -159,7 +161,7 @@ export default function Certification() {
             <input
               value={labSearch}
               onChange={(e) => setLabSearch(e.target.value)}
-              placeholder="Search accredited testing labs by city, state, or sector..."
+              placeholder={t('Search accredited testing labs by city, state, or sector...', 'Search accredited testing labs by city, state, or sector...')}
               className="input-gov pl-10 pr-8"
             />
             {labSearch && (
@@ -173,10 +175,10 @@ export default function Certification() {
           </div>
           {filteredLabs.length === 0 ? (
             <div className="text-center py-8 text-xs text-gray-400 dark:text-dark-text-muted">
-              No recognized labs match your search.
+              {t('No recognized labs match your search.', 'No recognized labs match your search.')}
               <br />
               <button onClick={() => setLabSearch('')} className="mt-2 text-orange-500 hover:underline font-semibold">
-                Clear filter
+                {t('Clear filter', 'Clear filter')}
               </button>
             </div>
           ) : (
@@ -192,7 +194,7 @@ export default function Certification() {
                       <p className="text-xs text-gray-500 dark:text-dark-text-muted">{lab.city}, {lab.state}</p>
                       <div className="flex items-center justify-between mt-2">
                         <span className="badge-gov bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs px-2 py-0.5">
-                          {lab.type}
+                          {t(lab.type, lab.type)}
                         </span>
                         <span className="font-mono text-xs text-gray-400 dark:text-dark-text-muted">{lab.phone}</span>
                       </div>
@@ -214,7 +216,7 @@ export default function Certification() {
                 <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
                   <BadgeCheck className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-gray-900 dark:text-white font-heading">Apply for ISI Mark Certification</h3>
+                <h3 className="font-bold text-gray-900 dark:text-white font-heading">{t('Apply for ISI Mark Certification', 'Apply for ISI Mark Certification')}</h3>
               </div>
               <button
                 onClick={() => setShowApply(false)}
@@ -226,7 +228,7 @@ export default function Certification() {
 
             <form onSubmit={handleApplySubmit} className="mt-4 space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Product Name &amp; Description *</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Product Name', 'Product Name & Description')} *</label>
                 <input
                   required
                   value={formData.product}
@@ -237,7 +239,7 @@ export default function Certification() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Applicable Indian Standard (IS Code) *</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Applicable Indian Standard (IS Code)', 'Applicable Indian Standard (IS Code)')} *</label>
                 <input
                   required
                   value={formData.standard}
@@ -249,23 +251,23 @@ export default function Certification() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Product Category</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Product Category', 'Product Category')}</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="input-gov"
                   >
-                    <option>Electrotechnical</option>
-                    <option>Mechanical</option>
-                    <option>Chemical</option>
-                    <option>Civil Engineering</option>
-                    <option>Food &amp; Agriculture</option>
-                    <option>IT &amp; Electronics</option>
+                    <option value="Electrotechnical">{t('Electrotechnical', 'Electrotechnical')}</option>
+                    <option value="Mechanical">{t('Mechanical', 'Mechanical')}</option>
+                    <option value="Chemical">{t('Chemical', 'Chemical')}</option>
+                    <option value="Civil Engineering">{t('Civil Engineering', 'Civil Engineering')}</option>
+                    <option value="Food & Agriculture">{t('Food & Agriculture', 'Food & Agriculture')}</option>
+                    <option value="IT & Electronics">{t('IT & Electronics', 'IT & Electronics')}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Preferred Testing Lab</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Assigned Testing Lab', 'Preferred Testing Lab')}</label>
                   <select
                     value={formData.lab}
                     onChange={(e) => setFormData({ ...formData, lab: e.target.value })}
@@ -284,13 +286,13 @@ export default function Certification() {
                   onClick={() => setShowApply(false)}
                   className="btn-gov-outline text-xs py-2"
                 >
-                  Cancel
+                  {t('Cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   className="btn-saffron text-xs py-2"
                 >
-                  Submit Application
+                  {t('Submit Application', 'Submit Application')}
                 </button>
               </div>
             </form>
@@ -327,21 +329,21 @@ export default function Certification() {
             <div className="py-4 space-y-3 text-xs">
               <div className="p-3 bg-slate-50 dark:bg-dark-bg-secondary rounded-gov border border-slate-200 dark:border-dark-border space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-dark-text-muted">Standard / Scope:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Standard / Scope', 'Standard / Scope')}:</span>
                   <span className="font-semibold text-gray-800 dark:text-dark-text">{selectedCert.standard || 'IS 374'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-dark-text-muted">Assigned Lab:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Assigned Lab', 'Assigned Lab')}:</span>
                   <span className="font-semibold text-gray-800 dark:text-dark-text">{selectedCert.lab}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-dark-text-muted">Application Date:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Application Date', 'Application Date')}:</span>
                   <span className="font-semibold text-gray-800 dark:text-dark-text">{formatDate(selectedCert.applied)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-dark-text-muted">Validity / Status:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Validity / Status', 'Validity / Status')}:</span>
                   <span className={`font-semibold uppercase ${STATUS_BADGE[selectedCert.status] || 'text-amber-600 dark:text-amber-400'}`}>
-                    {selectedCert.status.replace('_', ' ')}
+                    {t(selectedCert.status, selectedCert.status.replace('_', ' '))}
                   </span>
                 </div>
               </div>
@@ -351,7 +353,7 @@ export default function Certification() {
                 <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-gov animate-fade-in">
                   <div className="text-[11px] font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wider flex items-center gap-1.5 mb-1">
                     <Shield className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                    Official BIS Officer Decision Note
+                    {t('Official BIS Officer Decision Note', 'Official BIS Officer Decision Note')}
                   </div>
                   <p className="text-xs text-blue-900 dark:text-blue-200 leading-relaxed font-medium">
                     "{selectedCert.remarks}"
@@ -363,37 +365,37 @@ export default function Certification() {
               {selectedCert.status === 'approved' ? (
                 <div className="p-3 bg-green-50 dark:bg-green-900/15 border border-green-200 dark:border-green-800/80 rounded-gov text-green-800 dark:text-green-300">
                   <div className="font-semibold mb-0.5 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" /> License Granted &amp; Authorized
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" /> {t('License Granted & Authorized', 'License Granted & Authorized')}
                   </div>
                   <p className="text-[11px] leading-relaxed opacity-90">
-                    Official CM/L License active. You are granted statutory authorization to apply the ISI Mark to this certified product.
+                    {t('Official CM/L License active. You are granted statutory authorization to apply the ISI Mark to this certified product.', 'Official CM/L License active. You are granted statutory authorization to apply the ISI Mark to this certified product.')}
                   </p>
                 </div>
               ) : selectedCert.status === 'rejected' ? (
                 <div className="p-3 bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800/80 rounded-gov text-red-800 dark:text-red-300">
                   <div className="font-semibold mb-0.5 flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" /> Application Rejected by Authority
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" /> {t('Application Rejected by Authority', 'Application Rejected by Authority')}
                   </div>
                   <p className="text-[11px] leading-relaxed opacity-90">
-                    Application does not meet mandatory conformity criteria. Refer to officer remarks above for rectifications and resubmission.
+                    {t('Application does not meet mandatory conformity criteria. Refer to officer remarks above for rectifications and resubmission.', 'Application does not meet mandatory conformity criteria. Refer to officer remarks above for rectifications and resubmission.')}
                   </p>
                 </div>
               ) : selectedCert.status === 'under_review' ? (
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/15 border border-blue-200 dark:border-blue-800/80 rounded-gov text-blue-800 dark:text-blue-300">
                   <div className="font-semibold mb-0.5 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Technical Review &amp; Lab Testing in Progress
+                    <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> {t('Technical Review & Lab Testing in Progress', 'Technical Review & Lab Testing in Progress')}
                   </div>
                   <p className="text-[11px] leading-relaxed opacity-90">
-                    Factory audit evaluation and laboratory sample tests are under review with the designated technical branch.
+                    {t('Factory audit evaluation and laboratory sample tests are under review with the designated technical branch.', 'Factory audit evaluation and laboratory sample tests are under review with the designated technical branch.')}
                   </p>
                 </div>
               ) : (
                 <div className="p-3 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800/80 rounded-gov text-amber-800 dark:text-amber-300">
                   <div className="font-semibold mb-0.5 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Application Pending Initial Screening
+                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> {t('Application Pending Initial Screening', 'Application Pending Initial Screening')}
                   </div>
                   <p className="text-[11px] leading-relaxed opacity-90">
-                    Conformity assessment filed as per Scheme I of BIS (Conformity Assessment) Regulations, 2018. Awaiting officer allocation.
+                    {t('Conformity assessment filed as per Scheme I of BIS (Conformity Assessment) Regulations, 2018. Awaiting officer allocation.', 'Conformity assessment filed as per Scheme I of BIS (Conformity Assessment) Regulations, 2018. Awaiting officer allocation.')}
                   </p>
                 </div>
               )}
@@ -402,17 +404,17 @@ export default function Certification() {
             <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100 dark:border-dark-border">
               <button
                 onClick={() => {
-                  toast.success(`Downloading acknowledgement slip for ${selectedCert.id}...`)
+                  toast.success(t(`Downloading acknowledgement slip for ${selectedCert.id}...`, `Downloading acknowledgement slip for ${selectedCert.id}...`))
                 }}
                 className="btn-gov-outline text-xs py-2 flex items-center gap-1.5"
               >
-                <Download className="w-3.5 h-3.5" /> Download Slip
+                <Download className="w-3.5 h-3.5" /> {t('Download Slip', 'Download Slip')}
               </button>
               <button
                 onClick={() => setSelectedCert(null)}
                 className="btn-saffron text-xs py-2"
               >
-                Done
+                {t('Done', 'Done')}
               </button>
             </div>
           </div>

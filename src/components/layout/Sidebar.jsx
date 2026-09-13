@@ -225,8 +225,8 @@ export default function Sidebar({ mobile = false, onClose }) {
 
         {!collapsed && (
           <div className="pt-2 px-2 text-xs text-gray-400 dark:text-dark-text-muted">
-            <div className="font-semibold text-gray-500 dark:text-dark-text-muted">BIS Saarthi</div>
-            <div>Bureau of Indian Standards</div>
+            <div className="font-semibold text-gray-500 dark:text-dark-text-muted">{t('portal_brand', 'BIS Saarthi')}</div>
+            <div>{t('bis_title_en', 'Bureau of Indian Standards')}</div>
           </div>
         )}
       </div>

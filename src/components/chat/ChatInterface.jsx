@@ -6,7 +6,7 @@ import {
   Maximize2, Minimize2, Volume2, VolumeX, Edit2, Edit3, Check,
   Search, Sparkles, RotateCcw, Square, SlidersHorizontal, ExternalLink,
   Printer, FileText, HelpCircle, Type, Building2, BookOpen, ShieldCheck, Scale, FileBadge,
-  PanelLeftOpen, PanelLeftClose, History, Key, Eye, EyeOff, Loader2
+  PanelLeftOpen, PanelLeftClose, History, Key, Eye, EyeOff, Loader2, Zap
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { resolveDetailedCitation } from '@/lib/standardsReferences'
@@ -53,6 +53,36 @@ function normalizeTextForSpeech(text, lang = 'en') {
       .replace(/%/g, ' percent')
   }
   return s
+}
+
+// Splits cleaned text into natural sentences for complete, uninterrupted speech playback
+function splitTextIntoSpeechSentences(text) {
+  if (!text) return []
+  // Delimit on sentence-ending punctuation across English and Indian languages: . ! ? । \n
+  const rawPieces = text
+    .split(/([.!?।\n]+)/)
+    .reduce((acc, cur, idx, arr) => {
+      if (idx % 2 === 0) {
+        const punctuation = arr[idx + 1] || ''
+        const full = (cur + punctuation).trim()
+        if (full) acc.push(full)
+      }
+      return acc
+    }, [])
+
+  // Combine small fragments into smooth, natural sentence chunks (~150-200 chars)
+  const sentences = []
+  let buffer = ''
+  for (const piece of rawPieces) {
+    if ((buffer + ' ' + piece).length < 200) {
+      buffer = buffer ? `${buffer} ${piece}` : piece
+    } else {
+      if (buffer.trim()) sentences.push(buffer.trim())
+      buffer = piece
+    }
+  }
+  if (buffer.trim()) sentences.push(buffer.trim())
+  return sentences.length > 0 ? sentences : [text]
 }
 
 // ── Message Bubble ──────────────────────────────────────
@@ -180,14 +210,14 @@ function MessageBubble({
                   <div className="mb-2 flex items-center justify-between text-[11px] bg-blue-50/80 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-gov border border-blue-200/80 dark:border-blue-800/40">
                     <span className="flex items-center gap-1.5 font-medium">
                       <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                      <span>Translated via Bhashini AI (MeitY)</span>
+                      <span>{t('translated_via_bhashini', 'Translated via Bhashini AI (MeitY)')}</span>
                     </span>
                     <button
                       type="button"
                       onClick={() => setShowOriginal(!showOriginal)}
                       className="hover:underline text-[10px] font-bold text-bis-navy dark:text-blue-300 ml-2"
                     >
-                      {showOriginal ? 'View Translation' : 'View Original (English)'}
+                      {showOriginal ? t('view_translation', 'View Translation') : t('view_original', 'View Original (English)')}
                     </button>
                   </div>
                 )}
@@ -210,15 +240,6 @@ function MessageBubble({
 
 
 
-        {/* Cannot verify banner */}
-        {!isUser && message.canVerify === false && (
-          <div className="w-full mt-1 flex items-start gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-gov text-xs text-red-700 dark:text-red-400">
-            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            <div>
-              <span className="font-semibold">{t('cannot_verify_title', 'Cannot Verify')}</span> — {t('cannot_verify_desc', 'No direct BIS source match found. Try rephrasing your query or contact the BIS helpdesk.')}
-            </div>
-          </div>
-        )}
 
         {/* Output actions (AI only) */}
         {!isUser && (
@@ -338,10 +359,18 @@ function MessageBubble({
           </div>
         )}
 
-        {/* Timestamp */}
-        <span className="text-xs text-gray-400 dark:text-dark-text-muted px-1 mt-0.5">
-          {formatDateTime(message.timestamp)}
-        </span>
+        {/* Timestamp & Latency */}
+        <div className="flex items-center gap-2 px-1 mt-0.5">
+          <span className="text-xs text-gray-400 dark:text-dark-text-muted">
+            {formatDateTime(message.timestamp)}
+          </span>
+          {!isUser && message.latency && (
+            <span className="text-xs text-gray-400 dark:text-dark-text-muted bg-gray-100 dark:bg-dark-bg-card px-1.5 py-0.5 rounded-full flex items-center gap-1 border border-gray-200 dark:border-dark-border" title="Database Extraction & AI Generation Time">
+              <Zap size={10} className="text-amber-500" />
+              {message.latency}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* User Avatar */}
@@ -459,12 +488,23 @@ export default function ChatInterface({ role = 'consumer' }) {
   const [translations, setTranslations]             = useState({})
   const [audioPlayer, setAudioPlayer]               = useState(null)
   const [gatewayDismissed, setGatewayDismissed]     = useState(false)
+  const speechQueueIndexRef                         = useRef(0)
+  const isSpeechCancelledRef                        = useRef(false)
   
-  // Set current role and synchronize user-scoped chat sessions on sign-in / user change
   useEffect(() => {
     if (setRole) setRole(role)
     if (syncWithUser) syncWithUser(user)
   }, [role, user?.id, user?.role, setRole, syncWithUser])
+
+  // Stop any active speech synthesis if the user navigates away
+  useEffect(() => {
+    return () => {
+      isSpeechCancelledRef.current = true
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
   
   // Manufacturer Profile & Continuous Context State
   const [showProfileModal, setShowProfileModal]     = useState(false)
@@ -539,12 +579,16 @@ export default function ChatInterface({ role = 'consumer' }) {
   const [highlightedSourceKey, setHighlightedSourceKey]   = useState(null)
 
   // Unique citations extracted across current conversation (newest first)
+  // Merges both RAG citations (with full content/score data) and Gemini-cited sources
   const conversationCitations = useMemo(() => {
     const list = []
     const seen = new Set()
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i]
-      if (msg.role === 'assistant' && msg.citations && msg.citations.length > 0) {
+      if (msg.role !== 'assistant') continue
+
+      // Primary: full RAG citations with content, score, page, etc.
+      if (msg.citations && msg.citations.length > 0) {
         for (const rawCite of msg.citations) {
           const resolved = resolveDetailedCitation(rawCite)
           if (!resolved) continue
@@ -553,6 +597,31 @@ export default function ChatInterface({ role = 'consumer' }) {
             seen.add(key)
             list.push({
               ...resolved,
+              // Preserve RAG-specific fields
+              content: rawCite.content || resolved.content || '',
+              score: rawCite.score ?? resolved.score ?? null,
+              page: rawCite.page ?? resolved.page ?? null,
+              sourceFile: rawCite.sourceFile || resolved.sourceFile || '',
+              chunkId: rawCite.chunkId || resolved.chunkId || '',
+              messageId: msg.id,
+              timestamp: msg.timestamp,
+            })
+          }
+        }
+      }
+
+      // Secondary: Gemini-attributed sources (file + location pairs)
+      if (msg.sources && msg.sources.length > 0) {
+        for (const s of msg.sources) {
+          const key = (s.file || '').toLowerCase().trim()
+          if (key && !seen.has(key)) {
+            seen.add(key)
+            list.push({
+              source: s.file,
+              title: s.file,
+              clause: s.location || '',
+              type: 'standard',
+              ragGrounded: true,
               messageId: msg.id,
               timestamp: msg.timestamp,
             })
@@ -686,6 +755,9 @@ export default function ChatInterface({ role = 'consumer' }) {
     const assistantMessages = messages.filter((m) => m.role === 'assistant')
     assistantMessages.forEach(async (msg) => {
       if (translations[msg.id]?.[selectedLanguage]) return
+      // Skip if content is already localized in an Indian script
+      if (/[\u0900-\u0DFF]/.test(msg.content)) return
+
       try {
         const res = await fetch('/api/bhashini/translate', {
           method: 'POST',
@@ -721,9 +793,10 @@ export default function ChatInterface({ role = 'consumer' }) {
   }
   const currentFontSizeClass = fontSizeMap[chatFontSize] || 'text-sm'
 
-  // Bhashini Text-To-Speech (Read Aloud) handler
+  // High-Fidelity Text-To-Speech (Read Aloud) — Reads the 100% COMPLETE message without timeout or truncation
   const toggleTTS = async (text, messageId) => {
     if (speakingMsgId === messageId) {
+      isSpeechCancelledRef.current = true
       if (audioPlayer) {
         audioPlayer.pause()
         setAudioPlayer(null)
@@ -735,6 +808,7 @@ export default function ChatInterface({ role = 'consumer' }) {
       return
     }
 
+    isSpeechCancelledRef.current = false
     if (audioPlayer) {
       audioPlayer.pause()
       setAudioPlayer(null)
@@ -753,73 +827,62 @@ export default function ChatInterface({ role = 'consumer' }) {
 
     const phoneticText = normalizeTextForSpeech(cleanText, selectedLanguage)
 
-    try {
-      const resp = await fetch('/api/bhashini/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: phoneticText,
-          language: selectedLanguage,
-          gender: settings.bhashiniVoice || 'female',
-        }),
-      })
-      const data = await resp.json()
-
-      if (data.audioContent) {
-        const audio = new Audio(`data:audio/${data.audioFormat || 'wav'};base64,${data.audioContent}`)
-        audio.playbackRate = settings.speechRate || 1.0
-        setAudioPlayer(audio)
-        audio.onended = () => {
-          setSpeakingMsgId(null)
-          setAudioPlayer(null)
-        }
-        audio.onerror = () => {
-          setSpeakingMsgId(null)
-          setAudioPlayer(null)
-        }
-        await audio.play()
-        return
-      }
-    } catch (e) {
-      console.warn('Bhashini TTS fallback:', e)
-    }
-
-    // High-fidelity Indian Speech Synthesis Fallback with Native Indian Voice Selection
+    // Complete-message SpeechSynthesis with sequential sentence queue (zero length cutoff)
     if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(phoneticText)
+      const sentences = splitTextIntoSpeechSentences(phoneticText)
       const langObj = LANGUAGES.find((l) => l.code === selectedLanguage)
       const targetVoiceLang = (langObj?.voiceLang || 'en-IN').toLowerCase()
       const shortLang = (selectedLanguage || 'en').toLowerCase()
 
-      utterance.lang = langObj?.voiceLang || 'en-IN'
-      utterance.rate = settings.speechRate || 1.0
-      utterance.pitch = settings.speechPitch || 1.0
-
-      // Match native Indian voice for flawless pronunciation
       const voices = window.speechSynthesis.getVoices()
+      let matchedVoice = null
       if (voices && voices.length > 0) {
-        let matchedVoice = voices.find((v) => {
-          const vLang = v.lang.toLowerCase().replace('_', '-')
-          return vLang === targetVoiceLang
-        })
-        if (!matchedVoice) {
-          matchedVoice = voices.find((v) => v.lang.toLowerCase().startsWith(shortLang))
-        }
-        if (!matchedVoice && shortLang === 'en') {
-          matchedVoice = voices.find((v) => v.lang.toLowerCase().includes('in') && v.lang.toLowerCase().startsWith('en'))
-        }
-        if (matchedVoice) {
-          utterance.voice = matchedVoice
-        }
+        matchedVoice = voices.find((v) => v.lang.toLowerCase().replace('_', '-') === targetVoiceLang)
+          || voices.find((v) => v.lang.toLowerCase().startsWith(shortLang))
+          || (shortLang === 'en' ? voices.find((v) => v.lang.toLowerCase().includes('in') && v.lang.toLowerCase().startsWith('en')) : null)
       }
 
-      utterance.onend = () => setSpeakingMsgId(null)
-      utterance.onerror = () => setSpeakingMsgId(null)
-      window.speechSynthesis.speak(utterance)
-    } else {
-      setSpeakingMsgId(null)
-      toast.error('Audio playback is not supported in this browser')
+      speechQueueIndexRef.current = 0
+
+      const playNextSentence = () => {
+        if (isSpeechCancelledRef.current) {
+          setSpeakingMsgId(null)
+          return
+        }
+
+        if (speechQueueIndexRef.current >= sentences.length) {
+          setSpeakingMsgId(null)
+          return
+        }
+
+        const sentenceText = sentences[speechQueueIndexRef.current++]
+        const utterance = new SpeechSynthesisUtterance(sentenceText)
+        utterance.lang = langObj?.voiceLang || 'en-IN'
+        utterance.rate = settings.speechRate || 1.0
+        utterance.pitch = settings.speechPitch || 1.0
+        if (matchedVoice) utterance.voice = matchedVoice
+
+        utterance.onend = () => {
+          if (!isSpeechCancelledRef.current) {
+            setTimeout(playNextSentence, 40)
+          }
+        }
+        utterance.onerror = (err) => {
+          console.warn('Sentence playback notice, proceeding to next:', err)
+          if (!isSpeechCancelledRef.current) {
+            setTimeout(playNextSentence, 40)
+          }
+        }
+
+        window.speechSynthesis.speak(utterance)
+      }
+
+      playNextSentence()
+      return
     }
+
+    setSpeakingMsgId(null)
+    toast.error('Audio playback is not supported in this browser')
   }
 
   // Voice dictation & cross-lingual Speech-to-English translation via Bhashini
@@ -925,6 +988,7 @@ export default function ChatInterface({ role = 'consumer' }) {
   const handleSend = async () => {
     const text = input.trim()
     if (!text && uploadedFiles.length === 0) return
+    if (isStreaming) return
     setGatewayDismissed(true)
     settings.playSound('send')
     setInput('')
@@ -1058,8 +1122,8 @@ export default function ChatInterface({ role = 'consumer' }) {
             <button
               onClick={() => startSession()}
               className="p-2 rounded-lg text-white bg-bis-navy hover:bg-bis-navy-dark dark:bg-blue-600 dark:hover:bg-blue-700 transition-colors cursor-pointer shadow-xs"
-              title="New Conversation"
-              aria-label="New Conversation"
+              title={t('new_conversation', 'New Conversation')}
+              aria-label={t('new_conversation', 'New Conversation')}
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -1119,7 +1183,7 @@ export default function ChatInterface({ role = 'consumer' }) {
           <div className="flex items-center justify-between gap-1 pb-1">
             <div className="flex items-center gap-1.5">
               <History className="w-4 h-4 text-bis-navy dark:text-blue-400" />
-              <span className="text-xs font-bold text-gray-800 dark:text-dark-text">Conversations</span>
+              <span className="text-xs font-bold text-gray-800 dark:text-dark-text">{t('conversations', 'Conversations')}</span>
               <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
                 {sessions.length}
               </span>
@@ -1141,7 +1205,7 @@ export default function ChatInterface({ role = 'consumer' }) {
             }}
             className="btn-gov w-full text-xs py-2 flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" /> New Conversation
+            <Plus className="w-3.5 h-3.5" /> {t('new_conversation', 'New Conversation')}
           </button>
 
           {/* Search sessions input */}
@@ -1151,7 +1215,7 @@ export default function ChatInterface({ role = 'consumer' }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search conversations..."
+              placeholder={t('search_conversations', 'Search conversations...')}
               className="w-full bg-gray-50 dark:bg-dark-bg pl-8 pr-2.5 py-1.5 text-xs rounded-gov border border-gray-200 dark:border-dark-border outline-none text-gray-800 dark:text-dark-text placeholder-gray-400 dark:placeholder-dark-text-muted"
             />
             {searchQuery && (
@@ -1384,12 +1448,12 @@ export default function ChatInterface({ role = 'consumer' }) {
               {isFullscreen ? (
                 <>
                   <Minimize2 className="w-3.5 h-3.5" />
-                  <span className="hidden lg:inline text-[11px]">Exit</span>
+                  <span className="hidden lg:inline text-[11px]">{t('exit', 'Exit')}</span>
                 </>
               ) : (
                 <>
                   <Maximize2 className="w-3.5 h-3.5" />
-                  <span className="hidden lg:inline text-[11px]">Full</span>
+                  <span className="hidden lg:inline text-[11px]">{t('full', 'Full')}</span>
                 </>
               )}
             </button>
@@ -1403,7 +1467,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                 title="Show Sources & References Sidebar"
               >
                 <BookOpen className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                <span className="hidden sm:inline text-[11px]">Sources</span>
+                <span className="hidden sm:inline text-[11px]">{t('sources', 'Sources')}</span>
                 {conversationCitations.length > 0 && (
                   <span className="bg-bis-navy dark:bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
                     {conversationCitations.length}
@@ -1444,7 +1508,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                 title="Update enterprise details & context"
               >
                 <Edit3 className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                <span>Update Profile Context</span>
+                <span>{t('update_profile', 'Update Profile Context')}</span>
               </button>
             </div>
           </div>
@@ -1472,7 +1536,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                 className="btn-saffron text-[11px] py-1 px-3 flex items-center gap-1 shadow-xs"
               >
                 <Edit3 className="w-3 h-3" />
-                <span>Setup Company Profile</span>
+                <span>{t('setup_profile', 'Setup Company Profile')}</span>
               </button>
             </div>
           </div>
@@ -1808,7 +1872,7 @@ export default function ChatInterface({ role = 'consumer' }) {
           {/* Footer stats & Character counter */}
           <div className="flex items-center justify-between text-[11px] text-gray-400 dark:text-dark-text-muted mt-1.5 px-1">
             <div className="flex items-center gap-2">
-              <span>BIS Saarthi AI Guidance</span>
+              <span>{t('ai_guidance', 'BIS Saarthi AI Guidance')}</span>
               <span>·</span>
               <button
                 onClick={() => setShowShortcuts(true)}
@@ -1983,24 +2047,39 @@ export default function ChatInterface({ role = 'consumer' }) {
                     {cite.title}
                   </h4>
 
-                  {/* Simple summary */}
+                  {/* Simple summary or Product */}
                   {cite.summary && (
-                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {cite.summary}
                     </p>
                   )}
 
-                  {/* Key Requirements */}
-                  {cite.keyPoints && cite.keyPoints.length > 0 && (
-                    <div className="space-y-1 bg-gray-50/80 dark:bg-dark-bg/60 p-2 rounded border border-gray-100 dark:border-dark-border/60">
-                      {cite.keyPoints.slice(0, 2).map((pt, pIdx) => (
-                        <div key={pIdx} className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-300 leading-snug">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-                          <span>{pt}</span>
-                        </div>
-                      ))}
+                  {/* RAG Extracted Content */}
+                  {cite.content && (
+                    <div className="bg-gray-50/80 dark:bg-dark-bg/60 p-2.5 rounded-md border border-gray-100 dark:border-dark-border/60 mt-2">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">{t('extracted_text', 'Extracted Text')}</span>
+                        {cite.score !== null && (
+                          <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
+                            Score: {Number(cite.score).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-4 hover:line-clamp-none transition-all">
+                        {cite.content}
+                      </p>
                     </div>
                   )}
+
+                  {/* Location Meta (Page, Clause, File) */}
+                  {(cite.clause || cite.page || cite.sourceFile) && (
+                    <div className="flex flex-wrap items-center gap-2 mt-2 text-[10px] text-gray-500 dark:text-gray-400">
+                      {cite.clause && <span><span className="font-semibold text-gray-700 dark:text-gray-300">Clause:</span> {cite.clause}</span>}
+                      {cite.page && <span><span className="font-semibold text-gray-700 dark:text-gray-300">Page:</span> {cite.page}</span>}
+                      {cite.sourceFile && <span className="truncate max-w-[150px]" title={cite.sourceFile}><span className="font-semibold text-gray-700 dark:text-gray-300">File:</span> {cite.sourceFile.split('\\').pop().split('/').pop()}</span>}
+                    </div>
+                  )}
+
 
                   {/* Card Actions */}
                   <div className="pt-2 border-t border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
@@ -2010,7 +2089,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                       className="text-xs font-semibold text-bis-navy dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <FileText className="w-3.5 h-3.5" />
-                      <span>View Details</span>
+                      <span>{t('view_details', 'View Details')}</span>
                     </button>
 
                     <div className="flex items-center gap-1">
@@ -2033,7 +2112,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                           className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium ml-1"
                           title="Verify on BIS Portal"
                         >
-                          <span>BIS Portal</span>
+                          <span>{t('bis_portal', 'BIS Portal')}</span>
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
@@ -2219,7 +2298,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                   className="px-3 py-1.5 rounded-gov bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-dark-border text-xs flex items-center gap-1.5 transition-colors shadow-xs"
                 >
                   <Copy className="w-3.5 h-3.5" />
-                  <span>Copy Full Reference</span>
+                  <span>{t('copy_reference', 'Copy Full Reference')}</span>
                 </button>
 
                 <div className="flex items-center gap-2">
@@ -2418,11 +2497,11 @@ export default function ChatInterface({ role = 'consumer' }) {
             </div>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between items-center py-1">
-                <span className="text-gray-600 dark:text-dark-text">Send message</span>
+                <span className="text-gray-600 dark:text-dark-text">{t('send_message_hint', 'Send message')}</span>
                 <kbd className="px-2 py-0.5 bg-gray-100 dark:bg-dark-bg rounded border text-[11px] font-mono">Enter</kbd>
               </div>
               <div className="flex justify-between items-center py-1">
-                <span className="text-gray-600 dark:text-dark-text">New line</span>
+                <span className="text-gray-600 dark:text-dark-text">{t('new_line_hint', 'New line')}</span>
                 <kbd className="px-2 py-0.5 bg-gray-100 dark:bg-dark-bg rounded border text-[11px] font-mono">Shift + Enter</kbd>
               </div>
               <div className="flex justify-between items-center py-1">
@@ -2559,7 +2638,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                     onClick={() => setShowProfileModal(false)}
                     className="btn-gov-outline text-xs py-1.5 px-3"
                   >
-                    Cancel
+                    {t('cancel', 'Cancel')}
                   </button>
                   <button
                     type="submit"

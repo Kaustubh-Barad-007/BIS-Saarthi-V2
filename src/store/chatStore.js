@@ -80,7 +80,7 @@ const loadSavedActiveSessionId = (sessions, user = null) => {
   return sessions[0]?.id || null
 }
 
-const persistSessions = (sessions, activeId, user = null) => {
+function persistSessions(sessions, activeId, user = null) {
   if (typeof window === 'undefined') return
   try {
     const { sessionsKey, activeKey } = getUserStorageKeys(user)
@@ -117,7 +117,7 @@ const persistSessions = (sessions, activeId, user = null) => {
 const DEFAULT_FALLBACK_GEMINI_KEY = typeof atob !== 'undefined' ? atob('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=') : ''
 
 // External RAG API Key used strictly for data extraction
-const getStoredRagApiKey = () => {
+function getStoredRagApiKey() {
   if (typeof window === 'undefined') return ''
   try {
     const saved = localStorage.getItem('bis_settings_v2')
@@ -129,84 +129,39 @@ const getStoredRagApiKey = () => {
   return localStorage.getItem('bis_rag_api_key') || ''
 }
 
-// Gemini API Key used strictly for perfect formatting and general answers
-const getStoredGeminiApiKey = () => {
-  if (typeof window === 'undefined') return DEFAULT_FALLBACK_GEMINI_KEY
+// Helper to guarantee the query sent to the RAG database is in English for 100% accurate BIS standard retrieval
+export async function ensureEnglishQuery(text, selectedLang = 'en') {
+  if (!text || typeof text !== 'string') return ''
+  const trimmed = text.trim()
+  const hasNonAscii = /[^\u0000-\u007F]/.test(trimmed)
+  // If purely ASCII and already English, return as-is
+  if (!hasNonAscii && (!selectedLang || selectedLang === 'en')) {
+    return trimmed
+  }
   try {
-    const saved = localStorage.getItem('bis_settings_v2')
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      if (parsed?.geminiApiKey) return parsed.geminiApiKey
+    const res = await fetch('/api/bhashini/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: trimmed,
+        sourceLanguage: selectedLang !== 'en' ? selectedLang : 'auto',
+        targetLanguage: 'en',
+      }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (data.translatedText && data.translatedText.trim()) {
+        return data.translatedText.trim()
+      }
     }
-  } catch (_) {}
-  return localStorage.getItem('bis_gemini_api_key') || DEFAULT_FALLBACK_GEMINI_KEY
-}
-
-// Helper to determine contextual follow-up question chips
-const getSuggestedFollowUps = (content, readingMode, manufacturerProfile = null, role = 'consumer') => {
-  if (manufacturerProfile?.isProfileComplete) {
-    const std = manufacturerProfile.isStandard || 'this standard'
-    const scale = manufacturerProfile.scale || 'MSME'
-    return [
-      `What is the exact Scheme of Testing (SIT) for ${std}?`,
-      `How do I claim the 50% ${scale.toUpperCase()} marking fee concession?`,
-      `Which testing laboratories are nearest to ${manufacturerProfile.factoryLocation || 'my factory'}?`,
-    ]
+  } catch (e) {
+    console.warn('Query translation error:', e)
   }
-
-  if (role === 'manufacturer') {
-    return [
-      'What are the Scheme-I fee concessions for MSMEs?',
-      'What documents are required to apply on Manakonline?',
-      'How does the BIS factory inspection and lab testing work?',
-    ]
-  }
-
-  const lower = content.toLowerCase()
-  if (lower.includes('hallmark') || lower.includes('gold') || lower.includes('jewel') || lower.includes('huid')) {
-    return [
-      'How do I verify a 6-digit HUID in the BIS Care App?',
-      'What are the penalties for selling unhallmarked gold?',
-      'Where is the nearest Assaying & Hallmarking Centre (AHC)?',
-    ]
-  }
-  if (lower.includes('isi') || lower.includes('certif') || lower.includes('scheme') || lower.includes('license')) {
-    return [
-      'What is the step-by-step ISI Mark application process?',
-      'What are the application & renewal fees under Scheme-I?',
-      'Which testing laboratories are accredited for this category?',
-    ]
-  }
-  if (lower.includes('qco') || lower.includes('order') || lower.includes('mandatory')) {
-    return [
-      'Which electrical and electronic goods fall under mandatory QCO?',
-      'Can MSMEs obtain fee concessions or exemptions?',
-      'What is the penalty for importing goods without BIS certification?',
-    ]
-  }
-  if (lower.includes('complaint') || lower.includes('substandard') || lower.includes('fake') || lower.includes('fraud')) {
-    return [
-      'How do I track an existing BIS consumer complaint?',
-      'What proof or invoice is needed to file a substandard goods report?',
-      'How to report fraudulent ISI marking on consumer electronics?',
-    ]
-  }
-  if (readingMode === 'technical') {
-    return [
-      'What are the exact test parameters and sampling protocols?',
-      'List all current amendments and reaffirmed versions.',
-      'Show factory quality audit requirements as per Scheme-I.',
-    ]
-  }
-  return [
-    'What documents are required for BIS license registration?',
-    'How long does the certification process typically take?',
-    'How do I verify an ISI license number online?',
-  ]
+  return trimmed
 }
 
 // Helper to translate text into the selected Indian language via Bhashini NMT proxy
-export const translateToTargetLanguage = async (text, targetLang) => {
+export async function translateToTargetLanguage(text, targetLang) {
   if (!targetLang || targetLang === 'en' || !text) return text
   try {
     const res = await fetch('/api/bhashini/translate', {
@@ -235,6 +190,18 @@ const initialMessages = initialActiveSessionId
   ? (initialSessions.find((s) => s.id === initialActiveSessionId)?.messages || [])
   : []
 
+const getInitialLanguage = () => {
+  if (typeof window === 'undefined') return 'en'
+  try {
+    const saved = localStorage.getItem('bis_settings_v2')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (parsed?.preferredLanguage) return parsed.preferredLanguage
+    }
+  } catch (_) {}
+  return 'en'
+}
+
 const useChatStore = create((set, get) => ({
   sessions:        initialSessions,
   currentSessionId:initialActiveSessionId,
@@ -244,12 +211,20 @@ const useChatStore = create((set, get) => ({
   isLoading:       false,
   isStreaming:      false,
   error:           null,
-  selectedLanguage:'en',
+  selectedLanguage:getInitialLanguage(),
   uploadedFiles:   [],
 
   // Sync sessions when user logs in, switches accounts, or logs out
   syncWithUser: async (user) => {
     const targetUser = user || getActiveUserFromStorage()
+    const { currentUserId, currentRole, messages, isStreaming, sessions } = get()
+
+    // Do NOT wipe active chat state if user and role have not changed or if a query is streaming
+    if (isStreaming) return
+    if (currentUserId === (targetUser?.id || null) && currentRole === (targetUser?.role || 'consumer') && (messages.length > 0 || sessions.length > 0)) {
+      return
+    }
+
     const localSessions = loadSavedSessions(targetUser)
     let activeId = loadSavedActiveSessionId(localSessions, targetUser) || localSessions[0]?.id || null
 
@@ -403,9 +378,9 @@ const useChatStore = create((set, get) => ({
     set({ isStreaming: false })
   },
 
-  // Send a message (with mock AI response)
+  // Send a message
   sendMessage: async (content, options = {}) => {
-    const { currentSessionId, sessions, readingMode, selectedLanguage, manufacturerProfile, currentRole } = get()
+    const { currentSessionId, readingMode, selectedLanguage, manufacturerProfile, currentRole } = get()
     const role = options.role || currentRole || 'consumer'
     let sessionId = currentSessionId
 
@@ -422,64 +397,89 @@ const useChatStore = create((set, get) => ({
       files:     options.files || [],
     }
 
-    // Add user message
-    set((s) => ({ messages: [...s.messages, userMessage], isStreaming: true, error: null }))
+    // Immediately commit userMessage to both messages and sessions, and persist synchronously
+    const currentSessions = get().sessions
+    const sessionExists = currentSessions.some((s) => s.id === sessionId)
+    let updatedSessionsWithUser
+    if (sessionExists) {
+      updatedSessionsWithUser = currentSessions.map((s) => {
+        if (s.id === sessionId) {
+          const isDefaultTitle = s.title === 'New Conversation' || !s.title
+          return {
+            ...s,
+            title: isDefaultTitle ? content.slice(0, 45).trim() : s.title,
+            messages: [...(s.messages || []), userMessage],
+          }
+        }
+        return s
+      })
+    } else {
+      const newSession = {
+        id: sessionId,
+        title: content.slice(0, 45).trim() || 'New Conversation',
+        createdAt: new Date().toISOString(),
+        messages: [userMessage],
+      }
+      updatedSessionsWithUser = [newSession, ...currentSessions]
+    }
+
+    set((s) => ({
+      messages: [...s.messages, userMessage],
+      sessions: updatedSessionsWithUser,
+      currentSessionId: sessionId,
+      isStreaming: true,
+      error: null,
+    }))
+    persistSessions(updatedSessionsWithUser, sessionId)
 
     try {
-      // Simulate API call delay
-      await sleep(800)
-
-      // Check if user stopped streaming during the wait
       if (!get().isStreaming) return
 
       let aiContent = ''
       let citations = []
       let canVerify = false
+      let apiLatency = ''
+      let followUps = []
 
       try {
         const ragApiKey = getStoredRagApiKey()
-        const geminiApiKey = getStoredGeminiApiKey()
-        const previousMessages = (get().messages || []).slice(0, -1)
-        const chatHistory = previousMessages.slice(-4).map((m) => ({
+        // Extract up to 8 turns of preceding conversation history
+        const currentMsgs = get().messages || []
+        const previousMessages = currentMsgs.slice(0, -1)
+        const chatHistory = previousMessages.slice(-8).map((m) => ({
           role: m.role,
-          content: m.content,
+          content: typeof m.content === 'string' ? m.content : (m.content?.text || m.content?.original || ''),
         }))
+        const englishPrompt = await ensureEnglishQuery(content, selectedLanguage)
 
         const apiRes = await chatApi.query({
           sessionId,
-          content,
+          content: englishPrompt,
+          originalQuery: content,
           chatHistory,
           language: selectedLanguage,
           mode: readingMode,
           role,
           manufacturerProfile,
           ragApiKey,
-          geminiApiKey,
         })
         if (apiRes?.content) {
           aiContent = apiRes.content
           citations = apiRes.citations || []
           canVerify = apiRes.canVerify ?? (citations.length > 0)
+          apiLatency = apiRes.latency || ''
+          if (Array.isArray(apiRes.followUps)) followUps = apiRes.followUps
         } else {
           aiContent = '### ⚠️ No Database Response\n\nThe Bureau of Indian Standards database did not return any records for this query.'
         }
       } catch (err) {
-        aiContent = '### ⚠️ Database Connection Error\n\nUnable to retrieve records from the connected BIS database. Please check connection and try again.'
+        aiContent = `### ⚠️ API Connection Error\n\n**Error:** ${err.message || 'Unknown network error'}\n\nUnable to retrieve records from the connected BIS database. Please try again.`
       }
 
-      // Contextual follow-up suggestions
-      let followUps = getSuggestedFollowUps(content, readingMode, manufacturerProfile, role)
-
-      // If active language is not English, translate AI response & follow-up chips so output is strictly in that language
-      if (selectedLanguage && selectedLanguage !== 'en') {
-        aiContent = await translateToTargetLanguage(aiContent, selectedLanguage)
+      // If backend returned English fallback but user selected an Indian language, translate it
+      if (selectedLanguage && selectedLanguage !== 'en' && aiContent && !/[\u0900-\u0DFF]/.test(aiContent)) {
         try {
-          const translatedChips = await Promise.all(
-            followUps.map((chip) => translateToTargetLanguage(chip, selectedLanguage))
-          )
-          if (translatedChips?.length) {
-            followUps = translatedChips
-          }
+          aiContent = await translateToTargetLanguage(aiContent, selectedLanguage)
         } catch (_) {}
       }
 
@@ -492,16 +492,15 @@ const useChatStore = create((set, get) => ({
         followUps,
         readingMode,
         timestamp: new Date().toISOString(),
+        latency: apiLatency,
       }
 
-      // Update session title from first message if it's "New Conversation"
-      const updatedSessions = get().sessions.map((s) => {
+      // Append aiMessage to active session and persist
+      const finalSessions = get().sessions.map((s) => {
         if (s.id === sessionId) {
-          const isDefaultTitle = s.title === 'New Conversation' || !s.title
           return {
             ...s,
-            title: isDefaultTitle ? content.slice(0, 45).trim() : s.title,
-            messages: [...(s.messages || []), userMessage, aiMessage],
+            messages: [...(s.messages || []), aiMessage],
           }
         }
         return s
@@ -510,17 +509,42 @@ const useChatStore = create((set, get) => ({
       set((s) => ({
         messages:   [...s.messages, aiMessage],
         isStreaming: false,
-        sessions:   updatedSessions,
+        sessions:   finalSessions,
       }))
-      persistSessions(updatedSessions, sessionId)
+      persistSessions(finalSessions, sessionId)
     } catch (err) {
-      set({ isStreaming: false, error: err.message })
+      const errorAiMessage = {
+        id:        genId('msg'),
+        role:      'assistant',
+        content:   `### ⚠️ Service Notice\n\n**Error:** ${err.message || 'Unable to process query'}\n\nPlease try again.`,
+        citations: [],
+        canVerify: false,
+        followUps: [],
+        readingMode,
+        timestamp: new Date().toISOString(),
+      }
+      const errSessions = get().sessions.map((s) => {
+        if (s.id === sessionId) {
+          return {
+            ...s,
+            messages: [...(s.messages || []), errorAiMessage],
+          }
+        }
+        return s
+      })
+      set((s) => ({
+        messages:   [...s.messages, errorAiMessage],
+        isStreaming: false,
+        sessions:   errSessions,
+        error:      err.message,
+      }))
+      persistSessions(errSessions, sessionId)
     }
   },
 
   // Regenerate the last assistant response
   regenerateLastResponse: async () => {
-    const { messages } = get()
+    const { messages, currentSessionId } = get()
     if (messages.length === 0) return
 
     // Find the last user message
@@ -538,27 +562,35 @@ const useChatStore = create((set, get) => ({
 
     // Keep messages up to the user message
     const trimmedMessages = messages.slice(0, cutIndex + 1)
-    set({ messages: trimmedMessages, isStreaming: true, error: null })
+    const updatedSessions = get().sessions.map((s) =>
+      s.id === currentSessionId ? { ...s, messages: trimmedMessages } : s
+    )
+    set({ messages: trimmedMessages, sessions: updatedSessions, isStreaming: true, error: null })
+    persistSessions(updatedSessions, currentSessionId)
 
     try {
-      await sleep(750)
       if (!get().isStreaming) return
 
-      const { readingMode, selectedLanguage, manufacturerProfile, currentRole, currentSessionId } = get()
+      const { readingMode, selectedLanguage, manufacturerProfile, currentRole } = get()
       let aiContent = ''
       let citations = []
       let canVerify = false
+      let apiLatency = ''
+      let followUps = []
 
       try {
         const previousMessages = trimmedMessages.slice(0, -1)
-        const chatHistory = previousMessages.slice(-4).map((m) => ({
+        const chatHistory = previousMessages.slice(-8).map((m) => ({
           role: m.role,
-          content: m.content,
+          content: typeof m.content === 'string' ? m.content : (m.content?.text || m.content?.original || ''),
         }))
+
+        const englishPrompt = await ensureEnglishQuery(lastUserMsg.content, selectedLanguage)
 
         const apiRes = await chatApi.query({
           sessionId: currentSessionId,
-          content: lastUserMsg.content,
+          content: englishPrompt,
+          originalQuery: lastUserMsg.content,
           chatHistory,
           language: selectedLanguage,
           mode: readingMode,
@@ -570,24 +602,18 @@ const useChatStore = create((set, get) => ({
           aiContent = apiRes.content
           citations = apiRes.citations || []
           canVerify = apiRes.canVerify ?? (citations.length > 0)
+          apiLatency = apiRes.latency || ''
+          if (Array.isArray(apiRes.followUps)) followUps = apiRes.followUps
         } else {
           aiContent = '### ⚠️ No Database Response\n\nThe Bureau of Indian Standards database did not return any records for this query.'
         }
       } catch (err) {
-        aiContent = '### ⚠️ Database Connection Error\n\nUnable to retrieve records from the connected BIS database.'
+        aiContent = `### ⚠️ API Connection Error\n\n**Error:** ${err.message || 'Unknown network error'}\n\nUnable to retrieve records from the connected BIS database. Please try again.`
       }
 
-      let followUps = getSuggestedFollowUps(lastUserMsg.content, readingMode, manufacturerProfile, currentRole)
-
-      if (selectedLanguage && selectedLanguage !== 'en') {
-        aiContent = await translateToTargetLanguage(aiContent, selectedLanguage)
+      if (selectedLanguage && selectedLanguage !== 'en' && aiContent && !/[\u0900-\u0DFF]/.test(aiContent)) {
         try {
-          const translatedChips = await Promise.all(
-            followUps.map((chip) => translateToTargetLanguage(chip, selectedLanguage))
-          )
-          if (translatedChips?.length) {
-            followUps = translatedChips
-          }
+          aiContent = await translateToTargetLanguage(aiContent, selectedLanguage)
         } catch (_) {}
       }
 
@@ -600,10 +626,10 @@ const useChatStore = create((set, get) => ({
         followUps,
         readingMode,
         timestamp: new Date().toISOString(),
+        latency: apiLatency,
       }
 
-      const { sessions } = get()
-      const updatedSessions = sessions.map((s) =>
+      const finalSessions = get().sessions.map((s) =>
         s.id === currentSessionId
           ? { ...s, messages: [...trimmedMessages, aiMessage] }
           : s
@@ -612,9 +638,9 @@ const useChatStore = create((set, get) => ({
       set({
         messages:   [...trimmedMessages, aiMessage],
         isStreaming: false,
-        sessions:   updatedSessions,
+        sessions:   finalSessions,
       })
-      persistSessions(updatedSessions, currentSessionId)
+      persistSessions(finalSessions, currentSessionId)
     } catch (err) {
       set({ isStreaming: false, error: err.message })
     }
@@ -622,7 +648,7 @@ const useChatStore = create((set, get) => ({
 
   // Edit an existing user message and regenerate response from there
   editAndResendMessage: async (messageId, newContent) => {
-    const { messages, readingMode } = get()
+    const { messages, currentSessionId } = get()
     const targetIdx = messages.findIndex((m) => m.id === messageId)
     if (targetIdx === -1) return
 
@@ -635,21 +661,36 @@ const useChatStore = create((set, get) => ({
 
     // Keep messages before the edited message, plus the edited message
     const newHistory = [...messages.slice(0, targetIdx), updatedUserMsg]
-    set({ messages: newHistory, isStreaming: true, error: null })
+    const updatedSessions = get().sessions.map((s) =>
+      s.id === currentSessionId ? { ...s, messages: newHistory } : s
+    )
+    set({ messages: newHistory, sessions: updatedSessions, isStreaming: true, error: null })
+    persistSessions(updatedSessions, currentSessionId)
 
     try {
-      await sleep(800)
       if (!get().isStreaming) return
 
-      const { readingMode, selectedLanguage, manufacturerProfile, currentRole, currentSessionId } = get()
+      const { readingMode, selectedLanguage, manufacturerProfile, currentRole } = get()
       let aiContent = ''
       let citations = []
       let canVerify = false
+      let apiLatency = ''
+      let followUps = []
 
       try {
+        const previousMessages = messages.slice(0, targetIdx)
+        const chatHistory = previousMessages.slice(-8).map((m) => ({
+          role: m.role,
+          content: typeof m.content === 'string' ? m.content : (m.content?.text || m.content?.original || ''),
+        }))
+
+        const englishPrompt = await ensureEnglishQuery(newContent, selectedLanguage)
+
         const apiRes = await chatApi.query({
           sessionId: currentSessionId,
-          content: newContent,
+          content: englishPrompt,
+          originalQuery: newContent,
+          chatHistory,
           language: selectedLanguage,
           mode: readingMode,
           role: currentRole,
@@ -660,24 +701,18 @@ const useChatStore = create((set, get) => ({
           aiContent = apiRes.content
           citations = apiRes.citations || []
           canVerify = apiRes.canVerify ?? (citations.length > 0)
+          apiLatency = apiRes.latency || ''
+          if (Array.isArray(apiRes.followUps)) followUps = apiRes.followUps
         } else {
           aiContent = '### ⚠️ No Database Response\n\nThe Bureau of Indian Standards database did not return any records for this query.'
         }
       } catch (err) {
-        aiContent = '### ⚠️ Database Connection Error\n\nUnable to retrieve records from the connected BIS database.'
+        aiContent = `### ⚠️ API Connection Error\n\n**Error:** ${err.message || 'Unknown network error'}\n\nUnable to retrieve records from the connected BIS database. Please try again.`
       }
 
-      let followUps = getSuggestedFollowUps(newContent, readingMode, manufacturerProfile, currentRole)
-
-      if (selectedLanguage && selectedLanguage !== 'en') {
-        aiContent = await translateToTargetLanguage(aiContent, selectedLanguage)
+      if (selectedLanguage && selectedLanguage !== 'en' && aiContent && !/[\u0900-\u0DFF]/.test(aiContent)) {
         try {
-          const translatedChips = await Promise.all(
-            followUps.map((chip) => translateToTargetLanguage(chip, selectedLanguage))
-          )
-          if (translatedChips?.length) {
-            followUps = translatedChips
-          }
+          aiContent = await translateToTargetLanguage(aiContent, selectedLanguage)
         } catch (_) {}
       }
 
@@ -690,10 +725,10 @@ const useChatStore = create((set, get) => ({
         followUps,
         readingMode,
         timestamp: new Date().toISOString(),
+        latency: apiLatency,
       }
 
-      const { sessions } = get()
-      const updatedSessions = sessions.map((s) =>
+      const finalSessions = get().sessions.map((s) =>
         s.id === currentSessionId
           ? { ...s, messages: [...newHistory, aiMessage] }
           : s
@@ -702,9 +737,9 @@ const useChatStore = create((set, get) => ({
       set({
         messages:   [...newHistory, aiMessage],
         isStreaming: false,
-        sessions:   updatedSessions,
+        sessions:   finalSessions,
       })
-      persistSessions(updatedSessions, currentSessionId)
+      persistSessions(finalSessions, currentSessionId)
     } catch (err) {
       set({ isStreaming: false, error: err.message })
     }

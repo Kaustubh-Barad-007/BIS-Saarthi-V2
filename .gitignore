@@ -64,3 +64,6 @@ temp/
 *.tmp
 *.bak
 .env*
+.vercel
+scratch/
+test*.*

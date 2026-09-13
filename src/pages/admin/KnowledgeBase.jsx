@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
-import { Database, Upload, Search, CheckCircle2, Trash2, Eye, Plus, X, Check } from 'lucide-react'
+import { Database, Upload, Search, CheckCircle2, Trash2, Eye, Plus, X, Check, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDate, formatFileSize } from '@/lib/utils'
 import useDataStore from '@/store/dataStore'
+import { useTranslation } from '@/lib/i18n'
 
 export default function KnowledgeBase() {
+  const { t } = useTranslation()
   const {
     knowledgeDocs,
     addKnowledgeDoc,
@@ -57,17 +59,30 @@ export default function KnowledgeBase() {
     toast.success('Document removed from database')
   }
 
+  const handleDownloadFile = (doc) => {
+    if (doc.data_base64 || doc.dataBase64) {
+      const dataUri = doc.data_base64 || doc.dataBase64
+      const a = document.createElement('a')
+      a.href = dataUri
+      a.download = doc.file_name || doc.fileName || `${doc.title.replace(/[^a-z0-9]/gi, '_')}.pdf`
+      a.click()
+      toast.success(`Downloaded "${doc.title}"`)
+    } else {
+      toast.info('Document archive verified')
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">Knowledge Base Management</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('Knowledge Base Management', 'Knowledge Base Management')}</h1>
           <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-            Upload, review, and publish documents to the BIS AI knowledge layer (Real-Time Database).
+            {t('Upload, review, and publish documents to the BIS AI knowledge layer (Real-Time Database).', 'Upload, review, and publish documents to the BIS AI knowledge layer (Real-Time Database).')}
           </p>
         </div>
         <button onClick={() => setShowUpload(true)} className="btn-gov bg-red-600 hover:bg-red-700 shadow-xs">
-          <Plus className="w-4 h-4" /> Upload Document
+          <Plus className="w-4 h-4" /> {t('Upload Document', 'Upload Document')}
         </button>
       </div>
 
@@ -80,7 +95,7 @@ export default function KnowledgeBase() {
         ].map((s) => (
           <div key={s.label} className="card-gov p-4 text-center">
             <div className={`text-2xl font-bold font-heading ${s.color}`}>{s.value}</div>
-            <div className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">{s.label}</div>
+            <div className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">{t(s.label, s.label)}</div>
           </div>
         ))}
       </div>
@@ -88,10 +103,10 @@ export default function KnowledgeBase() {
       {/* Upload form */}
       {showUpload && (
         <form onSubmit={handleUploadSubmit} className="card-gov p-6 animate-slide-up border-red-200 dark:border-red-900/60">
-          <h2 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-5">Upload New Document to Database</h2>
+          <h2 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-5">{t('Upload New Document to Database', 'Upload New Document to Database')}</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">Document Title *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">{t('Document Title *', 'Document Title *')}</label>
               <input
                 required
                 value={formTitle}
@@ -101,21 +116,21 @@ export default function KnowledgeBase() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">Category</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">{t('Category', 'Category')}</label>
               <select
                 value={formCategory}
                 onChange={(e) => setFormCat(e.target.value)}
                 className="input-gov"
               >
-                <option>Standard</option>
-                <option>Circular</option>
-                <option>Notification</option>
-                <option>Reference</option>
-                <option>Guideline</option>
+                <option value="Standard">{t('Standard', 'Standard')}</option>
+                <option value="Circular">{t('Circular', 'Circular')}</option>
+                <option value="Notification">{t('Notification', 'Notification')}</option>
+                <option value="Reference">{t('Reference', 'Reference')}</option>
+                <option value="Guideline">{t('Guideline', 'Guideline')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">Version</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">{t('Version', 'Version')}</label>
               <input
                 value={formVersion}
                 onChange={(e) => setFormVersion(e.target.value)}
@@ -124,13 +139,13 @@ export default function KnowledgeBase() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">Attach Document File</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">{t('Attach Document File', 'Attach Document File')}</label>
               <input type="file" accept=".pdf,.doc,.docx" className="input-gov text-sm file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-bis-navy file:text-white file:text-xs" />
             </div>
           </div>
           <div className="flex gap-3 mt-5">
-            <button type="submit" className="btn-gov bg-red-600 hover:bg-red-700">Upload &amp; Queue for Review</button>
-            <button type="button" onClick={() => setShowUpload(false)} className="btn-gov-outline">Cancel</button>
+            <button type="submit" className="btn-gov bg-red-600 hover:bg-red-700">{t('Upload & Queue for Review', 'Upload & Queue for Review')}</button>
+            <button type="button" onClick={() => setShowUpload(false)} className="btn-gov-outline">{t('Cancel', 'Cancel')}</button>
           </div>
         </form>
       )}
@@ -141,7 +156,7 @@ export default function KnowledgeBase() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search knowledge base documents by title or category..."
+          placeholder={t('Search knowledge base documents by title or category...', 'Search knowledge base documents by title or category...')}
           className="input-gov pl-10"
         />
       </div>
@@ -157,7 +172,7 @@ export default function KnowledgeBase() {
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-gray-800 dark:text-dark-text text-sm truncate">{doc.title}</div>
                 <div className="text-xs text-gray-400 dark:text-dark-text-muted flex gap-2 mt-0.5 flex-wrap">
-                  <span>{doc.category}</span>
+                  <span>{t(doc.category, doc.category)}</span>
                   <span>·</span>
                   <span>v{doc.version}</span>
                   <span>·</span>
@@ -168,27 +183,27 @@ export default function KnowledgeBase() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`badge-gov text-xs px-2 py-0.5 ${doc.status === 'published' ? 'status-approved' : 'status-pending'}`}>
-                  {doc.status}
+                  {doc.status === 'published' ? t('Published', 'Published') : t('Under Review', 'Under Review')}
                 </span>
                 {doc.status === 'review' && (
                   <button
                     onClick={() => handlePublish(doc.id)}
                     className="text-xs text-green-600 dark:text-green-400 border border-green-400 dark:border-green-600 px-2 py-0.5 rounded hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
                   >
-                    Publish
+                    {t('Publish', 'Publish')}
                   </button>
                 )}
                 <button
                   onClick={() => setSelectedDoc(doc)}
                   className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-bg-secondary text-gray-400 hover:text-bis-navy dark:hover:text-blue-300 transition-colors"
-                  title="Inspect Document"
+                  title={t('Inspect Document', 'Inspect Document')}
                 >
                   <Eye className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setDocToDelete(doc)}
                   className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors"
-                  title="Remove Document"
+                  title={t('Remove Document', 'Remove Document')}
                 >
                   <Trash2 className="w-3.5 h-3.5 text-red-400" />
                 </button>
@@ -201,8 +216,8 @@ export default function KnowledgeBase() {
       {/* ── Document Inspection Modal ── */}
       {selectedDoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white dark:bg-dark-bg-card rounded-gov-xl border border-gray-200 dark:border-dark-border shadow-2xl max-w-md w-full p-6 animate-scale-in">
-            <div className="flex items-start justify-between pb-3 border-b border-gray-100 dark:border-dark-border">
+          <div className="bg-white dark:bg-dark-bg-card rounded-gov-xl border border-gray-200 dark:border-dark-border shadow-2xl max-w-xl w-full p-6 animate-scale-in max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-start justify-between pb-3 border-b border-gray-100 dark:border-dark-border shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
                   <Database className="w-5 h-5" />
@@ -211,7 +226,7 @@ export default function KnowledgeBase() {
                   <h3 className="font-bold text-sm text-gray-900 dark:text-white font-heading truncate">
                     {selectedDoc.title}
                   </h3>
-                  <div className="text-xs text-gray-500 dark:text-dark-text-muted">Category: {selectedDoc.category}</div>
+                  <div className="text-xs text-gray-500 dark:text-dark-text-muted">{t('Category', 'Category')}: {t(selectedDoc.category, selectedDoc.category)}</div>
                 </div>
               </div>
               <button
@@ -222,39 +237,67 @@ export default function KnowledgeBase() {
               </button>
             </div>
 
-            <div className="py-4 space-y-3 text-xs">
+            <div className="py-4 space-y-3 text-xs overflow-y-auto flex-1">
               <div className="p-3 bg-slate-50 dark:bg-dark-bg-secondary rounded-gov border border-slate-200 dark:border-dark-border space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-dark-text-muted">Version:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Version:', 'Version:')}</span>
                   <span className="font-semibold text-gray-800 dark:text-dark-text">v{selectedDoc.version}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-dark-text-muted">File Size:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('File Size:', 'File Size:')}</span>
                   <span className="font-semibold text-gray-800 dark:text-dark-text">{formatFileSize(selectedDoc.size)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-dark-text-muted">Indexed Embedding Chunks:</span>
-                  <span className="font-mono font-bold text-bis-navy dark:text-blue-400">{selectedDoc.chunks || 45} chunks</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Indexed Embedding Chunks:', 'Indexed Embedding Chunks:')}</span>
+                  <span className="font-mono font-bold text-bis-navy dark:text-blue-400">{selectedDoc.chunks || 45} {t('chunks', 'chunks')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-dark-text-muted">Publication State:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Publication State:', 'Publication State:')}</span>
                   <span className={`font-semibold capitalize ${selectedDoc.status === 'published' ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                    {selectedDoc.status}
+                    {selectedDoc.status === 'published' ? t('Published', 'Published') : t('Under Review', 'Under Review')}
                   </span>
                 </div>
               </div>
 
+              {/* Document Interactive Preview (SVG / PDF) if data is in database */}
+              {(selectedDoc.data_base64 || selectedDoc.dataBase64) && (
+                <div className="border border-gray-200 dark:border-dark-border rounded-gov p-2 bg-gray-50 dark:bg-dark-bg-secondary">
+                  <div className="font-semibold text-xs text-gray-700 dark:text-dark-text mb-2 flex items-center justify-between">
+                    <span>{t('Official Standard / Document Preview', 'Official Standard / Document Preview')}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadFile(selectedDoc)}
+                      className="btn-gov-outline text-[11px] py-1 px-2.5 flex items-center gap-1"
+                    >
+                      <Download className="w-3 h-3" /> {t('Download File', 'Download File')}
+                    </button>
+                  </div>
+                  {(selectedDoc.file_type?.includes('svg') || selectedDoc.fileType?.includes('svg')) ? (
+                    <div
+                      dangerouslySetInnerHTML={{ __html: decodeURIComponent(selectedDoc.data_base64 || selectedDoc.dataBase64).replace(/^data:image\/svg\+xml;utf8,/, '') }}
+                      className="w-full max-h-[220px] flex items-center justify-center p-2 overflow-hidden"
+                    />
+                  ) : (
+                    <iframe
+                      src={selectedDoc.data_base64 || selectedDoc.dataBase64}
+                      className="w-full h-64 rounded border-0 bg-white"
+                      title="Standard Preview"
+                    />
+                  )}
+                </div>
+              )}
+
               <div className="p-3 bg-green-50 dark:bg-green-900/15 border border-green-200 dark:border-green-800/80 rounded-gov text-green-800 dark:text-green-300">
                 <div className="font-semibold mb-0.5 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" /> Vector Index Live
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" /> {t('Vector Index Live', 'Vector Index Live')}
                 </div>
                 <p className="text-[11px] leading-relaxed opacity-90">
-                  Indexed into BIS Knowledge Base for high-dimensional semantic search and AI retrieval.
+                  {t('Indexed into BIS Knowledge Base for high-dimensional semantic search and AI retrieval.', 'Indexed into BIS Knowledge Base for high-dimensional semantic search and AI retrieval.')}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100 dark:border-dark-border">
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100 dark:border-dark-border shrink-0">
               {selectedDoc.status === 'review' ? (
                 <button
                   onClick={() => {
@@ -263,18 +306,18 @@ export default function KnowledgeBase() {
                   }}
                   className="btn-gov bg-green-600 hover:bg-green-700 text-xs py-2"
                 >
-                  Publish to AI Layer
+                  {t('Publish to AI Layer', 'Publish to AI Layer')}
                 </button>
               ) : (
                 <div className="text-xs text-green-600 dark:text-green-400 font-semibold flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> Published in Database
+                  <Check className="w-3.5 h-3.5" /> {t('Published in Database', 'Published in Database')}
                 </div>
               )}
               <button
                 onClick={() => setSelectedDoc(null)}
                 className="btn-gov-outline text-xs py-2"
               >
-                Close
+                {t('Close', 'Close')}
               </button>
             </div>
           </div>
@@ -291,15 +334,15 @@ export default function KnowledgeBase() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white font-heading">
-                  Remove Knowledge Document?
+                  {t('Remove Knowledge Document?', 'Remove Knowledge Document?')}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-dark-text-muted">
-                  Vector indexing removal
+                  {t('Vector indexing removal', 'Vector indexing removal')}
                 </p>
               </div>
             </div>
             <p className="text-xs text-gray-600 dark:text-dark-text-muted mb-5 leading-relaxed">
-              Are you sure you want to remove <strong className="text-gray-900 dark:text-white">&ldquo;{docToDelete.title}&rdquo;</strong> from the BIS AI Knowledge Base?
+              {t('Are you sure you want to remove', 'Are you sure you want to remove')} <strong className="text-gray-900 dark:text-white">&ldquo;{docToDelete.title}&rdquo;</strong> {t('from the BIS AI Knowledge Base?', 'from the BIS AI Knowledge Base?')}
             </p>
             <div className="flex items-center justify-end gap-2">
               <button
@@ -307,7 +350,7 @@ export default function KnowledgeBase() {
                 onClick={() => setDocToDelete(null)}
                 className="btn-gov-outline text-xs py-1.5 px-3"
               >
-                Cancel
+                {t('Cancel', 'Cancel')}
               </button>
               <button
                 type="button"
@@ -317,7 +360,7 @@ export default function KnowledgeBase() {
                 }}
                 className="btn-gov bg-red-600 hover:bg-red-700 text-xs py-1.5 px-3"
               >
-                Remove
+                {t('Remove', 'Remove')}
               </button>
             </div>
           </div>

@@ -3,6 +3,7 @@ import { ClipboardList, Search, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDateTime } from '@/lib/utils'
 import useDataStore from '@/store/dataStore'
+import { useTranslation } from '@/lib/i18n'
 
 const ACTION_COLOR = {
   UPLOAD:        'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
@@ -20,6 +21,7 @@ const ACTION_COLOR = {
 }
 
 export default function AuditLog() {
+  const { t } = useTranslation()
   const { auditLogs } = useDataStore()
   const [search, setSearch] = useState('')
   const [actionFilter, setActionFilter] = useState('')
@@ -57,13 +59,13 @@ export default function AuditLog() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">System Audit Log</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('System Audit Log', 'System Audit Log')}</h1>
           <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-            Real-time immutable trail of all administrative and user activities.
+            {t('Real-time immutable trail of all administrative and user activities.', 'Real-time immutable trail of all administrative and user activities.')}
           </p>
         </div>
         <button onClick={handleExportCSV} className="btn-gov-outline text-sm flex items-center gap-1.5 shadow-xs">
-          <Download className="w-4 h-4" /> Export CSV
+          <Download className="w-4 h-4" /> {t('Export CSV', 'Export CSV')}
         </button>
       </div>
 
@@ -74,7 +76,7 @@ export default function AuditLog() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by user, action, or affected resource..."
+            placeholder={t('Search by user, action, or affected resource...', 'Search by user, action, or affected resource...')}
             className="input-gov pl-10"
           />
         </div>
@@ -83,7 +85,7 @@ export default function AuditLog() {
           onChange={(e) => setActionFilter(e.target.value)}
           className="input-gov w-full sm:w-44"
         >
-          <option value="">All Actions</option>
+          <option value="">{t('All Actions', 'All Actions')}</option>
           {['UPLOAD', 'QUERY', 'APPLY', 'DELETE', 'PUBLISH', 'LOGIN', 'USER_CREATE', 'USER_UPDATE', 'COMPLAINT'].map((a) => (
             <option key={a} value={a}>{a}</option>
           ))}
@@ -96,9 +98,16 @@ export default function AuditLog() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-dark-bg-secondary border-b border-gray-100 dark:border-dark-border">
               <tr>
-                {['#', 'User', 'Action', 'Resource', 'IP Address', 'Timestamp'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-dark-text-muted uppercase tracking-wider">
-                    {h}
+                {[
+                  { key: 'id', label: '#' },
+                  { key: 'user', label: t('User', 'User') },
+                  { key: 'action', label: t('Action', 'Action') },
+                  { key: 'resource', label: t('Resource', 'Resource') },
+                  { key: 'ip', label: t('IP Address', 'IP Address') },
+                  { key: 'time', label: t('Timestamp', 'Timestamp') },
+                ].map((h) => (
+                  <th key={h.key} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-dark-text-muted uppercase tracking-wider">
+                    {h.label}
                   </th>
                 ))}
               </tr>
@@ -107,7 +116,7 @@ export default function AuditLog() {
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-10 text-gray-400 dark:text-dark-text-muted">
-                    No matching audit records found.
+                    {t('No matching audit records found.', 'No matching audit records found.')}
                   </td>
                 </tr>
               ) : (
@@ -136,8 +145,8 @@ export default function AuditLog() {
           </table>
         </div>
         <div className="px-4 py-3 border-t border-gray-100 dark:border-dark-border text-xs text-gray-400 dark:text-dark-text-muted flex justify-between items-center">
-          <span>{filtered.length} entries shown · Database logs retained indefinitely</span>
-          <span className="text-[11px] text-green-600 dark:text-green-400 font-medium">● Real-time live</span>
+          <span>{filtered.length} {t('entries shown · Database logs retained indefinitely', 'entries shown · Database logs retained indefinitely')}</span>
+          <span className="text-[11px] text-green-600 dark:text-green-400 font-medium">● {t('Real-time live', 'Real-time live')}</span>
         </div>
       </div>
     </div>

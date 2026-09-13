@@ -99,36 +99,10 @@ export default async function handler(req, res) {
       })
     }
   } catch (err) {
-    console.warn('[Bhashini TTS Warning]: Upstream error, signaling client fallback -', err.message)
+    console.warn('[Bhashini TTS Warning]: Upstream error, signaling client full-sentence synthesis -', err.message)
   }
 
-  // 2. High-fidelity native Indian voice synthesis fallback
-  try {
-    const ttsChunk = cleanText.slice(0, 200)
-    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(ttsChunk)}&tl=${encodeURIComponent(language)}&client=tw-ob`
-    const audioRes = await axios.get(ttsUrl, {
-      responseType: 'arraybuffer',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      },
-      timeout: 5000,
-    })
-
-    if (audioRes.data && audioRes.data.length > 0) {
-      const base64Audio = Buffer.from(audioRes.data).toString('base64')
-      return res.status(200).json({
-        audioContent: base64Audio,
-        audioFormat: 'mp3',
-        language,
-        gender,
-        provider: 'bhashini-assisted',
-      })
-    }
-  } catch (ttsErr) {
-    console.warn('[Server TTS Fallback Warning]:', ttsErr.message)
-  }
-
-  // 3. Graceful fallback response instructing client to use Web Speech synthesis
+  // 2. Instruct client to use high-fidelity sequential sentence-queue Web Speech synthesis (zero length cutoff)
   return res.status(200).json({
     audioContent: null,
     fallback: true,

@@ -4,9 +4,11 @@ import { CheckCircle2, Circle, ArrowRight, MessageSquare, Sparkles, Check, Rotat
 import { toast } from 'sonner'
 import { COMPLIANCE_STEPS, ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
 
 export default function ComplianceRoadmap() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [steps, setSteps] = useState(COMPLIANCE_STEPS)
 
   const completedCount = steps.filter((s) => s.status === 'completed').length
@@ -17,7 +19,7 @@ export default function ComplianceRoadmap() {
       prev.map((s) => {
         if (s.id === stepId) {
           const nextStatus = s.status === 'completed' ? 'pending' : 'completed'
-          toast.success(`Step ${stepId} marked as ${nextStatus === 'completed' ? 'Completed' : 'Pending'}!`)
+          toast.success(`${t('Step')} ${stepId} ${nextStatus === 'completed' ? t('Completed') : t('Pending')}!`)
           return { ...s, status: nextStatus }
         }
         return s
@@ -33,21 +35,21 @@ export default function ComplianceRoadmap() {
         return s
       })
     )
-    toast.info(`Step ${stepId} is now set as your active milestone`)
+    toast.info(`${t('Step')} ${stepId} ${t('Active Milestone')}`)
   }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">ISI Mark Compliance Roadmap</h1>
-          <p className="text-sm text-gray-500 dark:text-dark-text-muted">Interactive milestone tracker to achieve BIS ISI Mark certification.</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('ISI Mark Compliance Roadmap', 'ISI Mark Compliance Roadmap')}</h1>
+          <p className="text-sm text-gray-500 dark:text-dark-text-muted">{t('Interactive milestone tracker to achieve BIS ISI Mark certification.', 'Interactive milestone tracker to achieve BIS ISI Mark certification.')}</p>
         </div>
         <button
           onClick={() => navigate(ROUTES.MANUFACTURER_CHAT)}
           className="btn-saffron text-sm flex items-center gap-1.5 shrink-0"
         >
-          <MessageSquare className="w-4 h-4" /> Consult AI Assistant
+          <MessageSquare className="w-4 h-4" /> {t('Consult AI Assistant', 'Consult AI Assistant')}
         </button>
       </div>
 
@@ -56,10 +58,10 @@ export default function ComplianceRoadmap() {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-orange-500" />
-            <span className="text-sm font-bold text-gray-900 dark:text-white">Overall Compliance Progress</span>
+            <span className="text-sm font-bold text-gray-900 dark:text-white">{t('Overall Compliance Progress', 'Overall Compliance Progress')}</span>
           </div>
           <span className="font-mono text-sm font-bold text-orange-600 dark:text-orange-400">
-            {completedCount} of {steps.length} Steps ({progressPercent}%)
+            {completedCount} {t('of')} {steps.length} {t('Steps')} ({progressPercent}%)
           </span>
         </div>
         <div className="w-full bg-gray-200 dark:bg-dark-border h-2.5 rounded-full overflow-hidden">
@@ -80,7 +82,7 @@ export default function ComplianceRoadmap() {
                 <button
                   type="button"
                   onClick={() => toggleStep(step.id)}
-                  title={`Click to toggle Step ${step.id} status`}
+                  title={`${t('Step')} ${step.id}`}
                   className={cn(
                     'w-14 h-14 rounded-full border-4 flex items-center justify-center shrink-0 z-10 font-bold text-sm transition-all cursor-pointer',
                     step.status === 'completed' ? 'border-green-500 bg-green-500 text-white hover:scale-105' :
@@ -106,29 +108,29 @@ export default function ComplianceRoadmap() {
                         step.status === 'current'   ? 'text-orange-700 dark:text-orange-400' :
                         'text-gray-700 dark:text-dark-text'
                       )}>
-                        Step {step.id}: {step.title}
+                        {t('Step')} {step.id}: {t(step.title, step.title)}
                       </h3>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-dark-text-muted mt-1">{step.desc}</p>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-dark-text-muted mt-1">{t(step.desc, step.desc)}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {step.status === 'current' && (
                         <span className="badge-gov bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-xs">
-                          ● Active Milestone
+                          ● {t('Active Milestone', 'Active Milestone')}
                         </span>
                       )}
                       {step.status === 'completed' && (
-                        <span className="badge-gov status-approved text-xs">Completed</span>
+                        <span className="badge-gov status-approved text-xs">{t('Completed', 'Completed')}</span>
                       )}
                     </div>
                   </div>
 
                   {step.status === 'current' && (
                     <div className="mt-3 pt-3 border-t border-orange-200 dark:border-orange-800">
-                      <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mb-2">Required Actions:</p>
+                      <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mb-2">{t('Required Actions:', 'Required Actions:')}</p>
                       <ul className="text-xs text-gray-600 dark:text-dark-text-muted space-y-1">
-                        <li className="flex items-center gap-2"><ArrowRight className="w-3 h-3 text-orange-400" /> Submit application on BIS Connect portal</li>
-                        <li className="flex items-center gap-2"><ArrowRight className="w-3 h-3 text-orange-400" /> Upload factory layout and process flow diagram</li>
-                        <li className="flex items-center gap-2"><ArrowRight className="w-3 h-3 text-orange-400" /> Attach NABL lab test reports</li>
+                        <li className="flex items-center gap-2"><ArrowRight className="w-3 h-3 text-orange-400" /> {t('Submit application on BIS Connect portal', 'Submit application on BIS Connect portal')}</li>
+                        <li className="flex items-center gap-2"><ArrowRight className="w-3 h-3 text-orange-400" /> {t('Upload factory layout and process flow diagram', 'Upload factory layout and process flow diagram')}</li>
+                        <li className="flex items-center gap-2"><ArrowRight className="w-3 h-3 text-orange-400" /> {t('Attach NABL lab test reports', 'Attach NABL lab test reports')}</li>
                       </ul>
                     </div>
                   )}
@@ -141,9 +143,9 @@ export default function ComplianceRoadmap() {
                       className="btn-gov-outline text-xs py-1.5 px-3 flex items-center gap-1.5"
                     >
                       {step.status === 'completed' ? (
-                        <><RotateCcw className="w-3.5 h-3.5" /> Reopen Step</>
+                        <><RotateCcw className="w-3.5 h-3.5" /> {t('Reopen Step', 'Reopen Step')}</>
                       ) : (
-                        <><Check className="w-3.5 h-3.5 text-green-500" /> Mark as Done</>
+                        <><Check className="w-3.5 h-3.5 text-green-500" /> {t('Mark as Done', 'Mark as Done')}</>
                       )}
                     </button>
 
@@ -153,7 +155,7 @@ export default function ComplianceRoadmap() {
                         onClick={() => setAsCurrent(step.id)}
                         className="text-xs text-orange-600 dark:text-orange-400 hover:underline px-2"
                       >
-                        Set as Current Milestone
+                        {t('Set as Current Milestone', 'Set as Current Milestone')}
                       </button>
                     )}
 
@@ -162,7 +164,7 @@ export default function ComplianceRoadmap() {
                       onClick={() => navigate(ROUTES.MANUFACTURER_CHAT)}
                       className="text-xs text-bis-navy dark:text-blue-400 hover:underline flex items-center gap-1 ml-auto"
                     >
-                      <MessageSquare className="w-3 h-3" /> Ask BIS Saarthi about Step {step.id} &rarr;
+                      <MessageSquare className="w-3 h-3" /> {t('Ask BIS Saarthi about Step', 'Ask BIS Saarthi about Step')} {step.id} &rarr;
                     </button>
                   </div>
                 </div>
@@ -173,10 +175,10 @@ export default function ComplianceRoadmap() {
       </div>
 
       <div className="card-gov p-5 bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900">
-        <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">📋 Key Documents Required</h3>
+        <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">📋 {t('Key Documents Required', 'Key Documents Required')}</h3>
         <ul className="grid sm:grid-cols-2 gap-1 text-sm text-blue-700 dark:text-blue-400">
           {['Factory Registration Certificate', 'Product drawings / specifications', 'NABL accredited lab test reports', 'Quality Control Manual', 'List of manufacturing equipment', 'Organizational chart with QC personnel'].map((doc) => (
-            <li key={doc} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500" />{doc}</li>
+            <li key={doc} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500" />{t(doc, doc)}</li>
           ))}
         </ul>
       </div>

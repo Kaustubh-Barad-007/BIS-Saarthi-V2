@@ -6,10 +6,12 @@ import {
 } from 'recharts'
 import useThemeStore from '@/store/themeStore'
 import useDataStore from '@/store/dataStore'
+import { useTranslation } from '@/lib/i18n'
 
 const COLORS = ['#003580', '#FF9933', '#138808', '#C8A951', '#8B5CF6']
 
 export default function Analytics() {
+  const { t } = useTranslation()
   const { isDark } = useThemeStore()
   const { users, complaints, certifications, knowledgeDocs, queryCount } = useDataStore()
 
@@ -52,13 +54,13 @@ export default function Analytics() {
     const stdVal = Math.max(kbCount * 5, 18)
 
     return [
-      { name: 'Hallmarking',    value: hallmarkBase },
-      { name: 'Certification',  value: certVal },
-      { name: 'Standards Info', value: stdVal },
-      { name: 'Complaints',     value: compVal },
-      { name: 'Export',         value: exportBase },
+      { name: t('Hallmarking', 'Hallmarking'),    value: hallmarkBase },
+      { name: t('Certification', 'Certification'),  value: certVal },
+      { name: t('Standards Info', 'Standards Info'), value: stdVal },
+      { name: t('Complaints', 'Complaints'),     value: compVal },
+      { name: t('Export', 'Export'),         value: exportBase },
     ]
-  }, [complaints, certifications, knowledgeDocs, queryCount])
+  }, [complaints, certifications, knowledgeDocs, queryCount, t])
 
   const chartTheme = {
     grid: isDark ? '#334155' : '#f0f0f0',
@@ -72,24 +74,24 @@ export default function Analytics() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">Analytics &amp; Reporting</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('Analytics & Reporting', 'Analytics & Reporting')}</h1>
         <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-          Platform usage metrics, real-time query trends, and verified performance indicators.
+          {t('Platform usage metrics, real-time query trends, and verified performance indicators.', 'Platform usage metrics, real-time query trends, and verified performance indicators.')}
         </p>
       </div>
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Queries Logged',   value: queryCount.toLocaleString(), delta: '+18%', color: 'text-blue-600 dark:text-blue-400' },
-          { label: 'Active User Accounts',   value: users.length.toString(),     delta: '+12%', color: 'text-green-600 dark:text-green-400' },
-          { label: 'Certifications Active',  value: certifications.length.toString(), delta: '+5%', color: 'text-purple-600 dark:text-purple-400' },
-          { label: 'Complaints Managed',     value: complaints.length.toString(), delta: '+2',  color: 'text-orange-600 dark:text-orange-400' },
+          { label: t('Total Queries Logged', 'Total Queries Logged'),   value: queryCount.toLocaleString(), delta: '+18%', color: 'text-blue-600 dark:text-blue-400' },
+          { label: t('Active User Accounts', 'Active User Accounts'),   value: users.length.toString(),     delta: '+12%', color: 'text-green-600 dark:text-green-400' },
+          { label: t('Certifications Active', 'Certifications Active'),  value: certifications.length.toString(), delta: '+5%', color: 'text-purple-600 dark:text-purple-400' },
+          { label: t('Complaints Managed', 'Complaints Managed'),     value: complaints.length.toString(), delta: '+2',  color: 'text-orange-600 dark:text-orange-400' },
         ].map((k) => (
           <div key={k.label} className="card-gov p-5">
             <div className="text-xs text-gray-500 dark:text-dark-text-muted mb-2 font-medium">{k.label}</div>
             <div className={`text-2xl font-bold font-heading ${k.color}`}>{k.value}</div>
-            <div className="text-xs text-green-600 dark:text-green-400 mt-1 font-medium">↑ {k.delta} vs last period</div>
+            <div className="text-xs text-green-600 dark:text-green-400 mt-1 font-medium">↑ {k.delta} {t('vs last period', 'vs last period')}</div>
           </div>
         ))}
       </div>
@@ -97,7 +99,7 @@ export default function Analytics() {
       {/* Charts row 1 */}
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="card-gov p-5">
-          <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-4">Query Volume &amp; User Growth</h3>
+          <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-4">{t('Query Volume & User Growth', 'Query Volume & User Growth')}</h3>
           <ResponsiveContainer width="100%" height={230}>
             <AreaChart data={monthlyData}>
               <defs>
@@ -125,14 +127,14 @@ export default function Analytics() {
                 itemStyle={{ color: chartTheme.tooltipText }}
               />
               <Legend wrapperStyle={{ fontSize: 12, color: chartTheme.tooltipText }} />
-              <Area type="monotone" dataKey="queries" name="Queries" stroke={isDark ? '#3B82F6' : '#003580'} fill="url(#qGrad)" strokeWidth={2} />
-              <Area type="monotone" dataKey="users"   name="Users"   stroke="#FF9933" fill="url(#uGrad)" strokeWidth={2} />
+              <Area type="monotone" dataKey="queries" name={t('Queries', 'Queries')} stroke={isDark ? '#3B82F6' : '#003580'} fill="url(#qGrad)" strokeWidth={2} />
+              <Area type="monotone" dataKey="users"   name={t('Users', 'Users')}   stroke="#FF9933" fill="url(#uGrad)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         <div className="card-gov p-5">
-          <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-4">Query Categories Breakdown</h3>
+          <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-4">{t('Query Categories Breakdown', 'Query Categories Breakdown')}</h3>
           <ResponsiveContainer width="100%" height={230}>
             <PieChart>
               <Pie data={categoryData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={4} dataKey="value">
@@ -160,7 +162,7 @@ export default function Analytics() {
 
       {/* Charts row 2 */}
       <div className="card-gov p-5">
-        <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-4">Monthly Resolution Rate</h3>
+        <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-4">{t('Monthly Resolution Rate', 'Monthly Resolution Rate')}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={monthlyData}>
             <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
@@ -178,8 +180,8 @@ export default function Analytics() {
               itemStyle={{ color: chartTheme.tooltipText }}
             />
             <Legend wrapperStyle={{ fontSize: 12, color: chartTheme.tooltipText }} />
-            <Bar dataKey="queries"  name="Total Queries"   fill={isDark ? '#3B82F6' : '#003580'} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="resolved" name="Resolved"        fill="#138808" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="queries"  name={t('Total Queries', 'Total Queries')}   fill={isDark ? '#3B82F6' : '#003580'} radius={[4, 4, 0, 0]} />
+            <Bar dataKey="resolved" name={t('Resolved', 'Resolved')}        fill="#138808" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

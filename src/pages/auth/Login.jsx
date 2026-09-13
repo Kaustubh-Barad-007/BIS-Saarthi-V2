@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import useAuthStore from '@/store/authStore'
 import { DEMO_CREDENTIALS, ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
 
 const schema = z.object({
   email:    z.string().email('Enter a valid email address'),
@@ -38,6 +39,7 @@ const ROLE_BADGE = {
 }
 
 export default function Login() {
+  const { t } = useTranslation()
   const navigate  = useNavigate()
   const location  = useLocation()
   const { login, isLoading, error, clearError } = useAuthStore()
@@ -111,8 +113,8 @@ export default function Login() {
           </Link>
 
           {/* Heading */}
-          <h2 className="relative text-2xl font-bold text-white font-heading mb-1">Demo Accounts</h2>
-          <p className="relative text-blue-200/80 text-sm mb-6">Click any role to auto-fill credentials</p>
+          <h2 className="relative text-2xl font-bold text-white font-heading mb-1">{t('Demo Accounts', 'Demo Accounts')}</h2>
+          <p className="relative text-blue-200/80 text-sm mb-6">{t('Click any role to auto-fill credentials', 'Click any role to auto-fill credentials')}</p>
 
           {/* Role cards — white/transparent on dark bg */}
           <div className="relative space-y-3 flex-1">
@@ -130,9 +132,9 @@ export default function Login() {
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
                       <Icon className="w-3.5 h-3.5 text-white" />
-                      <span className="font-semibold text-sm text-white">{cred.label}</span>
+                      <span className="font-semibold text-sm text-white">{t(cred.label, cred.label)}</span>
                       <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-medium', ROLE_BADGE[cred.role])}>
-                        {cred.role}
+                        {t(cred.role, cred.role)}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -160,7 +162,7 @@ export default function Login() {
           {/* Footer note */}
           <div className="relative mt-6 pt-5 border-t border-white/10 flex items-start gap-2 text-xs text-blue-200/60">
             <Shield className="w-4 h-4 mt-0.5 shrink-0 text-white/30" />
-            <span>Demo accounts are pre-seeded for testing. Register with your own credentials for production use.</span>
+            <span>{t('Demo accounts are pre-seeded for testing. Register with your own credentials for production use.', 'Demo accounts are pre-seeded for testing. Register with your own credentials for production use.')}</span>
           </div>
         </div>
 
@@ -169,7 +171,7 @@ export default function Login() {
 
           {/* Mobile logo and home row */}
           <div className="flex lg:hidden items-center justify-between gap-2 mb-6">
-            <Link to="/" className="flex items-center gap-2" title="Return to Home">
+            <Link to="/" className="flex items-center gap-2" title={t('Return to Home', 'Return to Home')}>
               <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center p-0.5 shrink-0">
                 <img src="/bis-logo.svg" alt="BIS" className="w-full h-full object-contain" />
               </div>
@@ -180,25 +182,25 @@ export default function Login() {
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-bis-navy dark:text-blue-300 bg-slate-100 dark:bg-dark-bg-secondary hover:bg-slate-200 dark:hover:bg-dark-bg px-2.5 py-1.5 rounded-gov transition-colors"
             >
               <Home className="w-3.5 h-3.5" />
-              <span>Home</span>
+              <span>{t('Home', 'Home')}</span>
             </Link>
           </div>
 
           {/* Heading with Desktop Home Button */}
           <div className="flex items-start justify-between mb-6 sm:mb-8">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white font-heading">Welcome Back</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white font-heading">{t('Welcome Back', 'Welcome Back')}</h1>
               <p className="text-gray-500 dark:text-dark-text-muted text-xs sm:text-sm mt-1">
-                Sign in to your BIS Saarthi portal
+                {t('Sign in to your BIS Saarthi portal', 'Sign in to your BIS Saarthi portal')}
               </p>
             </div>
             <Link
               to="/"
               className="hidden lg:inline-flex items-center gap-1.5 text-xs font-semibold text-bis-navy dark:text-blue-300 bg-slate-100 dark:bg-dark-bg-secondary hover:bg-slate-200 dark:hover:bg-dark-bg px-3 py-1.5 rounded-gov transition-colors shadow-xs"
-              title="Return to Home"
+              title={t('Return to Home', 'Return to Home')}
             >
               <Home className="w-3.5 h-3.5" />
-              <span>Home</span>
+              <span>{t('Home', 'Home')}</span>
             </Link>
           </div>
 
@@ -214,7 +216,7 @@ export default function Login() {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">
-                Email Address
+                {t('Email Address', 'Email Address')}
               </label>
               <input
                 {...register('email')}
@@ -231,7 +233,7 @@ export default function Login() {
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">
-                Password
+                {t('Password', 'Password')}
               </label>
               <div className="relative">
                 <input
@@ -262,7 +264,7 @@ export default function Login() {
                 className="w-4 h-4 rounded border-gray-300 dark:border-dark-border text-bis-navy accent-bis-navy"
               />
               <label htmlFor="remember" className="text-sm text-gray-600 dark:text-dark-text-muted select-none">
-                Remember me for 7 days
+                {t('Remember me for 7 days', 'Remember me for 7 days')}
               </label>
             </div>
 
@@ -273,16 +275,16 @@ export default function Login() {
               className={cn('btn-gov w-full py-3 text-base', isLoading && 'opacity-70 cursor-not-allowed')}
             >
               {isLoading ? (
-                <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Signing in...</>
+                <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {t('Signing in...', 'Signing in...')}</>
               ) : (
-                <><LogIn className="w-5 h-5" /> Sign In to BIS Saarthi</>
+                <><LogIn className="w-5 h-5" /> {t('Sign In to BIS Saarthi', 'Sign In to BIS Saarthi')}</>
               )}
             </button>
           </form>
 
           {/* Mobile demo hint */}
           <div className="lg:hidden mt-5 p-4 bg-slate-50 dark:bg-dark-bg-secondary rounded-gov border border-slate-200 dark:border-dark-border">
-            <p className="text-xs font-semibold text-gray-700 dark:text-dark-text mb-2">Quick Demo Login:</p>
+            <p className="text-xs font-semibold text-gray-700 dark:text-dark-text mb-2">{t('Quick Demo Login:', 'Quick Demo Login:')}</p>
             <div className="space-y-1.5">
               {DEMO_CREDENTIALS.map(cred => (
                 <button
@@ -290,7 +292,7 @@ export default function Login() {
                   onClick={() => prefillDemo(cred)}
                   className="w-full text-left text-xs text-bis-navy dark:text-blue-400 hover:underline"
                 >
-                  {cred.label}: {cred.email}
+                  {t(cred.label, cred.label)}: {cred.email}
                 </button>
               ))}
             </div>
@@ -299,12 +301,12 @@ export default function Login() {
           <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 text-sm text-gray-500 dark:text-dark-text-muted mt-6 pt-4 border-t border-gray-100 dark:border-dark-border">
             <Link to="/" className="inline-flex items-center gap-1.5 text-gray-500 dark:text-dark-text-muted hover:text-bis-navy dark:hover:text-blue-400 font-medium transition-colors">
               <Home className="w-3.5 h-3.5" />
-              <span>Return to Home</span>
+              <span>{t('Return to Home', 'Return to Home')}</span>
             </Link>
             <p>
-              Don't have an account?{' '}
+              {t("Don't have an account?", "Don't have an account?")}{' '}
               <Link to={ROUTES.REGISTER} className="text-bis-navy dark:text-blue-400 font-semibold hover:underline">
-                Register here
+                {t('Register here', 'Register here')}
               </Link>
             </p>
           </div>

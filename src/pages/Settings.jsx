@@ -10,8 +10,10 @@ import useSettingsStore from '@/store/settingsStore'
 import useThemeStore from '@/store/themeStore'
 import { LANGUAGES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
 
 export default function Settings() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const { theme, toggleTheme } = useThemeStore()
   const settings = useSettingsStore()
@@ -97,20 +99,20 @@ export default function Settings() {
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in pb-12">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white font-heading">Settings & Preferences</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white font-heading">{t('Settings & Preferences', 'Settings & Preferences')}</h1>
         <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-          Customize your portal display, preferred regional language, notification alerts, and account security.
+          {t('Customize your portal display, preferred regional language, notification alerts, and account security.', 'Customize your portal display, preferred regional language, notification alerts, and account security.')}
         </p>
       </div>
 
       {/* Tabs Bar */}
       <div className="flex border-b border-gray-200 dark:border-dark-border overflow-x-auto no-scrollbar gap-2">
         {[
-          { id: 'appearance', label: 'Appearance', icon: Palette },
-          { id: 'language',   label: 'Language & Regional', icon: Languages },
-          { id: 'security',   label: 'Account & Security', icon: ShieldCheck },
-          { id: 'sound',      label: 'Notifications & Audio', icon: Bell },
-          { id: 'data',       label: 'Data & Privacy', icon: Database },
+          { id: 'appearance', label: t('Appearance', 'Appearance'), icon: Palette },
+          { id: 'language',   label: t('Language & Regional', 'Language & Regional'), icon: Languages },
+          { id: 'security',   label: t('Account & Security', 'Account & Security'), icon: ShieldCheck },
+          { id: 'sound',      label: t('Notifications & Audio', 'Notifications & Audio'), icon: Bell },
+          { id: 'data',       label: t('Data & Privacy', 'Data & Privacy'), icon: Database },
         ].map((tab) => {
           const Icon = tab.icon
           const active = activeTab === tab.id
@@ -137,16 +139,16 @@ export default function Settings() {
         <div className="space-y-6 animate-fade-in">
           {/* Theme Mode Selection */}
           <div className="card-gov p-6">
-            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-1">Theme Mode</h2>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-1">{t('Theme Mode', 'Theme Mode')}</h2>
             <p className="text-xs text-gray-500 dark:text-dark-text-muted mb-4">
-              Choose your visual appearance for the BIS Saarthi portal.
+              {t('Choose your visual appearance for the BIS Saarthi portal.', 'Choose your visual appearance for the BIS Saarthi portal.')}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { id: 'light',  label: 'Light Mode',  icon: Sun,     desc: 'Clean government white interface' },
-                { id: 'dark',   label: 'Dark Mode',   icon: Moon,    desc: 'High contrast slate dark mode' },
-                { id: 'system', label: 'System Auto', icon: Monitor, desc: 'Syncs automatically with device' },
+                { id: 'light',  label: t('Light Mode', 'Light Mode'),  icon: Sun,     desc: t('Clean government white interface', 'Clean government white interface') },
+                { id: 'dark',   label: t('Dark Mode', 'Dark Mode'),   icon: Moon,    desc: t('High contrast slate dark mode', 'High contrast slate dark mode') },
+                { id: 'system', label: t('System Auto', 'System Auto'), icon: Monitor, desc: t('Syncs automatically with device', 'Syncs automatically with device') },
               ].map((m) => {
                 const Icon = m.icon
                 const isSelected = settings.theme === m.id
@@ -182,16 +184,16 @@ export default function Settings() {
 
           {/* Font Scaling */}
           <div className="card-gov p-6">
-            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-1">Display Text Scaling</h2>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-1">{t('Display Text Scaling', 'Display Text Scaling')}</h2>
             <p className="text-xs text-gray-500 dark:text-dark-text-muted mb-4">
-              Complies with Guidelines for Indian Government Websites (GIGW) accessibility.
+              {t('Complies with Guidelines for Indian Government Websites (GIGW) accessibility.', 'Complies with Guidelines for Indian Government Websites (GIGW) accessibility.')}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { id: 'compact',     label: 'Compact (90%)',      sample: 'Small & dense layout' },
-                { id: 'standard',    label: 'Standard (100%)',    sample: 'Default standard scale' },
-                { id: 'comfortable', label: 'Comfortable (115%)', sample: 'Larger text for readability' },
+                { id: 'compact',     label: t('Compact (90%)', 'Compact (90%)'),      sample: t('Small & dense layout', 'Small & dense layout') },
+                { id: 'standard',    label: t('Standard (100%)', 'Standard (100%)'),    sample: t('Default standard scale', 'Default standard scale') },
+                { id: 'comfortable', label: t('Comfortable (115%)', 'Comfortable (115%)'), sample: t('Larger text for readability', 'Larger text for readability') },
               ].map((s) => (
                 <button
                   key={s.id}
@@ -216,9 +218,9 @@ export default function Settings() {
           {/* Reduce Motion */}
           <div className="card-gov p-5 flex items-center justify-between">
             <div>
-              <div className="font-semibold text-sm text-gray-900 dark:text-white">Reduce Animations</div>
+              <div className="font-semibold text-sm text-gray-900 dark:text-white">{t('Reduce Animations', 'Reduce Animations')}</div>
               <div className="text-xs text-gray-500 dark:text-dark-text-muted">
-                Minimizes background pulses, slide transitions, and decorative particles.
+                {t('Minimizes background pulses, slide transitions, and decorative particles.', 'Minimizes background pulses, slide transitions, and decorative particles.')}
               </div>
             </div>
             <input
@@ -236,9 +238,9 @@ export default function Settings() {
         <div className="space-y-6 animate-fade-in">
           {/* Primary Language Selection */}
           <div className="card-gov p-6">
-            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-1">Preferred Portal Language</h2>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-1">{t('Preferred Portal Language', 'Preferred Portal Language')}</h2>
             <p className="text-xs text-gray-500 dark:text-dark-text-muted mb-4">
-              Select your primary language. All portal sections, standard titles, notices, and UI controls will automatically adapt to your selection.
+              {t('Select your primary language. All portal sections, standard titles, notices, and UI controls will automatically adapt to your selection.', 'Select your primary language. All portal sections, standard titles, notices, and UI controls will automatically adapt to your selection.')}
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
@@ -274,29 +276,29 @@ export default function Settings() {
           {/* Identity Overview */}
           <div className="card-gov p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading">Account Profile</h2>
+              <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading">{t('Account Profile', 'Account Profile')}</h2>
               <span className="badge-gov status-approved capitalize text-xs px-2.5 py-0.5">
-                {user?.role || 'Citizen'}
+                {t(user?.role || 'Citizen', user?.role || 'Citizen')}
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="p-3 bg-slate-50 dark:bg-dark-bg-secondary rounded-gov border border-slate-200 dark:border-dark-border">
-                <span className="text-gray-400 block mb-0.5">Full Name</span>
+                <span className="text-gray-400 block mb-0.5">{t('Full Name', 'Full Name')}</span>
                 <span className="font-semibold text-gray-800 dark:text-white text-sm">{user?.name || 'Authorized User'}</span>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-dark-bg-secondary rounded-gov border border-slate-200 dark:border-dark-border">
-                <span className="text-gray-400 block mb-0.5">Registered Email</span>
+                <span className="text-gray-400 block mb-0.5">{t('Registered Email', 'Registered Email')}</span>
                 <span className="font-semibold text-gray-800 dark:text-white text-sm">{user?.email || 'user@bis.gov.in'}</span>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-dark-bg-secondary rounded-gov border border-slate-200 dark:border-dark-border">
-                <span className="text-gray-400 block mb-0.5">Assigned Organization / Branch</span>
+                <span className="text-gray-400 block mb-0.5">{t('Assigned Organization / Branch', 'Assigned Organization / Branch')}</span>
                 <span className="font-semibold text-gray-800 dark:text-white text-sm">{user?.org || 'Bureau of Indian Standards'}</span>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-dark-bg-secondary rounded-gov border border-slate-200 dark:border-dark-border">
-                <span className="text-gray-400 block mb-0.5">Government ID Verification</span>
+                <span className="text-gray-400 block mb-0.5">{t('Government ID Verification', 'Government ID Verification')}</span>
                 <span className="font-semibold text-green-600 dark:text-green-400 text-sm flex items-center gap-1">
-                  <ShieldCheck className="w-4 h-4" /> Verified & Cleared
+                  <ShieldCheck className="w-4 h-4" /> {t('Verified & Cleared', 'Verified & Cleared')}
                 </span>
               </div>
             </div>
@@ -304,14 +306,14 @@ export default function Settings() {
 
           {/* Change Password Form */}
           <div className="card-gov p-6">
-            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-1">Change Account Password</h2>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-1">{t('Change Account Password', 'Change Account Password')}</h2>
             <p className="text-xs text-gray-500 dark:text-dark-text-muted mb-4">
-              Ensure your password is at least 8 characters and contains special characters.
+              {t('Ensure your password is at least 8 characters and contains special characters.', 'Ensure your password is at least 8 characters and contains special characters.')}
             </p>
 
             <form onSubmit={submitPasswordChange} className="space-y-4 max-w-md">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Current Password</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Current Password', 'Current Password')}</label>
                 <input
                   type="password"
                   value={passData.current}
@@ -322,7 +324,7 @@ export default function Settings() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">New Password</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('New Password', 'New Password')}</label>
                 <input
                   type="password"
                   value={passData.next}
@@ -334,12 +336,12 @@ export default function Settings() {
                 {passData.next && (
                   <div className="mt-2 space-y-1">
                     <div className="flex justify-between text-[11px] text-gray-500">
-                      <span>Password Strength:</span>
+                      <span>{t('Password Strength', 'Password Strength')}:</span>
                       <span className={cn(
                         'font-bold',
                         passStrength < 50 ? 'text-red-500' : passStrength < 100 ? 'text-amber-500' : 'text-green-500'
                       )}>
-                        {passStrength < 50 ? 'Weak' : passStrength < 100 ? 'Good' : 'Strong'}
+                        {passStrength < 50 ? t('Weak', 'Weak') : passStrength < 100 ? t('Good', 'Good') : t('Strong', 'Strong')}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-dark-border h-1.5 rounded-full overflow-hidden">
@@ -356,7 +358,7 @@ export default function Settings() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Confirm New Password</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Confirm New Password', 'Confirm New Password')}</label>
                 <input
                   type="password"
                   value={passData.confirm}
@@ -367,7 +369,7 @@ export default function Settings() {
               </div>
 
               <button type="submit" className="btn-gov text-xs py-2 px-4">
-                Update Password
+                {t('Update Password', 'Update Password')}
               </button>
             </form>
           </div>
@@ -377,10 +379,10 @@ export default function Settings() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Smartphone className="w-4 h-4 text-bis-navy dark:text-blue-400" />
-                <h3 className="font-bold text-sm text-gray-900 dark:text-white">Two-Factor Authentication (2FA)</h3>
+                <h3 className="font-bold text-sm text-gray-900 dark:text-white">{t('Two-Factor Authentication (2FA)', 'Two-Factor Authentication (2FA)')}</h3>
               </div>
               <p className="text-xs text-gray-500 dark:text-dark-text-muted">
-                Add an extra layer of security to your BIS Saarthi account using SMS OTP or Authenticator app.
+                {t('Add an extra layer of security to your BIS Saarthi account using SMS OTP or Authenticator app.', 'Add an extra layer of security to your BIS Saarthi account using SMS OTP or Authenticator app.')}
               </p>
             </div>
             <button
@@ -400,13 +402,13 @@ export default function Settings() {
                   : 'btn-gov-outline'
               )}
             >
-              {settings.twoFactorEnabled ? '2FA Enabled (Active)' : 'Enable 2FA Protection'}
+              {settings.twoFactorEnabled ? t('2FA Enabled (Active)', '2FA Enabled (Active)') : t('Enable 2FA Protection', 'Enable 2FA Protection')}
             </button>
           </div>
 
           {/* Active Sessions */}
           <div className="card-gov p-6">
-            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-3">Active Login Sessions</h2>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-3">{t('Active Login Sessions', 'Active Login Sessions')}</h2>
             <div className="space-y-3 text-xs">
               <div className="flex items-center justify-between p-3 border border-gray-100 dark:border-dark-border rounded-gov bg-gray-50/50 dark:bg-dark-bg-secondary/40">
                 <div className="flex items-center gap-3">
@@ -415,10 +417,10 @@ export default function Settings() {
                   </div>
                   <div>
                     <div className="font-semibold text-gray-900 dark:text-white">Windows 11 · Chrome Browser</div>
-                    <div className="text-gray-400 dark:text-dark-text-muted text-[11px]">IP: 10.0.0.1 (New Delhi, India) · Current Active Session</div>
+                    <div className="text-gray-400 dark:text-dark-text-muted text-[11px]">IP: 10.0.0.1 (New Delhi, India) · {t('Current Active Session', 'Current Active Session')}</div>
                   </div>
                 </div>
-                <span className="badge-gov status-approved text-[11px]">Current</span>
+                <span className="badge-gov status-approved text-[11px]">{t('Current', 'Current')}</span>
               </div>
             </div>
           </div>
@@ -429,13 +431,13 @@ export default function Settings() {
       {activeTab === 'sound' && (
         <div className="space-y-6 animate-fade-in">
           <div className="card-gov p-6 space-y-4">
-            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading">Audio & Notification Preferences</h2>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading">{t('Audio & Notification Preferences', 'Audio & Notification Preferences')}</h2>
 
             <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-dark-border">
               <div>
-                <div className="font-semibold text-sm text-gray-900 dark:text-white">Chat Sound Effects</div>
+                <div className="font-semibold text-sm text-gray-900 dark:text-white">{t('Chat Sound Effects', 'Chat Sound Effects')}</div>
                 <div className="text-xs text-gray-500 dark:text-dark-text-muted">
-                  Plays subtle audio cues when sending messages and receiving standard recommendations.
+                  {t('Plays subtle audio cues when sending messages and receiving standard recommendations.', 'Plays subtle audio cues when sending messages and receiving standard recommendations.')}
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -444,7 +446,7 @@ export default function Settings() {
                   onClick={() => settings.playSound('receive')}
                   className="text-xs text-bis-navy dark:text-blue-400 hover:underline"
                 >
-                  Test Sound
+                  {t('Test Sound', 'Test Sound')}
                 </button>
                 <input
                   type="checkbox"
@@ -457,9 +459,9 @@ export default function Settings() {
 
             <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-dark-border">
               <div>
-                <div className="font-semibold text-sm text-gray-900 dark:text-white">Desktop Push Notifications</div>
+                <div className="font-semibold text-sm text-gray-900 dark:text-white">{t('Desktop Push Notifications', 'Desktop Push Notifications')}</div>
                 <div className="text-xs text-gray-500 dark:text-dark-text-muted">
-                  Receive browser notifications when a complaint status changes or audit log reports are generated.
+                  {t('Receive browser notifications when a complaint status changes or audit log reports are generated.', 'Receive browser notifications when a complaint status changes or audit log reports are generated.')}
                 </div>
               </div>
               <input
@@ -475,9 +477,9 @@ export default function Settings() {
 
             <div className="flex items-center justify-between py-3">
               <div>
-                <div className="font-semibold text-sm text-gray-900 dark:text-white">Standard & Gazette Email Alerts</div>
+                <div className="font-semibold text-sm text-gray-900 dark:text-white">{t('Standard & Gazette Email Alerts', 'Standard & Gazette Email Alerts')}</div>
                 <div className="text-xs text-gray-500 dark:text-dark-text-muted">
-                  Receive email digests when new Quality Control Orders (QCO) or amendments are published.
+                  {t('Receive email digests when new Quality Control Orders (QCO) or amendments are published.', 'Receive email digests when new Quality Control Orders (QCO) or amendments are published.')}
                 </div>
               </div>
               <input
@@ -496,9 +498,9 @@ export default function Settings() {
         <div className="space-y-6 animate-fade-in">
           {/* Data Export Card */}
           <div className="card-gov p-6">
-            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-1">Export Personal Data</h2>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mb-1">{t('Export Personal Data', 'Export Personal Data')}</h2>
             <p className="text-xs text-gray-500 dark:text-dark-text-muted mb-4">
-              Download your complete conversation history, citations, and filed reports in standard portable formats.
+              {t('Download your complete conversation history, citations, and filed reports in standard portable formats.', 'Download your complete conversation history, citations, and filed reports in standard portable formats.')}
             </p>
             <div className="flex flex-wrap gap-3">
               <button
@@ -506,14 +508,14 @@ export default function Settings() {
                 onClick={() => handleExportData('json')}
                 className="btn-gov-outline text-xs py-2 px-4 flex items-center gap-1.5"
               >
-                <Download className="w-3.5 h-3.5" /> Export JSON Archive
+                <Download className="w-3.5 h-3.5" /> {t('Export JSON Archive', 'Export JSON Archive')}
               </button>
               <button
                 type="button"
                 onClick={() => handleExportData('md')}
                 className="btn-gov-outline text-xs py-2 px-4 flex items-center gap-1.5"
               >
-                <Download className="w-3.5 h-3.5" /> Export Markdown Transcript
+                <Download className="w-3.5 h-3.5" /> {t('Export Markdown Transcript', 'Export Markdown Transcript')}
               </button>
             </div>
           </div>
@@ -523,10 +525,10 @@ export default function Settings() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-base font-bold text-red-600 dark:text-red-400 font-heading mb-1">
-                  Clear Cache & Reset Storage
+                  {t('Clear Cache & Reset Storage', 'Clear Cache & Reset Storage')}
                 </h2>
                 <p className="text-xs text-gray-600 dark:text-dark-text-muted leading-relaxed">
-                  Removes locally cached chat sessions, audio blobs, and temporary standards records. Does not delete your primary BIS account.
+                  {t('Removes locally cached chat sessions, audio blobs, and temporary standards records. Does not delete your primary BIS account.', 'Removes locally cached chat sessions, audio blobs, and temporary standards records. Does not delete your primary BIS account.')}
                 </p>
               </div>
               <button
@@ -534,7 +536,7 @@ export default function Settings() {
                 onClick={() => setShowClearModal(true)}
                 className="btn-gov bg-red-600 hover:bg-red-700 text-xs py-2 px-4 shrink-0 flex items-center gap-1.5"
               >
-                <Trash2 className="w-3.5 h-3.5" /> Clear Local Cache
+                <Trash2 className="w-3.5 h-3.5" /> {t('Clear Local Cache', 'Clear Local Cache')}
               </button>
             </div>
           </div>
@@ -543,10 +545,10 @@ export default function Settings() {
           <div className="card-gov p-5 bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/40 text-xs text-blue-900 dark:text-blue-300">
             <div className="flex items-center gap-2 font-bold mb-1">
               <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span>Government Cloud & MeitY Privacy Shield</span>
+              <span>{t('Government Cloud & MeitY Privacy Shield', 'Government Cloud & MeitY Privacy Shield')}</span>
             </div>
             <p className="leading-relaxed">
-              All portal communications, documents, and user records are protected under the <em>Digital Personal Data Protection Act (DPDPA), 2023</em> and encrypted in transit via TLS 1.3 to BIS Government of India cloud repositories.
+              {t('All portal communications, documents, and user records are protected under the Digital Personal Data Protection Act (DPDPA), 2023 and encrypted in transit via TLS 1.3 to BIS Government of India cloud repositories.', 'All portal communications, documents, and user records are protected under the Digital Personal Data Protection Act (DPDPA), 2023 and encrypted in transit via TLS 1.3 to BIS Government of India cloud repositories.')}
             </p>
           </div>
         </div>
@@ -561,13 +563,13 @@ export default function Settings() {
                 <Smartphone className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white font-heading">Enable Two-Factor Auth</h3>
-                <p className="text-xs text-gray-500">Security Verification</p>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white font-heading">{t('Enable Two-Factor Auth', 'Enable Two-Factor Auth')}</h3>
+                <p className="text-xs text-gray-500">{t('Security Verification', 'Security Verification')}</p>
               </div>
             </div>
 
             <p className="text-xs text-gray-600 dark:text-dark-text-muted mb-4 leading-relaxed">
-              A 6-digit verification code was dispatched to your registered contact number <strong>+91 ••••• ••210</strong>. Enter it below to activate 2FA:
+              {t('A 6-digit verification code was dispatched to your registered contact number', 'A 6-digit verification code was dispatched to your registered contact number')} <strong>+91 ••••• ••210</strong>. {t('Enter it below to activate 2FA:', 'Enter it below to activate 2FA:')}
             </p>
 
             <div className="flex justify-between gap-1.5 mb-5">
@@ -598,7 +600,7 @@ export default function Settings() {
                 onClick={() => setShow2FAModal(false)}
                 className="btn-gov-outline text-xs py-1.5 px-3"
               >
-                Cancel
+                {t('Cancel', 'Cancel')}
               </button>
               <button
                 type="button"
@@ -609,7 +611,7 @@ export default function Settings() {
                 }}
                 className="btn-gov text-xs py-1.5 px-4"
               >
-                Verify & Activate
+                {t('Verify & Activate', 'Verify & Activate')}
               </button>
             </div>
           </div>
@@ -625,13 +627,13 @@ export default function Settings() {
                 <Trash2 className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white font-heading">Clear Local Cache?</h3>
-                <p className="text-xs text-gray-500">Storage Reset</p>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white font-heading">{t('Clear Local Cache?', 'Clear Local Cache?')}</h3>
+                <p className="text-xs text-gray-500">{t('Storage Reset', 'Storage Reset')}</p>
               </div>
             </div>
 
             <p className="text-xs text-gray-600 dark:text-dark-text-muted mb-5 leading-relaxed">
-              This will clear local offline chat transcripts, audio speech chunks, and temporary cache. Your login credentials and official BIS server records remain unaffected.
+              {t('This will clear local offline chat transcripts, audio speech chunks, and temporary cache. Your login credentials and official BIS server records remain unaffected.', 'This will clear local offline chat transcripts, audio speech chunks, and temporary cache. Your login credentials and official BIS server records remain unaffected.')}
             </p>
 
             <div className="flex items-center justify-end gap-2">
@@ -640,14 +642,14 @@ export default function Settings() {
                 onClick={() => setShowClearModal(false)}
                 className="btn-gov-outline text-xs py-1.5 px-3"
               >
-                Cancel
+                {t('Cancel', 'Cancel')}
               </button>
               <button
                 type="button"
                 onClick={handleConfirmClearData}
                 className="btn-gov bg-red-600 hover:bg-red-700 text-xs py-1.5 px-3"
               >
-                Confirm Clear
+                {t('Confirm Clear', 'Confirm Clear')}
               </button>
             </div>
           </div>

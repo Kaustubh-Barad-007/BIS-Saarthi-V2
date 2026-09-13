@@ -122,9 +122,73 @@ export default async function handler(req, res) {
       }
     }
 
-    // 4. Documents endpoints (knowledge_docs and manufacturer_documents removed)
+    // 4. Documents endpoints (PDFs, Standard Dossiers, Lab Reports, Evidence Images)
     if (type === 'documents' || type === 'manufacturer-documents') {
-      return res.status(200).json({ documents: [] })
+      if (req.method === 'GET') {
+        let rows = []
+        if (type === 'manufacturer-documents') {
+          rows = await sql`
+            SELECT id, title, file_name as "fileName", file_type as "fileType", file_size as "fileSize",
+                   category, role_access as "roleAccess", uploader_email as "uploaderEmail",
+                   description, data_base64 as "dataBase64", standard_code as "standardCode", created_at as "createdAt"
+            FROM documents
+            WHERE role_access IN ('all', 'manufacturer')
+            ORDER BY created_at DESC
+          `
+        } else {
+          rows = await sql`
+            SELECT id, title, file_name as "fileName", file_type as "fileType", file_size as "fileSize",
+                   category, role_access as "roleAccess", uploader_email as "uploaderEmail",
+                   description, data_base64 as "dataBase64", standard_code as "standardCode", created_at as "createdAt"
+            FROM documents
+            ORDER BY created_at DESC
+          `
+        }
+        return res.status(200).json({ documents: rows || [] })
+      }
+
+      if (req.method === 'POST') {
+        const {
+          title,
+          fileName,
+          fileType = 'application/pdf',
+          fileSize = 524288,
+          category = 'standard',
+          roleAccess = 'all',
+          description = '',
+          dataBase64 = '',
+          standardCode = ''
+        } = req.body || {}
+
+        if (!title || !fileName) {
+          return res.status(400).json({ error: 'Title and file name are required' })
+        }
+
+        const docId = `DOC-${Date.now().toString().slice(-6)}`
+        const uploaderEmail = user?.email || (type === 'manufacturer-documents' ? 'msme@bis.gov.in' : 'admin@bis.gov.in')
+
+        const [newDoc] = await sql`
+          INSERT INTO documents (
+            id, title, file_name, file_type, file_size, category, role_access,
+            uploader_email, description, data_base64, standard_code
+          )
+          VALUES (
+            ${docId}, ${title}, ${fileName}, ${fileType}, ${fileSize}, ${category}, ${roleAccess},
+            ${uploaderEmail}, ${description}, ${dataBase64}, ${standardCode}
+          )
+          RETURNING id, title, file_name as "fileName", file_type as "fileType", file_size as "fileSize",
+                    category, role_access as "roleAccess", uploader_email as "uploaderEmail",
+                    description, data_base64 as "dataBase64", standard_code as "standardCode", created_at as "createdAt"
+        `
+        return res.status(201).json({ document: newDoc })
+      }
+
+      if (req.method === 'DELETE') {
+        const docId = req.query?.id || req.body?.id
+        if (!docId) return res.status(400).json({ error: 'Document ID is required' })
+        await sql`DELETE FROM documents WHERE id = ${docId}`
+        return res.status(200).json({ success: true, deletedId: docId })
+      }
     }
 
     // 5. Audit logs
@@ -149,21 +213,85 @@ export default async function handler(req, res) {
       }
     }
 
-    // 6. Standards search (served from regulatory standards registry)
+    // 6. Standards search (served dynamically from DB & RAG only — zero static data)
     if (type === 'standards') {
-      const { STANDARDS_REGISTRY } = await import('./_lib/standardsReferences.js')
-      let list = Object.values(STANDARDS_REGISTRY).map((s) => ({
-        id: s.source,
-        title: s.title,
-        category: s.type === 'guidelines' ? 'Guidelines' : 'Standard',
-        year: 2023,
-        status: 'current',
-        scope: s.summary,
-      }))
+      let list = []
+
+      // 1. Query Neon DB documents table
+      try {
+        const docRows = await sql`
+          SELECT DISTINCT COALESCE(standard_code, title) as id, title, category, description as scope
+          FROM documents
+          WHERE standard_code IS NOT NULL OR category = 'standard'
+        `.catch(() => [])
+        for (const d of docRows) {
+          list.push({
+            id: d.id,
+            title: d.title,
+            category: d.category || 'Standard',
+            year: 2024,
+            status: 'current',
+            scope: d.scope || d.title,
+          })
+        }
+      } catch (_) {}
+
+      // 2. Query Neon DB certifications table
+      try {
+        const certRows = await sql`
+          SELECT DISTINCT standard as id, product as title, category
+          FROM certifications
+        `.catch(() => [])
+        for (const c of certRows) {
+          if (!list.some(item => item.id === c.id)) {
+            list.push({
+              id: c.id,
+              title: c.title,
+              category: c.category || 'Certification',
+              year: 2024,
+              status: 'current',
+              scope: `Active BIS Certification Standard for ${c.title}`,
+            })
+          }
+        }
+      } catch (_) {}
+
+      // 3. If user searches, also query live Render RAG search dynamically
       if (search && search.trim()) {
         const q = search.trim().toLowerCase()
+        try {
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 2500)
+          const ragRes = await fetch(`${process.env.RAG_API_BASE || 'https://bis-saarthi-api.onrender.com'}/api/v1/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: q, limit: 10 }),
+            signal: controller.signal
+          }).catch(() => null)
+          clearTimeout(timeoutId)
+
+          if (ragRes && ragRes.ok) {
+            const ragData = await ragRes.json().catch(() => null)
+            const evidence = ragData?.evidence || ragData?.results || []
+            for (const ev of evidence) {
+              const stdId = ev.standard_id || ev.standard || ev.document_standard
+              if (stdId && !list.some(item => item.id === stdId)) {
+                list.push({
+                  id: stdId,
+                  title: ev.title || stdId,
+                  category: ev.product || 'Standard',
+                  year: 2024,
+                  status: 'current',
+                  scope: (ev.text || '').slice(0, 180),
+                })
+              }
+            }
+          }
+        } catch (_) {}
+
         list = list.filter((s) => s.id.toLowerCase().includes(q) || s.title.toLowerCase().includes(q) || s.scope.toLowerCase().includes(q))
       }
+
       return res.status(200).json({ standards: list.slice(0, 50) })
     }
 

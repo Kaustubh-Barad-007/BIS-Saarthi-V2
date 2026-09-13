@@ -7,10 +7,12 @@ import { toast } from 'sonner'
 import { cn, getRoleLabel, getRoleColor, formatDate } from '@/lib/utils'
 import { ROLES } from '@/lib/constants'
 import useDataStore from '@/store/dataStore'
+import { useTranslation } from '@/lib/i18n'
 
 const ROLE_ICON = { [ROLES.CONSUMER]: User, [ROLES.MANUFACTURER]: Building2, [ROLES.ADMIN]: Shield }
 
 export default function UserManagement() {
+  const { t } = useTranslation()
   const { users, addUser, updateUser, toggleUserStatus, deleteUser } = useDataStore()
 
   const [search, setSearch] = useState('')
@@ -89,13 +91,13 @@ export default function UserManagement() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">User Management</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('User Management', 'User Management')}</h1>
           <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-            {users.length} total registered users across all roles (Real-Time Database)
+            {users.length} {t('total registered users across all roles (Real-Time Database)', 'total registered users across all roles (Real-Time Database)')}
           </p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-gov bg-red-600 hover:bg-red-700 text-sm">
-          <Plus className="w-4 h-4" /> Add User
+          <Plus className="w-4 h-4" /> {t('Add User', 'Add User')}
         </button>
       </div>
 
@@ -106,7 +108,7 @@ export default function UserManagement() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email, or organization..."
+            placeholder={t('Search by name, email, or organization...', 'Search by name, email, or organization...')}
             className="input-gov pl-10"
           />
         </div>
@@ -115,10 +117,10 @@ export default function UserManagement() {
           onChange={(e) => setRoleFilter(e.target.value)}
           className="input-gov w-full sm:w-48"
         >
-          <option value="">All Roles</option>
-          <option value={ROLES.CONSUMER}>Consumer</option>
-          <option value={ROLES.MANUFACTURER}>Manufacturer</option>
-          <option value={ROLES.ADMIN}>Admin</option>
+          <option value="">{t('All Roles', 'All Roles')}</option>
+          <option value={ROLES.CONSUMER}>{t('Consumer', 'Consumer')}</option>
+          <option value={ROLES.MANUFACTURER}>{t('Manufacturer', 'Manufacturer')}</option>
+          <option value={ROLES.ADMIN}>{t('Admin', 'Admin')}</option>
         </select>
       </div>
 
@@ -128,9 +130,16 @@ export default function UserManagement() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-dark-bg-secondary border-b border-gray-100 dark:border-dark-border">
               <tr>
-                {['User', 'Role', 'Organization', 'Joined', 'Status', 'Actions'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-dark-text-muted uppercase tracking-wider">
-                    {h}
+                {[
+                  { key: 'User', label: t('User', 'User') },
+                  { key: 'Role', label: t('Role', 'Role') },
+                  { key: 'Organization', label: t('Organization', 'Organization') },
+                  { key: 'Joined', label: t('Joined', 'Joined') },
+                  { key: 'Status', label: t('Status', 'Status') },
+                  { key: 'Actions', label: t('Actions', 'Actions') }
+                ].map((h) => (
+                  <th key={h.key} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-dark-text-muted uppercase tracking-wider">
+                    {h.label}
                   </th>
                 ))}
               </tr>
@@ -154,14 +163,14 @@ export default function UserManagement() {
                     <td className="px-4 py-3">
                       <span className={cn('badge-gov px-2 py-0.5 text-xs flex items-center gap-1 w-fit', getRoleColor(user.role))}>
                         <Icon className="w-3 h-3" />
-                        {user.role}
+                        {t(user.role, user.role)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-dark-text-muted">{user.org || '-'}</td>
                     <td className="px-4 py-3 text-gray-500 dark:text-dark-text-muted">{formatDate(user.created)}</td>
                     <td className="px-4 py-3">
                       <span className={cn('badge-gov px-2 py-0.5 text-xs', user.status === 'active' ? 'status-active' : 'status-rejected')}>
-                        {user.status}
+                        {t(user.status, user.status)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -169,7 +178,7 @@ export default function UserManagement() {
                         <button
                           onClick={() => handleToggleStatus(user.id)}
                           className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-bg-card transition-colors"
-                          title={user.status === 'active' ? 'Deactivate' : 'Activate'}
+                          title={user.status === 'active' ? t('Deactivate', 'Deactivate') : t('Activate', 'Activate')}
                         >
                           {user.status === 'active'
                             ? <XCircle className="w-4 h-4 text-red-400 hover:text-red-500" />
@@ -179,14 +188,14 @@ export default function UserManagement() {
                         <button
                           onClick={() => setEditUser(user)}
                           className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-bg-card transition-colors text-gray-400 hover:text-bis-navy dark:hover:text-blue-300"
-                          title="Edit user"
+                          title={t('Edit User Details', 'Edit user')}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setUserToDelete(user)}
                           className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-gray-400 hover:text-red-500"
-                          title="Delete user"
+                          title={t('Delete User', 'Delete user')}
                         >
                           <Trash2 className="w-4 h-4 text-red-400" />
                         </button>
@@ -199,8 +208,8 @@ export default function UserManagement() {
           </table>
         </div>
         <div className="px-4 py-3 border-t border-gray-100 dark:border-dark-border text-xs text-gray-400 dark:text-dark-text-muted flex justify-between items-center">
-          <span>Showing {filtered.length} of {users.length} users</span>
-          <span className="text-[11px] text-green-600 dark:text-green-400 font-medium">● Real-time sync active</span>
+          <span>{t('Showing', 'Showing')} {filtered.length} {t('of', 'of')} {users.length} {t('users', 'users')}</span>
+          <span className="text-[11px] text-green-600 dark:text-green-400 font-medium">● {t('Real-time sync active', 'Real-time sync active')}</span>
         </div>
       </div>
 
@@ -213,7 +222,7 @@ export default function UserManagement() {
                 <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
                   <UserCheck className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-gray-900 dark:text-white font-heading">Add New Portal User</h3>
+                <h3 className="font-bold text-gray-900 dark:text-white font-heading">{t('Add New Portal User', 'Add New Portal User')}</h3>
               </div>
               <button
                 onClick={() => setShowCreate(false)}
@@ -225,7 +234,7 @@ export default function UserManagement() {
 
             <form onSubmit={handleCreateSubmit} className="mt-4 space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Full Name *</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Full Name', 'Full Name')} *</label>
                 <input
                   required
                   value={newUser.name}
@@ -236,7 +245,7 @@ export default function UserManagement() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Email Address *</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Email Address', 'Email Address')} *</label>
                 <input
                   type="email"
                   required
@@ -249,33 +258,33 @@ export default function UserManagement() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Portal Role</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Portal Role', 'Portal Role')}</label>
                   <select
                     value={newUser.role}
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                     className="input-gov"
                   >
-                    <option value={ROLES.CONSUMER}>Consumer</option>
-                    <option value={ROLES.MANUFACTURER}>Manufacturer</option>
-                    <option value={ROLES.ADMIN}>Admin</option>
+                    <option value={ROLES.CONSUMER}>{t('Consumer', 'Consumer')}</option>
+                    <option value={ROLES.MANUFACTURER}>{t('Manufacturer', 'Manufacturer')}</option>
+                    <option value={ROLES.ADMIN}>{t('Admin', 'Admin')}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Status</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Status', 'Status')}</label>
                   <select
                     value={newUser.status}
                     onChange={(e) => setNewUser({ ...newUser, status: e.target.value })}
                     className="input-gov"
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="active">{t('Active', 'Active')}</option>
+                    <option value="inactive">{t('Inactive', 'Inactive')}</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Organization (Optional)</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Organization (Optional)', 'Organization (Optional)')}</label>
                 <input
                   value={newUser.org}
                   onChange={(e) => setNewUser({ ...newUser, org: e.target.value })}
@@ -290,13 +299,13 @@ export default function UserManagement() {
                   onClick={() => setShowCreate(false)}
                   className="btn-gov-outline text-xs py-2"
                 >
-                  Cancel
+                  {t('Cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   className="btn-gov bg-red-600 hover:bg-red-700 text-xs py-2"
                 >
-                  Create User
+                  {t('Create User', 'Create User')}
                 </button>
               </div>
             </form>
@@ -313,7 +322,7 @@ export default function UserManagement() {
                 <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
                   <Edit2 className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-gray-900 dark:text-white font-heading">Edit User Details</h3>
+                <h3 className="font-bold text-gray-900 dark:text-white font-heading">{t('Edit User Details', 'Edit User Details')}</h3>
               </div>
               <button
                 onClick={() => setEditUser(null)}
@@ -325,7 +334,7 @@ export default function UserManagement() {
 
             <form onSubmit={handleEditSubmit} className="mt-4 space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Full Name *</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Full Name', 'Full Name')} *</label>
                 <input
                   required
                   value={editUser.name}
@@ -335,7 +344,7 @@ export default function UserManagement() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Email Address *</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Email Address', 'Email Address')} *</label>
                 <input
                   type="email"
                   required
@@ -347,33 +356,33 @@ export default function UserManagement() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Portal Role</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Portal Role', 'Portal Role')}</label>
                   <select
                     value={editUser.role}
                     onChange={(e) => setEditUser({ ...editUser, role: e.target.value })}
                     className="input-gov"
                   >
-                    <option value={ROLES.CONSUMER}>Consumer</option>
-                    <option value={ROLES.MANUFACTURER}>Manufacturer</option>
-                    <option value={ROLES.ADMIN}>Admin</option>
+                    <option value={ROLES.CONSUMER}>{t('Consumer', 'Consumer')}</option>
+                    <option value={ROLES.MANUFACTURER}>{t('Manufacturer', 'Manufacturer')}</option>
+                    <option value={ROLES.ADMIN}>{t('Admin', 'Admin')}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Status</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Status', 'Status')}</label>
                   <select
                     value={editUser.status}
                     onChange={(e) => setEditUser({ ...editUser, status: e.target.value })}
                     className="input-gov"
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="active">{t('Active', 'Active')}</option>
+                    <option value="inactive">{t('Inactive', 'Inactive')}</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">Organization</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1">{t('Organization', 'Organization')}</label>
                 <input
                   value={editUser.org || ''}
                   onChange={(e) => setEditUser({ ...editUser, org: e.target.value })}
@@ -387,13 +396,13 @@ export default function UserManagement() {
                   onClick={() => setEditUser(null)}
                   className="btn-gov-outline text-xs py-2"
                 >
-                  Cancel
+                  {t('Cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   className="btn-gov text-xs py-2"
                 >
-                  Save Changes
+                  {t('Save Changes', 'Save Changes')}
                 </button>
               </div>
             </form>
@@ -411,15 +420,15 @@ export default function UserManagement() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white font-heading">
-                  Delete User Account?
+                  {t('Delete User Account?', 'Delete User Account?')}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-dark-text-muted">
-                  Permanent removal from database
+                  {t('Permanent removal from database', 'Permanent removal from database')}
                 </p>
               </div>
             </div>
             <p className="text-xs text-gray-600 dark:text-dark-text-muted mb-5 leading-relaxed">
-              Are you sure you want to delete <strong className="text-gray-900 dark:text-white">&ldquo;{userToDelete.name}&rdquo;</strong> ({userToDelete.email})? This action will remove their profile and revoke access immediately.
+              {t('Are you sure you want to delete', 'Are you sure you want to delete')} <strong className="text-gray-900 dark:text-white">&ldquo;{userToDelete.name}&rdquo;</strong> ({userToDelete.email})? {t('This action will remove their profile and revoke access immediately.', 'This action will remove their profile and revoke access immediately.')}
             </p>
             <div className="flex items-center justify-end gap-2">
               <button
@@ -427,7 +436,7 @@ export default function UserManagement() {
                 onClick={() => setUserToDelete(null)}
                 className="btn-gov-outline text-xs py-1.5 px-3"
               >
-                Cancel
+                {t('Cancel', 'Cancel')}
               </button>
               <button
                 type="button"
@@ -437,7 +446,7 @@ export default function UserManagement() {
                 }}
                 className="btn-gov bg-red-600 hover:bg-red-700 text-xs py-1.5 px-3"
               >
-                Delete User
+                {t('Delete User', 'Delete User')}
               </button>
             </div>
           </div>

@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { Search, BookOpen, ExternalLink, ChevronDown, ChevronUp, X, MessageSquare, CheckCircle2, ShieldCheck, Loader2 } from 'lucide-react'
 import { STANDARD_CATEGORIES, ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
 
 export default function Standards() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [search,  setSearch]  = useState('')
   const [catFilter, setCat]   = useState('')
@@ -39,9 +41,9 @@ export default function Standards() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">Indian Standards Browser</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('Indian Standards Browser', 'Indian Standards Browser')}</h1>
         <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-          Browse and search 22,000+ Bureau of Indian Standards publications
+          {t('Browse and search 22,000+ Bureau of Indian Standards publications', 'Browse and search 22,000+ Bureau of Indian Standards publications')}
         </p>
       </div>
 
@@ -52,7 +54,7 @@ export default function Standards() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by IS number or title (e.g. IS 302, IS 1417)..."
+            placeholder={t('Search by IS number or title (e.g. IS 302, IS 1417)...', 'Search by IS number or title (e.g. IS 302, IS 1417)...')}
             className="input-gov pl-10"
           />
         </div>
@@ -61,9 +63,9 @@ export default function Standards() {
           onChange={(e) => setCat(e.target.value)}
           className="input-gov w-full sm:w-56"
         >
-          <option value="">All Categories</option>
+          <option value="">{t('All Categories', 'All Categories')}</option>
           {STANDARD_CATEGORIES.map((c) => (
-            <option key={c.id} value={c.label}>{c.label} ({c.count})</option>
+            <option key={c.id} value={c.label}>{t(c.label, c.label)} ({c.count})</option>
           ))}
         </select>
       </div>
@@ -79,7 +81,7 @@ export default function Standards() {
               : 'bg-gray-100 text-gray-700 dark:bg-dark-bg-secondary dark:text-dark-text-muted dark:border-dark-border hover:bg-gray-200 dark:hover:bg-dark-bg-card'
           )}
         >
-          All
+          {t('All', 'All')}
         </button>
         {STANDARD_CATEGORIES.map((c) => (
           <button
@@ -92,7 +94,7 @@ export default function Standards() {
                 : 'bg-gray-100 text-gray-700 dark:bg-dark-bg-secondary dark:text-dark-text-muted dark:border-dark-border hover:bg-gray-200 dark:hover:bg-dark-bg-card'
             )}
           >
-            {c.label}
+            {t(c.label, c.label)}
           </button>
         ))}
       </div>
@@ -100,7 +102,7 @@ export default function Standards() {
       {/* Results */}
       <div className="space-y-3">
         <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-          Showing {filtered.length} results {search && `for "${search}"`}
+          {t('Showing', 'Showing')} {filtered.length} {t('results', 'results')} {search && `${t('for', 'for')} "${search}"`}
         </p>
         {filtered.map((std) => (
           <div key={std.id} className="card-gov p-4 hover:shadow-gov-md transition-all">
@@ -115,14 +117,14 @@ export default function Standards() {
                     std.status === 'current' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                     'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                   )}>
-                    {std.status}
+                    {t(std.status, std.status)}
                   </span>
                 </div>
                 <h3 className="text-sm font-medium text-gray-800 dark:text-dark-text">{std.title}</h3>
                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 dark:text-dark-text-muted">
-                  <span>{std.category}</span>
+                  <span>{t(std.category, std.category)}</span>
                   <span>·</span>
-                  <span>Year: {std.year}</span>
+                  <span>{t('Year', 'Year')}: {std.year}</span>
                 </div>
               </div>
               <button className="p-1 text-gray-400 dark:text-dark-text-muted ml-3 shrink-0">
@@ -133,11 +135,11 @@ export default function Standards() {
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-dark-border animate-fade-in">
                 <div className="grid sm:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 dark:text-dark-text-muted mb-1">Technical Committee</p>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-dark-text-muted mb-1">{t('Technical Committee', 'Technical Committee')}</p>
                     <p className="text-gray-700 dark:text-dark-text">{std.committee}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 dark:text-dark-text-muted mb-1">ICS Code</p>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-dark-text-muted mb-1">{t('ICS Code', 'ICS Code')}</p>
                     <p className="text-gray-700 dark:text-dark-text">{std.ics}</p>
                   </div>
                 </div>
@@ -146,13 +148,13 @@ export default function Standards() {
                     onClick={() => setSelectedStandard(std)}
                     className="btn-gov text-xs py-1.5"
                   >
-                    <BookOpen className="w-3.5 h-3.5" /> View Standard Details
+                    <BookOpen className="w-3.5 h-3.5" /> {t('View Standard Details', 'View Standard Details')}
                   </button>
                   <button
                     onClick={() => window.open('https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/knowyourstandards/indian_standards/isdetails', '_blank')}
                     className="btn-gov-outline text-xs py-1.5"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" /> BIS Portal
+                    <ExternalLink className="w-3.5 h-3.5" /> {t('BIS Portal', 'BIS Portal')}
                   </button>
                 </div>
               </div>
@@ -190,29 +192,29 @@ export default function Standards() {
             <div className="py-4 space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-dark-bg-secondary rounded-gov border border-slate-200 dark:border-dark-border text-xs">
                 <div>
-                  <span className="text-gray-500 dark:text-dark-text-muted">Category:</span>
-                  <div className="font-semibold text-gray-800 dark:text-dark-text">{selectedStandard.category}</div>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Category', 'Category')}:</span>
+                  <div className="font-semibold text-gray-800 dark:text-dark-text">{t(selectedStandard.category, selectedStandard.category)}</div>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-dark-text-muted">Status:</span>
-                  <div className="font-semibold capitalize text-green-600 dark:text-green-400">{selectedStandard.status}</div>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Status', 'Status')}:</span>
+                  <div className="font-semibold capitalize text-green-600 dark:text-green-400">{t(selectedStandard.status, selectedStandard.status)}</div>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-dark-text-muted">ICS Code:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('ICS Code', 'ICS Code')}:</span>
                   <div className="font-mono font-semibold text-gray-800 dark:text-dark-text">{selectedStandard.ics}</div>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-dark-text-muted">Publication Year:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Publication Year', 'Publication Year')}:</span>
                   <div className="font-semibold text-gray-800 dark:text-dark-text">{selectedStandard.year}</div>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-gray-500 dark:text-dark-text-muted">Sectional Committee:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Sectional Committee', 'Sectional Committee')}:</span>
                   <div className="font-semibold text-gray-800 dark:text-dark-text">{selectedStandard.committee}</div>
                 </div>
               </div>
 
               <div>
-                <h4 className="font-semibold text-xs text-gray-700 dark:text-dark-text uppercase tracking-wider mb-1">Scope &amp; Technical Requirements</h4>
+                <h4 className="font-semibold text-xs text-gray-700 dark:text-dark-text uppercase tracking-wider mb-1">{t('Scope & Technical Requirements', 'Scope & Technical Requirements')}</h4>
                 <p className="text-xs text-gray-600 dark:text-dark-text-muted leading-relaxed bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-gov border border-blue-100 dark:border-blue-900/30">
                   {selectedStandard.scope}
                 </p>
@@ -220,7 +222,7 @@ export default function Standards() {
 
               <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 rounded-gov text-xs text-amber-800 dark:text-amber-300">
                 <CheckCircle2 className="w-4 h-4 shrink-0 text-amber-600" />
-                <span>Applicable for mandatory certification under Gazette QCO Regulations.</span>
+                <span>{t('Applicable for mandatory certification under Gazette QCO Regulations.', 'Applicable for mandatory certification under Gazette QCO Regulations.')}</span>
               </div>
             </div>
 
@@ -229,14 +231,14 @@ export default function Standards() {
                 onClick={() => window.open('https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/knowyourstandards/indian_standards/isdetails', '_blank')}
                 className="btn-gov-outline text-xs py-2"
               >
-                <ExternalLink className="w-3.5 h-3.5" /> BIS Portal Record
+                <ExternalLink className="w-3.5 h-3.5" /> {t('BIS Portal Record', 'BIS Portal Record')}
               </button>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSelectedStandard(null)}
                   className="btn-gov-outline text-xs py-2"
                 >
-                  Close
+                  {t('Close', 'Close')}
                 </button>
                 <button
                   onClick={() => {
@@ -244,7 +246,7 @@ export default function Standards() {
                   }}
                   className="btn-gov text-xs py-2"
                 >
-                  <MessageSquare className="w-3.5 h-3.5" /> Ask AI About {selectedStandard.id}
+                  <MessageSquare className="w-3.5 h-3.5" /> {t('Ask AI About', 'Ask AI About')} {selectedStandard.id}
                 </button>
               </div>
             </div>

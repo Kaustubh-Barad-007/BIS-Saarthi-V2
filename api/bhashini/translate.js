@@ -122,13 +122,36 @@ export default async function handler(req, res) {
     console.warn('[Bhashini Translation Warning]: Falling back to standard regional engine -', err.message)
   }
 
-  // 2. High-reliability neural fallback across all 10 Indian languages
+  // 2. High-reliability neural translation across all 10 Indian languages (with paragraph chunking for long content)
   let translatedText = null
   try {
-    const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLanguage)}&tl=${encodeURIComponent(targetLanguage)}&dt=t&q=${encodeURIComponent(text)}`
-    const gtxResp = await axios.get(gtxUrl, { timeout: 5000 })
-    if (Array.isArray(gtxResp.data?.[0])) {
-      translatedText = gtxResp.data[0].map((chunk) => chunk?.[0] || '').join('')
+    const translateSingleChunk = async (chunk) => {
+      if (!chunk || !chunk.trim()) return chunk
+      const sl = sourceLanguage || 'auto'
+      const tl = targetLanguage || 'en'
+      const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(chunk)}`
+      const gtxResp = await axios.get(gtxUrl, { timeout: 6500 })
+      if (Array.isArray(gtxResp.data?.[0])) {
+        return gtxResp.data[0].map((c) => c?.[0] || '').join('')
+      }
+      return chunk
+    }
+
+    if (text.length <= 600) {
+      translatedText = await translateSingleChunk(text)
+    } else {
+      // Split by paragraph blocks so long responses are never truncated by query URL limits
+      const paragraphs = text.split('\n\n')
+      const translatedParagraphs = []
+      for (const p of paragraphs) {
+        if (p.trim()) {
+          const resChunk = await translateSingleChunk(p)
+          translatedParagraphs.push(resChunk)
+        } else {
+          translatedParagraphs.push('')
+        }
+      }
+      translatedText = translatedParagraphs.join('\n\n')
     }
   } catch (err) {
     console.warn('[Neural Translation Warning]:', err.message)

@@ -8,6 +8,7 @@ import {
 import { toast } from 'sonner'
 import useDataStore from '@/store/dataStore'
 import { cn, formatDate, formatDateTime } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
 
 export default function AdminRequestsManager({
   initialTab = 'all',
@@ -15,6 +16,7 @@ export default function AdminRequestsManager({
   title = null,
   subtitle = null,
 }) {
+  const { t } = useTranslation()
   const {
     complaints, certifications,
     updateComplaintStatus, updateCertStatus
@@ -152,7 +154,7 @@ export default function AdminRequestsManager({
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
             <CheckCircle2 className="w-3 h-3" />
-            {status === 'approved' ? 'Approved & Granted' : 'Resolved'}
+            {status === 'approved' ? t('Approved & Granted', 'Approved & Granted') : t('Resolved', 'Resolved')}
           </span>
         )
       case 'under_review':
@@ -160,21 +162,21 @@ export default function AdminRequestsManager({
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
             <Clock className="w-3 h-3 animate-spin" />
-            {status === 'under_review' ? 'Under Review' : 'In Progress'}
+            {status === 'under_review' ? t('Under Review', 'Under Review') : t('In Progress', 'In Progress')}
           </span>
         )
       case 'rejected':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
             <XCircle className="w-3 h-3" />
-            Rejected
+            {t('Rejected', 'Rejected')}
           </span>
         )
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
             <AlertCircle className="w-3 h-3" />
-            Pending Action
+            {t('Pending Action', 'Pending Action')}
           </span>
         )
     }
@@ -194,29 +196,29 @@ export default function AdminRequestsManager({
               <Shield className="w-5 h-5 text-bis-navy dark:text-blue-400" />
             )}
             <h2 className="text-lg font-bold text-gray-900 dark:text-dark-text font-heading">
-              {title || (
+              {title ? t(title, title) : (
                 filterMode === 'complaints'
-                  ? 'Consumer Complaints Redressal Operations'
+                  ? t('Consumer Complaints Redressal Operations', 'Consumer Complaints Redressal Operations')
                   : filterMode === 'certs'
-                  ? 'MSME Certification Applications & Approvals'
-                  : 'Requests & Compliance Operations Center'
+                  ? t('MSME Certification Applications & Approvals', 'MSME Certification Applications & Approvals')
+                  : t('Requests & Compliance Operations Center', 'Requests & Compliance Operations Center')
               )}
             </h2>
           </div>
           <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-0.5">
-            {subtitle || (
+            {subtitle ? t(subtitle, subtitle) : (
               filterMode === 'complaints'
-                ? 'Review, investigate, and resolve product quality and non-compliance complaints submitted by consumers.'
+                ? t('Review, investigate, and resolve product quality and non-compliance complaints submitted by consumers.', 'Review, investigate, and resolve product quality and non-compliance complaints submitted by consumers.')
                 : filterMode === 'certs'
-                ? 'Review, verify laboratory test reports, and approve or reject Scheme-I & ISI mark certification applications from manufacturers.'
-                : 'Centralized intake and approval gateway for all Citizen Quality Complaints and MSME Certification Applications.'
+                ? t('Review, verify laboratory test reports, and approve or reject Scheme-I & ISI mark certification applications from manufacturers.', 'Review, verify laboratory test reports, and approve or reject Scheme-I & ISI mark certification applications from manufacturers.')
+                : t('Centralized intake and approval gateway for all Citizen Quality Complaints and MSME Certification Applications.', 'Centralized intake and approval gateway for all Citizen Quality Complaints and MSME Certification Applications.')
             )}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500 dark:text-dark-text-muted">
-            Live Sync: <strong className="text-green-600 dark:text-green-400 font-mono">{totalCount}</strong> active {filterMode === 'complaints' ? 'complaints' : filterMode === 'certs' ? 'applications' : 'cases'}
+            {t('Live Sync:', 'Live Sync:')} <strong className="text-green-600 dark:text-green-400 font-mono">{totalCount}</strong> {t('active', 'active')} {filterMode === 'complaints' ? t('complaints', 'complaints') : filterMode === 'certs' ? t('applications', 'applications') : t('cases', 'cases')}
           </span>
         </div>
       </div>
@@ -225,28 +227,28 @@ export default function AdminRequestsManager({
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="p-3 rounded-gov bg-gray-50 dark:bg-dark-bg-secondary border border-gray-100 dark:border-dark-border">
           <div className="text-[11px] font-medium text-gray-500 dark:text-dark-text-muted uppercase tracking-wider">
-            {filterMode === 'complaints' ? 'Total Complaints' : filterMode === 'certs' ? 'Total Applications' : 'Total Requests'}
+            {filterMode === 'complaints' ? t('Total Complaints', 'Total Complaints') : filterMode === 'certs' ? t('Total Applications', 'Total Applications') : t('Total Requests', 'Total Requests')}
           </div>
           <div className="text-xl font-bold text-gray-900 dark:text-dark-text mt-1">{totalCount}</div>
         </div>
 
         <div className="p-3 rounded-gov bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/40">
-          <div className="text-[11px] font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wider">Pending Action</div>
+          <div className="text-[11px] font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wider">{t('Pending Action', 'Pending Action')}</div>
           <div className="text-xl font-bold text-amber-800 dark:text-amber-200 mt-1">{pendingCount}</div>
         </div>
 
         <div className="p-3 rounded-gov bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/40">
-          <div className="text-[11px] font-medium text-blue-700 dark:text-blue-300 uppercase tracking-wider">Under Review</div>
+          <div className="text-[11px] font-medium text-blue-700 dark:text-blue-300 uppercase tracking-wider">{t('Under Review', 'Under Review')}</div>
           <div className="text-xl font-bold text-blue-800 dark:text-blue-200 mt-1">{reviewCount}</div>
         </div>
 
         <div className="p-3 rounded-gov bg-green-50/60 dark:bg-green-950/20 border border-green-200/50 dark:border-green-800/40">
-          <div className="text-[11px] font-medium text-green-700 dark:text-green-300 uppercase tracking-wider">Approved / Resolved</div>
+          <div className="text-[11px] font-medium text-green-700 dark:text-green-300 uppercase tracking-wider">{t('Approved / Resolved', 'Approved / Resolved')}</div>
           <div className="text-xl font-bold text-green-800 dark:text-green-200 mt-1">{approvedCount}</div>
         </div>
 
         <div className="p-3 rounded-gov bg-red-50/60 dark:bg-red-950/20 border border-red-200/50 dark:border-red-800/40 col-span-2 sm:col-span-1">
-          <div className="text-[11px] font-medium text-red-700 dark:text-red-300 uppercase tracking-wider">Rejected</div>
+          <div className="text-[11px] font-medium text-red-700 dark:text-red-300 uppercase tracking-wider">{t('Rejected', 'Rejected')}</div>
           <div className="text-xl font-bold text-red-800 dark:text-red-200 mt-1">{rejectedCount}</div>
         </div>
       </div>
@@ -266,7 +268,7 @@ export default function AdminRequestsManager({
                   : 'text-gray-600 dark:text-dark-text-muted hover:text-gray-900'
               )}
             >
-              All Requests ({totalCount})
+              {t('All Requests', 'All Requests')} ({totalCount})
             </button>
             <button
               type="button"
@@ -279,7 +281,7 @@ export default function AdminRequestsManager({
               )}
             >
               <User className="w-3.5 h-3.5 text-amber-600" />
-              <span>Consumer Complaints ({complaints.length})</span>
+              <span>{t('Consumer Complaints', 'Consumer Complaints')} ({complaints.length})</span>
             </button>
             <button
               type="button"
@@ -292,7 +294,7 @@ export default function AdminRequestsManager({
               )}
             >
               <Building2 className="w-3.5 h-3.5 text-blue-600" />
-              <span>MSME Applications ({certifications.length})</span>
+              <span>{t('MSME Applications', 'MSME Applications')} ({certifications.length})</span>
             </button>
           </div>
         ) : (
@@ -301,12 +303,12 @@ export default function AdminRequestsManager({
               {filterMode === 'complaints' ? (
                 <>
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Citizen Complaints Redressal</span>
+                  <span>{t('Citizen Complaints Redressal', 'Citizen Complaints Redressal')}</span>
                 </>
               ) : (
                 <>
                   <BadgeCheck className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Manufacturer Licensing &amp; Approvals</span>
+                  <span>{t('Manufacturer Licensing & Approvals', 'Manufacturer Licensing & Approvals')}</span>
                 </>
               )}
             </span>
@@ -321,11 +323,11 @@ export default function AdminRequestsManager({
             onChange={(e) => setStatusFilter(e.target.value)}
             className="text-xs bg-white dark:bg-dark-bg-card border border-gray-200 dark:border-dark-border rounded-gov px-2.5 py-1.5 text-gray-700 dark:text-dark-text outline-none"
           >
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending Action</option>
-            <option value="review">Under Review / In Progress</option>
-            <option value="resolved_approved">Resolved / Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="all">{t('All Statuses', 'All Statuses')}</option>
+            <option value="pending">{t('Pending Action', 'Pending Action')}</option>
+            <option value="review">{t('Under Review / In Progress', 'Under Review / In Progress')}</option>
+            <option value="resolved_approved">{t('Resolved / Approved', 'Resolved / Approved')}</option>
+            <option value="rejected">{t('Rejected', 'Rejected')}</option>
           </select>
 
           {/* Search box */}
@@ -335,7 +337,7 @@ export default function AdminRequestsManager({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by ID, product, std..."
+              placeholder={t('Search by ID, product, std...', 'Search by ID, product, std...')}
               className="pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-dark-bg-card border border-gray-200 dark:border-dark-border rounded-gov text-gray-800 dark:text-dark-text placeholder:text-gray-400 outline-none w-48 sm:w-60 focus:border-bis-navy dark:focus:border-blue-500"
             />
             {searchQuery && (
@@ -352,19 +354,19 @@ export default function AdminRequestsManager({
         <table className="w-full text-left text-xs border-collapse">
           <thead className="bg-gray-50 dark:bg-dark-bg-secondary text-gray-600 dark:text-dark-text-muted border-b border-gray-100 dark:border-dark-border">
             <tr>
-              <th className="py-3 px-3.5 font-semibold">Type & ID</th>
-              <th className="py-3 px-3.5 font-semibold">Subject / Product Details</th>
-              <th className="py-3 px-3.5 font-semibold">Standard & Facility</th>
-              <th className="py-3 px-3.5 font-semibold">Date Filed</th>
-              <th className="py-3 px-3.5 font-semibold">Current Status</th>
-              <th className="py-3 px-3.5 font-semibold text-right">Admin Action</th>
+              <th className="py-3 px-3.5 font-semibold">{t('Type & ID', 'Type & ID')}</th>
+              <th className="py-3 px-3.5 font-semibold">{t('Subject / Product Details', 'Subject / Product Details')}</th>
+              <th className="py-3 px-3.5 font-semibold">{t('Standard & Facility', 'Standard & Facility')}</th>
+              <th className="py-3 px-3.5 font-semibold">{t('Date Filed', 'Date Filed')}</th>
+              <th className="py-3 px-3.5 font-semibold">{t('Current Status', 'Current Status')}</th>
+              <th className="py-3 px-3.5 font-semibold text-right">{t('Admin Action', 'Admin Action')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
             {filteredRequests.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-8 text-center text-gray-400 dark:text-dark-text-muted">
-                  No requests matching the selected filter or query.
+                  {t('No requests matching the selected filter or query.', 'No requests matching the selected filter or query.')}
                 </td>
               </tr>
             ) : (
@@ -377,7 +379,7 @@ export default function AdminRequestsManager({
                   <td className="py-3 px-3.5">
                     <div className="flex flex-col gap-1">
                       <span className={cn('inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full border w-fit', req.kindBadgeCls)}>
-                        {req.kind === 'complaint' ? 'Citizen Report' : 'MSME License'}
+                        {req.kind === 'complaint' ? t('Citizen Report', 'Citizen Report') : t('MSME License', 'MSME License')}
                       </span>
                       <span className="font-mono font-bold text-gray-900 dark:text-white text-[11px]">
                         {req.id}
@@ -396,7 +398,7 @@ export default function AdminRequestsManager({
                     {req.remarks && (
                       <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1 font-mono">
                         <MessageSquare className="w-2.5 h-2.5 shrink-0" />
-                        <span className="truncate">Note: {req.remarks}</span>
+                        <span className="truncate">{t('Note:', 'Note:')} {req.remarks}</span>
                       </div>
                     )}
                   </td>
@@ -407,7 +409,7 @@ export default function AdminRequestsManager({
                       {req.standard}
                     </div>
                     <div className="text-[11px] text-gray-400 dark:text-dark-text-muted mt-0.5 truncate max-w-[180px]">
-                      {req.locationOrFacility || 'General location'}
+                      {req.locationOrFacility || t('General location', 'General location')}
                     </div>
                   </td>
 
@@ -415,7 +417,7 @@ export default function AdminRequestsManager({
                   <td className="py-3 px-3.5 whitespace-nowrap text-gray-500 dark:text-dark-text-muted text-[11px]">
                     {formatDate(req.date)}
                     {req.updated && (
-                      <div className="text-[10px] text-gray-400">Upd: {formatDate(req.updated)}</div>
+                      <div className="text-[10px] text-gray-400">{t('Upd:', 'Upd:')} {formatDate(req.updated)}</div>
                     )}
                   </td>
 
@@ -429,21 +431,21 @@ export default function AdminRequestsManager({
                         value={req.status}
                         onChange={(e) => handleInlineStatusChange(req, e.target.value)}
                         className="text-[11px] bg-transparent hover:bg-gray-100 dark:hover:bg-dark-bg p-1 rounded border border-transparent hover:border-gray-300 dark:hover:border-dark-border text-gray-600 dark:text-dark-text-muted outline-none cursor-pointer"
-                        title="Quickly change status directly from table"
+                        title={t('Quickly change status directly from table', 'Quickly change status directly from table')}
                       >
                         {req.kind === 'complaint' ? (
                           <>
-                            <option value="pending">Pending</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="resolved">Resolved</option>
-                            <option value="rejected">Rejected</option>
+                            <option value="pending">{t('Pending', 'Pending')}</option>
+                            <option value="in_progress">{t('In Progress', 'In Progress')}</option>
+                            <option value="resolved">{t('Resolved', 'Resolved')}</option>
+                            <option value="rejected">{t('Rejected', 'Rejected')}</option>
                           </>
                         ) : (
                           <>
-                            <option value="pending">Pending</option>
-                            <option value="under_review">Under Review</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
+                            <option value="pending">{t('Pending', 'Pending')}</option>
+                            <option value="under_review">{t('Under Review', 'Under Review')}</option>
+                            <option value="approved">{t('Approved', 'Approved')}</option>
+                            <option value="rejected">{t('Rejected', 'Rejected')}</option>
                           </>
                         )}
                       </select>
@@ -458,7 +460,7 @@ export default function AdminRequestsManager({
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-gray-100 dark:bg-dark-bg-card hover:bg-bis-navy hover:text-white dark:hover:bg-blue-600 text-gray-700 dark:text-dark-text text-xs font-medium transition-colors border border-gray-200 dark:border-dark-border shadow-xs"
                     >
                       <Eye className="w-3.5 h-3.5" />
-                      <span>Review Case</span>
+                      <span>{t('Review Case', 'Review Case')}</span>
                     </button>
                   </td>
                 </tr>
@@ -481,12 +483,12 @@ export default function AdminRequestsManager({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-gray-900 dark:text-dark-text font-heading">
-                    Official Case Dossier: {selectedItem.id}
+                    {t('Official Case Dossier:', 'Official Case Dossier:')} {selectedItem.id}
                   </h3>
                   <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-dark-text-muted mt-0.5">
-                    <span>{selectedItem.kindLabel}</span>
+                    <span>{t(selectedItem.kindLabel, selectedItem.kindLabel)}</span>
                     <span>•</span>
-                    <span>Submitter: {selectedItem.submitterRole}</span>
+                    <span>{t('Submitter:', 'Submitter:')} {t(selectedItem.submitterRole, selectedItem.submitterRole)}</span>
                   </div>
                 </div>
               </div>
@@ -504,33 +506,33 @@ export default function AdminRequestsManager({
               {/* Primary Info Grid */}
               <div className="grid sm:grid-cols-2 gap-4 bg-gray-50 dark:bg-dark-bg-secondary p-4 rounded-gov border border-gray-100 dark:border-dark-border">
                 <div>
-                  <span className="text-gray-400 dark:text-dark-text-muted block text-[11px]">Product / Article</span>
+                  <span className="text-gray-400 dark:text-dark-text-muted block text-[11px]">{t('Product / Article', 'Product / Article')}</span>
                   <strong className="text-sm text-gray-900 dark:text-dark-text block mt-0.5">{selectedItem.product}</strong>
                 </div>
                 <div>
-                  <span className="text-gray-400 dark:text-dark-text-muted block text-[11px]">Indian Standard (IS Code)</span>
+                  <span className="text-gray-400 dark:text-dark-text-muted block text-[11px]">{t('Indian Standard (IS Code)', 'Indian Standard (IS Code)')}</span>
                   <strong className="text-sm text-gray-900 dark:text-dark-text block mt-0.5">{selectedItem.standard}</strong>
                 </div>
                 <div>
-                  <span className="text-gray-400 dark:text-dark-text-muted block text-[11px]">Facility / Purchase Location</span>
-                  <span className="text-gray-800 dark:text-dark-text block mt-0.5 font-medium">{selectedItem.locationOrFacility || 'Not specified'}</span>
+                  <span className="text-gray-400 dark:text-dark-text-muted block text-[11px]">{t('Facility / Purchase Location', 'Facility / Purchase Location')}</span>
+                  <span className="text-gray-800 dark:text-dark-text block mt-0.5 font-medium">{selectedItem.locationOrFacility || t('Not specified', 'Not specified')}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400 dark:text-dark-text-muted block text-[11px]">Current Case Status</span>
+                  <span className="text-gray-400 dark:text-dark-text-muted block text-[11px]">{t('Current Case Status', 'Current Case Status')}</span>
                   <div className="mt-1">{getStatusBadge(selectedItem.status)}</div>
                 </div>
               </div>
 
               {/* Case Subject & Narrative */}
               <div className="space-y-1.5">
-                <label className="font-semibold text-gray-700 dark:text-dark-text block">Case Subject / Title:</label>
+                <label className="font-semibold text-gray-700 dark:text-dark-text block">{t('Case Subject / Title:', 'Case Subject / Title:')}</label>
                 <div className="p-3 bg-white dark:bg-dark-bg rounded border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text">
                   {selectedItem.title}
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold text-gray-700 dark:text-dark-text block">Detailed Case Description / Inspection Request:</label>
+                <label className="font-semibold text-gray-700 dark:text-dark-text block">{t('Detailed Case Description / Inspection Request:', 'Detailed Case Description / Inspection Request:')}</label>
                 <div className="p-3 bg-white dark:bg-dark-bg rounded border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text leading-relaxed whitespace-pre-wrap">
                   {selectedItem.description}
                 </div>
@@ -539,8 +541,8 @@ export default function AdminRequestsManager({
               {/* Official BIS Officer Notes / Remarks */}
               <div className="space-y-1.5 bg-blue-50/40 dark:bg-blue-950/20 p-4 rounded-gov border border-blue-200/50 dark:border-blue-800/40">
                 <label className="font-bold text-gray-800 dark:text-dark-text flex items-center justify-between">
-                  <span>Official BIS Officer Remarks & Action Trail:</span>
-                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-normal">Visible in real-time to applicant</span>
+                  <span>{t('Official BIS Officer Remarks & Action Trail:', 'Official BIS Officer Remarks & Action Trail:')}</span>
+                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-normal">{t('Visible in real-time to applicant', 'Visible in real-time to applicant')}</span>
                 </label>
                 <textarea
                   rows={3}
@@ -554,7 +556,7 @@ export default function AdminRequestsManager({
               {/* Action Buttons */}
               <div className="pt-2 border-t border-gray-100 dark:border-dark-border">
                 <div className="font-semibold text-gray-700 dark:text-dark-text mb-2.5">
-                  Update Official Status & Sync to Applicant:
+                  {t('Update Official Status & Sync to Applicant:', 'Update Official Status & Sync to Applicant:')}
                 </div>
                 
                 {selectedItem.kind === 'complaint' ? (
@@ -565,7 +567,7 @@ export default function AdminRequestsManager({
                       className="px-3 py-2 rounded-gov bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-700 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800 flex items-center gap-1.5 transition-all"
                     >
                       <Clock className="w-3.5 h-3.5" />
-                      Mark In Progress (Investigating)
+                      {t('Mark In Progress (Investigating)', 'Mark In Progress (Investigating)')}
                     </button>
                     <button
                       type="button"
@@ -573,7 +575,7 @@ export default function AdminRequestsManager({
                       className="px-3 py-2 rounded-gov bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center gap-1.5 transition-all shadow-xs"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Resolve & Close Complaint
+                      {t('Resolve & Close Complaint', 'Resolve & Close Complaint')}
                     </button>
                     <button
                       type="button"
@@ -581,7 +583,7 @@ export default function AdminRequestsManager({
                       className="px-3 py-2 rounded-gov bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-700 dark:text-red-300 font-semibold border border-red-200 dark:border-red-800 flex items-center gap-1.5 transition-all"
                     >
                       <XCircle className="w-3.5 h-3.5" />
-                      Reject Report
+                      {t('Reject Report', 'Reject Report')}
                     </button>
                   </div>
                 ) : (
@@ -592,7 +594,7 @@ export default function AdminRequestsManager({
                       className="px-3 py-2 rounded-gov bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-700 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800 flex items-center gap-1.5 transition-all"
                     >
                       <Clock className="w-3.5 h-3.5" />
-                      Mark Under Review (Factory Audit)
+                      {t('Mark Under Review (Factory Audit)', 'Mark Under Review (Factory Audit)')}
                     </button>
                     <button
                       type="button"
@@ -600,7 +602,7 @@ export default function AdminRequestsManager({
                       className="px-3 py-2 rounded-gov bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center gap-1.5 transition-all shadow-xs"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Approve & Grant ISI License
+                      {t('Approve & Grant ISI License', 'Approve & Grant ISI License')}
                     </button>
                     <button
                       type="button"
@@ -608,7 +610,7 @@ export default function AdminRequestsManager({
                       className="px-3 py-2 rounded-gov bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-700 dark:text-red-300 font-semibold border border-red-200 dark:border-red-800 flex items-center gap-1.5 transition-all"
                     >
                       <XCircle className="w-3.5 h-3.5" />
-                      Reject Application
+                      {t('Reject Application', 'Reject Application')}
                     </button>
                   </div>
                 )}
@@ -622,7 +624,7 @@ export default function AdminRequestsManager({
                 onClick={() => setSelectedItem(null)}
                 className="btn-gov text-xs py-1.5 px-4"
               >
-                Close Dossier
+                {t('Close Dossier', 'Close Dossier')}
               </button>
             </div>
 

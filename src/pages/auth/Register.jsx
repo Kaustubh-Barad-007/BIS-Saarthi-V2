@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import useAuthStore from '@/store/authStore'
 import { ROUTES, ROLES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
 
 const ROLE_OPTIONS = [
   { value: ROLES.CONSUMER,     label: 'Consumer (General Public)',  icon: User,      desc: 'Product queries, hallmarking, complaints' },
@@ -30,11 +31,12 @@ const stepSchemas = [
   }),
 ]
 
-const STEPS = ['Personal Info', 'Select Role']
-
 export default function Register() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { register: registerUser, isLoading } = useAuthStore()
+
+  const STEPS = [t('Personal Info', 'Personal Info'), t('Select Role', 'Select Role')]
 
   const [step,     setStep]     = useState(0)
   const [formData, setFormData] = useState({ role: ROLES.CONSUMER })
@@ -88,17 +90,17 @@ export default function Register() {
                   <img src="/bis-logo.svg" alt="BIS" className="w-full h-full object-contain" />
                 </div>
                 <div className="min-w-0">
-                  <div className="font-bold text-sm sm:text-base leading-tight truncate">BIS Saarthi Portal Registration</div>
-                  <div className="text-[11px] sm:text-xs text-blue-200 truncate">Bureau of Indian Standards Portal</div>
+                  <div className="font-bold text-sm sm:text-base leading-tight truncate">{t('BIS Saarthi Portal Registration', 'BIS Saarthi Portal Registration')}</div>
+                  <div className="text-[11px] sm:text-xs text-blue-200 truncate">{t('Bureau of Indian Standards Portal', 'Bureau of Indian Standards Portal')}</div>
                 </div>
               </Link>
               <Link
                 to="/"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-white/15 hover:bg-white/25 rounded-gov transition-colors shadow-xs shrink-0"
-                title="Return to Home"
+                title={t('Return to Home', 'Return to Home')}
               >
                 <Home className="w-3.5 h-3.5" />
-                <span>Home</span>
+                <span>{t('Home', 'Home')}</span>
               </Link>
             </div>
             {/* Progress steps */}
@@ -133,20 +135,20 @@ export default function Register() {
               {/* Step 0 — Personal Info */}
               {step === 0 && (
                 <div className="space-y-4 animate-fade-in">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Personal Information</h2>
-                  <p className="text-sm text-gray-500 dark:text-dark-text-muted mb-4">No password needed — quick registration for portal access.</p>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('Personal Information', 'Personal Information')}</h2>
+                  <p className="text-sm text-gray-500 dark:text-dark-text-muted mb-4">{t('No password needed — quick registration for portal access.', 'No password needed — quick registration for portal access.')}</p>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">Full Name *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">{t('Full Name *', 'Full Name *')}</label>
                     <input {...register('name')} placeholder="e.g. Rajesh Kumar" className={cn('input-gov', errors.name && 'border-red-400')} />
                     {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">Email Address *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">{t('Email Address *', 'Email Address *')}</label>
                     <input {...register('email')} type="email" placeholder="e.g. rajesh@example.com" className={cn('input-gov', errors.email && 'border-red-400')} />
                     {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">Mobile Number *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">{t('Mobile Number *', 'Mobile Number *')}</label>
                     <div className="flex gap-2">
                       <span className="input-gov w-16 text-center flex items-center justify-center bg-gray-50 dark:bg-dark-bg-secondary font-medium">+91</span>
                       <input {...register('phone')} placeholder="9876543210" className={cn('input-gov flex-1', errors.phone && 'border-red-400')} />
@@ -159,8 +161,8 @@ export default function Register() {
               {/* Step 1 — Role Selection */}
               {step === 1 && (
                 <div className="animate-fade-in">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Select Your Role</h2>
-                  <p className="text-sm text-gray-500 dark:text-dark-text-muted mb-5">Choose how you plan to use the BIS Saarthi AI portal.</p>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t('Select Your Role', 'Select Your Role')}</h2>
+                  <p className="text-sm text-gray-500 dark:text-dark-text-muted mb-5">{t('Choose how you plan to use the BIS Saarthi AI portal.', 'Choose how you plan to use the BIS Saarthi AI portal.')}</p>
                   <div className="space-y-3">
                     {ROLE_OPTIONS.map((opt) => {
                       const Icon = opt.icon
@@ -189,8 +191,8 @@ export default function Register() {
                             <Icon className="w-5 h-5" />
                           </div>
                           <div className="flex-1">
-                            <div className="font-semibold text-sm text-gray-900 dark:text-white">{opt.label}</div>
-                            <div className="text-xs text-gray-500 dark:text-dark-text-muted">{opt.desc}</div>
+                            <div className="font-semibold text-sm text-gray-900 dark:text-white">{t(opt.label, opt.label)}</div>
+                            <div className="text-xs text-gray-500 dark:text-dark-text-muted">{t(opt.desc, opt.desc)}</div>
                           </div>
                           {isSelected && <CheckCircle2 className="w-5 h-5 text-bis-navy dark:text-blue-400" />}
                         </label>
@@ -199,7 +201,7 @@ export default function Register() {
                   </div>
                   {selectedRole === ROLES.MANUFACTURER && (
                     <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">Organization / Enterprise Name</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">{t('Organization / Enterprise Name', 'Organization / Enterprise Name')}</label>
                       <input {...register('organization')} placeholder="e.g. RK Manufacturing Enterprises" className="input-gov" />
                     </div>
                   )}
@@ -213,7 +215,7 @@ export default function Register() {
                   onClick={prevStep}
                   className={cn('btn-gov-outline', step === 0 && 'invisible')}
                 >
-                  <ChevronLeft className="w-4 h-4" /> Back
+                  <ChevronLeft className="w-4 h-4" /> {t('Back', 'Back')}
                 </button>
                 <button
                   type="submit"
@@ -221,11 +223,11 @@ export default function Register() {
                   className={cn('btn-gov', isLoading && 'opacity-70 cursor-not-allowed')}
                 >
                   {isLoading ? (
-                    <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Creating Account...</>
+                    <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {t('Creating Account...', 'Creating Account...')}</>
                   ) : step === STEPS.length - 1 ? (
-                    <><UserPlus className="w-4 h-4" /> Complete &amp; Launch AI Assistant</>
+                    <><UserPlus className="w-4 h-4" /> {t('Complete & Launch AI Assistant', 'Complete & Launch AI Assistant')}</>
                   ) : (
-                    <>Next <ChevronRight className="w-4 h-4" /></>
+                    <>{t('Next', 'Next')} <ChevronRight className="w-4 h-4" /></>
                   )}
                 </button>
               </div>
@@ -234,12 +236,12 @@ export default function Register() {
             <div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-100 dark:border-dark-border text-sm">
               <Link to="/" className="inline-flex items-center gap-1.5 text-gray-500 dark:text-dark-text-muted hover:text-bis-navy dark:hover:text-blue-400 font-medium transition-colors">
                 <Home className="w-3.5 h-3.5" />
-                <span>Return to Home</span>
+                <span>{t('Return to Home', 'Return to Home')}</span>
               </Link>
               <p className="text-gray-500 dark:text-dark-text-muted">
-                Already have an account?{' '}
+                {t('Already have an account?', 'Already have an account?')}{' '}
                 <Link to={ROUTES.LOGIN} className="text-bis-navy dark:text-blue-400 font-semibold hover:underline">
-                  Sign In
+                  {t('Sign In', 'Sign In')}
                 </Link>
               </p>
             </div>

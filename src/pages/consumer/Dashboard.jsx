@@ -10,14 +10,10 @@ import useDataStore from '@/store/dataStore'
 import StatCard from '@/components/dashboard/StatCard'
 import { ROUTES, BIS_STATS } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
-
-const NEWS = [
-  { title: 'Mandatory BIS hallmarking extended to silver jewellery from April 2025', date: '2025-03-15', type: 'notification' },
-  { title: 'New IS 18031 standard for Solar Panels – effective from January 2025', date: '2025-01-10', type: 'standard' },
-  { title: 'BIS Care Mobile App v3.0 released with AI-powered product verification', date: '2024-12-20', type: 'update' },
-]
+import { useTranslation } from '@/lib/i18n'
 
 export default function ConsumerDashboard() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const { sessions, messages } = useChatStore()
   const { complaints, notifications } = useDataStore()
@@ -43,34 +39,34 @@ export default function ConsumerDashboard() {
       <div className="bg-gov-gradient text-white rounded-gov-xl p-6 flex items-center justify-between shadow-gov-md">
         <div>
           <h1 className="text-xl font-bold font-heading mb-1">
-            Welcome, {user?.name?.split(' ')[0] || 'Citizen'}! 👋
+            {t('welcome_citizen', 'Welcome, Citizen!')} 👋
           </h1>
           <p className="text-blue-100 text-sm">
-            Your official AI-powered guide to Indian Standards and consumer protection.
+            {t('citizen_guide_sub', 'Your official AI-powered guide to Indian Standards and consumer protection.')}
           </p>
         </div>
         <Link to={ROUTES.CONSUMER_CHAT} className="btn-saffron text-sm hidden sm:inline-flex shadow-xs">
-          <MessageSquare className="w-4 h-4" /> Ask BIS Saarthi
+          <MessageSquare className="w-4 h-4" /> {t('ask_bis_saarthi', 'Ask BIS Saarthi')}
         </Link>
       </div>
 
       {/* Real-time Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Queries Logged"     value={Math.max(messages.filter(m => m.role === 'user').length, 12)} delta="+3" color="blue"   icon={MessageSquare} />
-        <StatCard label="Standards Browsed" value={8}  delta="+2" color="green"  icon={BookOpen}      />
-        <StatCard label="Complaints Filed"  value={complaints.length} delta={complaints.length > 0 ? `+${complaints.length}` : '0'} color="orange" icon={AlertTriangle}  />
-        <StatCard label="Saved Answers"     value={5}  delta="+1" color="purple" icon={CheckCircle2}  />
+        <StatCard label={t('queries_logged', 'Queries Logged')}     value={Math.max(messages.filter(m => m.role === 'user').length, 12)} delta="+3" color="blue"   icon={MessageSquare} />
+        <StatCard label={t('standards_browsed', 'Standards Browsed')} value={8}  delta="+2" color="green"  icon={BookOpen}      />
+        <StatCard label={t('complaints_filed', 'Complaints Filed')}  value={complaints.length} delta={complaints.length > 0 ? `+${complaints.length}` : '0'} color="orange" icon={AlertTriangle}  />
+        <StatCard label={t('saved_answers', 'Saved Answers')}     value={5}  delta="+1" color="purple" icon={CheckCircle2}  />
       </div>
 
       {/* Quick Actions */}
       <div>
-        <h2 className="section-header text-lg mb-4 text-gray-900 dark:text-white">Quick Actions</h2>
+        <h2 className="section-header text-lg mb-4 text-gray-900 dark:text-white">{t('quick_actions', 'Quick Actions')}</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Ask BIS Saarthi',  desc: 'Get AI-powered guidance',       href: ROUTES.CONSUMER_CHAT,        icon: MessageSquare, color: 'bg-blue-600'   },
-            { label: 'Browse Standards', desc: 'Search 22,000+ IS codes',      href: ROUTES.CONSUMER_STANDARDS,   icon: BookOpen,      color: 'bg-green-600'  },
-            { label: 'Hallmarking Info', desc: 'Gold purity & HUID verification',href: ROUTES.CONSUMER_HALLMARKING, icon: Award,         color: 'bg-amber-600'  },
-            { label: 'File Complaint',   desc: 'Report substandard products',   href: ROUTES.CONSUMER_COMPLAINTS,  icon: AlertTriangle, color: 'bg-red-600'    },
+            { label: t('ask_bis_saarthi', 'Ask BIS Saarthi'),  desc: t('Get AI-powered guidance', 'Get AI-powered guidance'),       href: ROUTES.CONSUMER_CHAT,        icon: MessageSquare, color: 'bg-blue-600'   },
+            { label: t('browse_standards', 'Browse Standards'), desc: t('browse_standards_desc', 'Search 22,000+ IS codes'),      href: ROUTES.CONSUMER_STANDARDS,   icon: BookOpen,      color: 'bg-green-600'  },
+            { label: t('hallmarking_info', 'Hallmarking Info'), desc: t('hallmarking_info_desc', 'Gold purity & HUID verification'),href: ROUTES.CONSUMER_HALLMARKING, icon: Award,         color: 'bg-amber-600'  },
+            { label: t('file_complaint', 'File Complaint'),   desc: t('file_complaint_desc', 'Report substandard products'),   href: ROUTES.CONSUMER_COMPLAINTS,  icon: AlertTriangle, color: 'bg-red-600'    },
           ].map(({ label, desc, href, icon: Icon, color }) => (
             <Link
               key={label}
@@ -96,9 +92,9 @@ export default function ConsumerDashboard() {
         {/* Recent Queries */}
         <div className="card-gov p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading">Recent Inquiries</h3>
+            <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading">{t('recent_inquiries', 'Recent Inquiries')}</h3>
             <Link to={ROUTES.CONSUMER_CHAT} className="text-xs text-bis-navy dark:text-blue-400 hover:underline flex items-center gap-1 font-medium">
-              Open Chat <ArrowRight className="w-3 h-3" />
+              {t('open_chat', 'Open Chat')} <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
           <div className="space-y-3">
@@ -111,7 +107,7 @@ export default function ConsumerDashboard() {
                     <Clock className="w-3 h-3" /> {formatDate(q.timestamp || q.time)}
                   </p>
                 </div>
-                <span className="badge-gov status-approved text-xs shrink-0">Answered</span>
+                <span className="badge-gov status-approved text-xs shrink-0">{t('Answered', 'Answered')}</span>
               </div>
             ))}
           </div>
@@ -120,9 +116,9 @@ export default function ConsumerDashboard() {
         {/* News & Updates */}
         <div className="card-gov p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading">Official BIS Notifications</h3>
+            <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading">{t('official_bis_notifications', 'Official BIS Notifications')}</h3>
             <Link to={ROUTES.CONSUMER_NOTIFICATIONS} className="text-xs text-bis-navy dark:text-blue-400 hover:underline">
-              View All →
+              {t('view_all', 'View All')} →
             </Link>
           </div>
           <div className="space-y-3">
@@ -153,12 +149,12 @@ export default function ConsumerDashboard() {
 
       {/* BIS Stats Showcase */}
       <div className="card-gov p-6">
-        <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-5">Bureau of Indian Standards at a Glance</h3>
+        <h3 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-5">{t('bis_at_glance', 'Bureau of Indian Standards at a Glance')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
           {BIS_STATS.map((stat, i) => (
             <div key={i} className="p-2 rounded-gov hover:bg-gray-50 dark:hover:bg-dark-bg-secondary transition-colors">
               <div className="text-xl font-extrabold text-bis-navy dark:text-blue-300 font-heading">{stat.value}</div>
-              <div className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">{stat.label}</div>
+              <div className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">{t(stat.label, stat.label)}</div>
             </div>
           ))}
         </div>

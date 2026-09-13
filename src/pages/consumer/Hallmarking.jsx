@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Award, MapPin, Search, CheckCircle2, AlertTriangle, Info, Phone, X, Building, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from '@/lib/i18n'
 
 const HUID_INFO = [
   { label: 'BIS Logo',         desc: 'Triangle with BIS mark — confirms BIS testing and statutory conformity' },
@@ -23,6 +24,7 @@ const SAMPLE_HUIDS = [
 ]
 
 export default function Hallmarking() {
+  const { t } = useTranslation()
   const [huid, setHuid]         = useState('')
   const [citySearch, setCity]   = useState('')
   const [verified, setVerified] = useState(null)
@@ -37,10 +39,10 @@ export default function Hallmarking() {
       } else {
         setVerified({ huid: target, caratage: '22K (916)', jeweller: 'Certified BIS Hallmark Partner Jewellers', ahc: 'MH-001', date: '2024-05-10' })
       }
-      toast.success(`HUID ${target} verified in real-time registry!`)
+      toast.success(t(`HUID ${target} verified in real-time registry!`, `HUID ${target} verified in real-time registry!`))
     } else {
       setVerified('invalid')
-      toast.error('Invalid HUID format. 6 alphanumeric characters required.')
+      toast.error(t('Invalid HUID format. 6 alphanumeric characters required.', 'Invalid HUID format. 6 alphanumeric characters required.'))
     }
   }
 
@@ -56,19 +58,19 @@ export default function Hallmarking() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">Hallmarking Guidance</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('Hallmarking Guidance', 'Hallmarking Guidance')}</h1>
         <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-          Gold and Silver jewellery hallmarking compliance and HUID authentication registry.
+          {t('Gold and Silver jewellery hallmarking compliance and HUID authentication registry.', 'Gold and Silver jewellery hallmarking compliance and HUID authentication registry.')}
         </p>
       </div>
 
       {/* HUID Verifier */}
       <div className="card-gov p-6">
         <h2 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-1 flex items-center gap-2">
-          <Award className="w-5 h-5 text-bis-gold" /> Verify HUID (Hallmark Unique ID)
+          <Award className="w-5 h-5 text-bis-gold" /> {t('Verify HUID (Hallmark Unique ID)', 'Verify HUID (Hallmark Unique ID)')}
         </h2>
         <p className="text-sm text-gray-500 dark:text-dark-text-muted mb-4">
-          Enter the 6-digit alphanumeric HUID printed on your hallmarked jewellery to verify authenticity against the BIS registry.
+          {t('Enter the 6-digit alphanumeric HUID printed on your hallmarked jewellery to verify authenticity against the BIS registry.', 'Enter the 6-digit alphanumeric HUID printed on your hallmarked jewellery to verify authenticity against the BIS registry.')}
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <input
@@ -78,12 +80,12 @@ export default function Hallmarking() {
             maxLength={6}
             className="input-gov w-48 font-mono text-center text-lg tracking-widest uppercase"
           />
-          <button onClick={() => verifyHUID(huid)} className="btn-gov">Verify HUID</button>
+          <button onClick={() => verifyHUID(huid)} className="btn-gov">{t('Verify HUID', 'Verify HUID')}</button>
         </div>
 
         {/* 1-Click Sample Chips for rapid testing */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-gray-500 dark:text-dark-text-muted">Quick test samples:</span>
+          <span className="text-xs text-gray-500 dark:text-dark-text-muted">{t('Quick test samples:', 'Quick test samples:')}</span>
           {SAMPLE_HUIDS.map((sample) => (
             <button
               key={sample.code}
@@ -98,20 +100,20 @@ export default function Hallmarking() {
 
         {verified === 'invalid' && (
           <div className="mt-3 flex items-center gap-2 text-sm text-red-600 dark:text-red-400 animate-fade-in">
-            <AlertTriangle className="w-4 h-4 shrink-0" /> Invalid HUID format. Enter a valid 6-character alphanumeric code.
+            <AlertTriangle className="w-4 h-4 shrink-0" /> {t('Invalid HUID format. Enter a valid 6-character alphanumeric code.', 'Invalid HUID format. Enter a valid 6-character alphanumeric code.')}
           </div>
         )}
         {verified && verified !== 'invalid' && (
           <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/15 border border-green-200 dark:border-green-800/80 rounded-gov animate-fade-in">
             <div className="flex items-center gap-2 mb-3 text-green-700 dark:text-green-400 font-semibold">
-              <CheckCircle2 className="w-5 h-5" /> Authentic BIS Hallmarked Jewellery Record
+              <CheckCircle2 className="w-5 h-5" /> {t('Authentic BIS Hallmarked Jewellery Record', 'Authentic BIS Hallmarked Jewellery Record')}
             </div>
             <div className="grid sm:grid-cols-2 gap-3 text-sm text-gray-700 dark:text-dark-text">
-              <div><span className="font-medium text-gray-500 dark:text-dark-text-muted">HUID:</span> <span className="font-mono font-bold text-bis-navy dark:text-blue-300">{verified.huid}</span></div>
-              <div><span className="font-medium text-gray-500 dark:text-dark-text-muted">Caratage:</span> <span className="font-semibold text-amber-600 dark:text-amber-400">{verified.caratage}</span></div>
-              <div><span className="font-medium text-gray-500 dark:text-dark-text-muted">Jeweller:</span> {verified.jeweller}</div>
-              <div><span className="font-medium text-gray-500 dark:text-dark-text-muted">AHC Code:</span> {verified.ahc}</div>
-              <div><span className="font-medium text-gray-500 dark:text-dark-text-muted">Hallmarked On:</span> {verified.date}</div>
+              <div><span className="font-medium text-gray-500 dark:text-dark-text-muted">{t('HUID', 'HUID')}:</span> <span className="font-mono font-bold text-bis-navy dark:text-blue-300">{verified.huid}</span></div>
+              <div><span className="font-medium text-gray-500 dark:text-dark-text-muted">{t('Caratage', 'Caratage')}:</span> <span className="font-semibold text-amber-600 dark:text-amber-400">{verified.caratage}</span></div>
+              <div><span className="font-medium text-gray-500 dark:text-dark-text-muted">{t('Jeweller', 'Jeweller')}:</span> {verified.jeweller}</div>
+              <div><span className="font-medium text-gray-500 dark:text-dark-text-muted">{t('AHC Code', 'AHC Code')}:</span> {verified.ahc}</div>
+              <div><span className="font-medium text-gray-500 dark:text-dark-text-muted">{t('Hallmarked On', 'Hallmarked On')}:</span> {verified.date}</div>
             </div>
           </div>
         )}
@@ -121,21 +123,21 @@ export default function Hallmarking() {
         {/* What's in a Hallmark */}
         <div className="card-gov p-6">
           <h2 className="font-bold text-gray-900 dark:text-dark-text font-heading mb-4 flex items-center gap-2">
-            <Info className="w-5 h-5 text-blue-500" /> Understanding the BIS Hallmark
+            <Info className="w-5 h-5 text-blue-500" /> {t('Understanding the BIS Hallmark', 'Understanding the BIS Hallmark')}
           </h2>
           <div className="space-y-3">
             {HUID_INFO.map((item, i) => (
               <div key={i} className="flex gap-3 p-3 bg-gray-50 dark:bg-dark-bg-secondary rounded-gov border border-gray-100/60 dark:border-dark-border/60">
                 <div className="w-7 h-7 rounded-full bg-bis-navy text-white flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</div>
                 <div>
-                  <div className="font-semibold text-sm text-gray-800 dark:text-dark-text">{item.label}</div>
-                  <div className="text-xs text-gray-500 dark:text-dark-text-muted mt-0.5">{item.desc}</div>
+                  <div className="font-semibold text-sm text-gray-800 dark:text-dark-text">{t(item.label, item.label)}</div>
+                  <div className="text-xs text-gray-500 dark:text-dark-text-muted mt-0.5">{t(item.desc, item.desc)}</div>
                 </div>
               </div>
             ))}
           </div>
           <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800/60 rounded-gov text-xs text-amber-800 dark:text-amber-300">
-            <strong>Statutory Notice:</strong> Mandatory hallmarking applies to 14K, 18K, 20K, 22K, 23K, and 24K gold jewellery under BIS Act 2016.
+            <strong>{t('Statutory Notice', 'Statutory Notice')}:</strong> {t('Mandatory hallmarking applies to 14K, 18K, 20K, 22K, 23K, and 24K gold jewellery under BIS Act 2016.', 'Mandatory hallmarking applies to 14K, 18K, 20K, 22K, 23K, and 24K gold jewellery under BIS Act 2016.')}
           </div>
         </div>
 
@@ -143,14 +145,14 @@ export default function Hallmarking() {
         <div className="card-gov p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-gray-900 dark:text-dark-text font-heading flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-red-500" /> Assaying &amp; Hallmarking Centres
+              <MapPin className="w-5 h-5 text-red-500" /> {t('Assaying & Hallmarking Centres', 'Assaying & Hallmarking Centres')}
             </h2>
             {citySearch && (
               <button
                 onClick={() => setCity('')}
                 className="text-xs text-bis-navy dark:text-blue-400 hover:underline"
               >
-                Clear Filter
+                {t('Clear Filter', 'Clear Filter')}
               </button>
             )}
           </div>
@@ -159,7 +161,7 @@ export default function Hallmarking() {
             <input
               value={citySearch}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="Search by city or state (e.g. Mumbai, Delhi)..."
+              placeholder={t('Search by city or state (e.g. Mumbai, Delhi)...', 'Search by city or state (e.g. Mumbai, Delhi)...')}
               className="input-gov pl-10 pr-8"
             />
             {citySearch && (
@@ -174,10 +176,10 @@ export default function Hallmarking() {
           <div className="space-y-3">
             {centres.length === 0 ? (
               <div className="text-center py-6 text-xs text-gray-400 dark:text-dark-text-muted">
-                No hallmarking centres found for &ldquo;{citySearch}&rdquo;.
+                {t('No hallmarking centres found for', 'No hallmarking centres found for')} &ldquo;{citySearch}&rdquo;.
                 <br />
                 <button onClick={() => setCity('')} className="mt-2 text-bis-navy dark:text-blue-400 font-semibold hover:underline">
-                  Reset search filter
+                  {t('Reset search filter', 'Reset search filter')}
                 </button>
               </div>
             ) : (
@@ -194,9 +196,9 @@ export default function Hallmarking() {
                     <div className="font-medium text-sm text-gray-800 dark:text-dark-text group-hover:text-bis-navy dark:group-hover:text-blue-300 transition-colors truncate">
                       {c.name}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-dark-text-muted">{c.city}, {c.state} · Code: {c.code}</div>
+                    <div className="text-xs text-gray-500 dark:text-dark-text-muted">{c.city}, {c.state} · {t('Code', 'Code')}: {c.code}</div>
                   </div>
-                  <span className="badge-gov status-active text-xs shrink-0">Active</span>
+                  <span className="badge-gov status-active text-xs shrink-0">{t('Active', 'Active')}</span>
                   <ChevronRight className="w-4 h-4 text-gray-300 dark:text-dark-border group-hover:text-bis-navy dark:group-hover:text-blue-400 transition-colors shrink-0" />
                 </div>
               ))
@@ -216,7 +218,7 @@ export default function Hallmarking() {
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-gray-900 dark:text-white font-heading">{selectedCentre.name}</h3>
-                  <div className="text-xs font-mono text-gray-500 dark:text-dark-text-muted">Centre Code: {selectedCentre.code}</div>
+                  <div className="text-xs font-mono text-gray-500 dark:text-dark-text-muted">{t('Centre Code', 'Centre Code')}: {selectedCentre.code}</div>
                 </div>
               </div>
               <button
@@ -230,25 +232,25 @@ export default function Hallmarking() {
             <div className="py-4 space-y-3 text-xs">
               <div className="p-3 bg-slate-50 dark:bg-dark-bg-secondary rounded-gov border border-slate-200 dark:border-dark-border space-y-2">
                 <div>
-                  <span className="text-gray-500 dark:text-dark-text-muted">Jurisdiction:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Jurisdiction', 'Jurisdiction')}:</span>
                   <div className="font-semibold text-gray-800 dark:text-dark-text">{selectedCentre.city}, {selectedCentre.state}</div>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-dark-text-muted">Address:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Address', 'Address')}:</span>
                   <div className="font-medium text-gray-700 dark:text-dark-text">{selectedCentre.address}</div>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-dark-text-muted">Official Contact:</span>
+                  <span className="text-gray-500 dark:text-dark-text-muted">{t('Official Contact', 'Official Contact')}:</span>
                   <div className="font-mono text-bis-navy dark:text-blue-300 font-semibold">{selectedCentre.phone}</div>
                 </div>
               </div>
 
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-gov text-blue-800 dark:text-blue-300">
                 <div className="font-semibold mb-0.5 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> BIS Recognized Testing Facility
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {t('BIS Recognized Testing Facility', 'BIS Recognized Testing Facility')}
                 </div>
                 <p className="text-[11px] leading-relaxed">
-                  Authorized for X-ray fluorescence (XRF) spectrometry testing and Fire Assay cupellation as per IS 1417 &amp; IS 2112.
+                  {t('Authorized for X-ray fluorescence (XRF) spectrometry testing and Fire Assay cupellation as per IS 1417 & IS 2112.', 'Authorized for X-ray fluorescence (XRF) spectrometry testing and Fire Assay cupellation as per IS 1417 & IS 2112.')}
                 </p>
               </div>
             </div>
@@ -258,7 +260,7 @@ export default function Hallmarking() {
                 onClick={() => setSelectedCentre(null)}
                 className="btn-gov text-xs py-2 px-4"
               >
-                Close Details
+                {t('Close Details', 'Close Details')}
               </button>
             </div>
           </div>

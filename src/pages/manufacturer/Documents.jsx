@@ -7,6 +7,7 @@ import {
 import { formatDate, formatFileSize, cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useDataStore } from '@/store/dataStore'
+import { useTranslation } from '@/lib/i18n'
 
 const DOCUMENT_CATEGORIES = [
   'All',
@@ -29,6 +30,7 @@ const STANDARD_SUGGESTIONS = [
 ]
 
 export default function Documents() {
+  const { t } = useTranslation()
   const docs = useDataStore((s) => s.manufacturerDocs)
   const addManufacturerDoc = useDataStore((s) => s.addManufacturerDoc)
   const deleteManufacturerDoc = useDataStore((s) => s.deleteManufacturerDoc)
@@ -210,11 +212,11 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               <FileCheck className="w-4 h-4" />
             </div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">
-              Manufacturer Compliance Vault
+              {t('Manufacturer Compliance Vault', 'Manufacturer Compliance Vault')}
             </h1>
           </div>
           <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-            Manage factory audit manuals, NABL lab test reports, machinery specifications, and statutory undertakings.
+            {t('Manage factory audit manuals, NABL lab test reports, machinery specifications, and statutory undertakings.', 'Manage factory audit manuals, NABL lab test reports, machinery specifications, and statutory undertakings.')}
           </p>
         </div>
 
@@ -224,20 +226,20 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
             onClick={handleRefresh}
             disabled={isRefreshing || isLoadingDb}
             className="btn-gov-outline text-xs py-2 px-3 flex items-center gap-1.5 shadow-xs"
-            title="Sync with database"
+            title={t('Sync with database', 'Sync with database')}
           >
             <RefreshCw className={cn('w-3.5 h-3.5', (isRefreshing || isLoadingDb) && 'animate-spin')} />
-            <span className="hidden sm:inline">Sync Vault</span>
+            <span className="hidden sm:inline">{t('Sync Vault', 'Sync Vault')}</span>
           </button>
 
           <button
             type="button"
             onClick={handleDownloadDossier}
             className="btn-gov-outline text-xs py-2 px-3 flex items-center gap-1.5 shadow-xs"
-            title="Download full dossier manifest"
+            title={t('Download full dossier manifest', 'Download full dossier manifest')}
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export Dossier</span>
+            <span>{t('Export Dossier', 'Export Dossier')}</span>
           </button>
 
           <button
@@ -246,7 +248,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
             className="btn-saffron text-xs py-2 px-4 flex items-center gap-1.5 shadow-xs"
           >
             <Plus className="w-4 h-4" />
-            <span>Upload Document</span>
+            <span>{t('Upload Document', 'Upload Document')}</span>
           </button>
         </div>
       </div>
@@ -254,35 +256,35 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
       {/* ── Overview Metrics Bar ── */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="card-gov p-4 bg-white dark:bg-dark-bg-card border-l-4 border-l-bis-navy dark:border-l-blue-400">
-          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Total Vault Records</div>
+          <div className="text-xs text-gray-500 dark:text-dark-text-muted">{t('Total Vault Records', 'Total Vault Records')}</div>
           <div className="text-xl font-bold text-gray-900 dark:text-white mt-1 font-heading">{metrics.total}</div>
-          <div className="text-[10px] text-gray-400 mt-0.5">Active compliance files</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">{t('Active compliance files', 'Active compliance files')}</div>
         </div>
 
         <div className="card-gov p-4 bg-white dark:bg-dark-bg-card border-l-4 border-l-green-500">
-          <div className="text-xs text-gray-500 dark:text-dark-text-muted">BIS Verified &amp; Approved</div>
+          <div className="text-xs text-gray-500 dark:text-dark-text-muted">{t('BIS Verified & Approved', 'BIS Verified & Approved')}</div>
           <div className="text-xl font-bold text-green-600 dark:text-green-400 mt-1 font-heading">{metrics.approved}</div>
-          <div className="text-[10px] text-green-600/80 mt-0.5">Passed technical scrutiny</div>
+          <div className="text-[10px] text-green-600/80 mt-0.5">{t('Passed technical scrutiny', 'Passed technical scrutiny')}</div>
         </div>
 
         <div className="card-gov p-4 bg-white dark:bg-dark-bg-card border-l-4 border-l-amber-500">
-          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Under Scrutiny</div>
+          <div className="text-xs text-gray-500 dark:text-dark-text-muted">{t('Under Scrutiny', 'Under Scrutiny')}</div>
           <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1 font-heading">{metrics.review}</div>
-          <div className="text-[10px] text-amber-600/80 mt-0.5">Assigned to BIS officer</div>
+          <div className="text-[10px] text-amber-600/80 mt-0.5">{t('Assigned to BIS officer', 'Assigned to BIS officer')}</div>
         </div>
 
         <div className="card-gov p-4 bg-white dark:bg-dark-bg-card border-l-4 border-l-red-500">
-          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Action Required</div>
+          <div className="text-xs text-gray-500 dark:text-dark-text-muted">{t('Action Required', 'Action Required')}</div>
           <div className="text-xl font-bold text-red-600 dark:text-red-400 mt-1 font-heading">{metrics.actionRequired}</div>
-          <div className="text-[10px] text-red-600/80 mt-0.5">Requires re-upload / remarks</div>
+          <div className="text-[10px] text-red-600/80 mt-0.5">{t('Requires re-upload / remarks', 'Requires re-upload / remarks')}</div>
         </div>
 
         <div className="card-gov p-4 bg-white dark:bg-dark-bg-card border-l-4 border-l-blue-500 col-span-2 lg:col-span-1">
-          <div className="text-xs text-gray-500 dark:text-dark-text-muted">Encrypted Vault Storage</div>
+          <div className="text-xs text-gray-500 dark:text-dark-text-muted">{t('Encrypted Vault Storage', 'Encrypted Vault Storage')}</div>
           <div className="text-xl font-bold text-bis-navy dark:text-blue-300 mt-1 font-heading">
             {formatFileSize(metrics.totalBytes)}
           </div>
-          <div className="text-[10px] text-gray-400 mt-0.5">ISO 27001 Cloud Tier</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">{t('ISO 27001 Cloud Tier', 'ISO 27001 Cloud Tier')}</div>
         </div>
       </div>
 
@@ -305,10 +307,10 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
           </div>
           <div>
             <span className="font-semibold text-sm text-gray-800 dark:text-dark-text">
-              Drop new compliance documents here, or <span className="text-orange-600 dark:text-orange-400 hover:underline">browse files</span>
+              {t('Drop new compliance documents here, or', 'Drop new compliance documents here, or')} <span className="text-orange-600 dark:text-orange-400 hover:underline">{t('browse files', 'browse files')}</span>
             </span>
             <p className="text-xs text-gray-400 dark:text-dark-text-muted mt-0.5">
-              Supports PDF, DOCX, XLSX, and scans up to 25MB · Encrypted with AES-256 for BIS official audit
+              {t('Supports PDF, DOCX, XLSX, and scans up to 25MB · Encrypted with AES-256 for BIS official audit', 'Supports PDF, DOCX, XLSX, and scans up to 25MB · Encrypted with AES-256 for BIS official audit')}
             </p>
           </div>
         </div>
@@ -350,7 +352,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by title, ID (e.g. DOC-2025), standard code (e.g. IS 10500), or notes..."
+              placeholder={t('Search by title, ID, standard code, or notes...', 'Search by title, ID, standard code, or notes...')}
               className="input-gov pl-9 text-xs"
             />
             {search && (
@@ -359,7 +361,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                 onClick={() => setSearch('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
               >
-                Clear
+                {t('Clear', 'Clear')}
               </button>
             )}
           </div>
@@ -371,11 +373,11 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               onChange={(e) => setStatusFilter(e.target.value)}
               className="input-gov text-xs py-1.5 px-2.5 w-auto"
             >
-              <option value="all">All Statuses</option>
-              <option value="approved">Approved &amp; Verified</option>
-              <option value="review">Under Scrutiny / Review</option>
-              <option value="pending">Pending Officer</option>
-              <option value="action_required">Action Required</option>
+              <option value="all">{t('All Statuses', 'All Statuses')}</option>
+              <option value="approved">{t('Approved & Verified', 'Approved & Verified')}</option>
+              <option value="review">{t('Under Scrutiny / Review', 'Under Scrutiny / Review')}</option>
+              <option value="pending">{t('Pending Officer', 'Pending Officer')}</option>
+              <option value="action_required">{t('Action Required', 'Action Required')}</option>
             </select>
 
             <select
@@ -383,10 +385,10 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               onChange={(e) => setSortBy(e.target.value)}
               className="input-gov text-xs py-1.5 px-2.5 w-auto"
             >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-              <option value="name">Title (A-Z)</option>
-              <option value="size">File Size</option>
+              <option value="newest">{t('Newest First', 'Newest First')}</option>
+              <option value="oldest">{t('Oldest First', 'Oldest First')}</option>
+              <option value="name">{t('Title (A-Z)', 'Title (A-Z)')}</option>
+              <option value="size">{t('File Size', 'File Size')}</option>
             </select>
           </div>
         </div>
@@ -407,7 +409,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                     : 'bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-dark-text hover:bg-gray-200 dark:hover:bg-dark-bg-secondary'
                 )}
               >
-                {cat}
+                {t(cat, cat)}
               </button>
             )
           })}
@@ -418,9 +420,9 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs text-gray-500 dark:text-dark-text-muted px-1">
           <span>
-            Showing <strong>{filteredDocs.length}</strong> of {docs.length} compliance documents
+            {t('Showing', 'Showing')} <strong>{filteredDocs.length}</strong> {t('of', 'of')} {docs.length} {t('compliance documents', 'compliance documents')}
           </span>
-          <span>Verified under BIS (Conformity Assessment) Regulations, 2018</span>
+          <span>{t('Verified under BIS (Conformity Assessment) Regulations, 2018', 'Verified under BIS (Conformity Assessment) Regulations, 2018')}</span>
         </div>
 
         {filteredDocs.length === 0 ? (
@@ -428,11 +430,11 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
             <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-dark-bg-secondary text-gray-400 flex items-center justify-center mx-auto">
               <FileText className="w-6 h-6" />
             </div>
-            <h3 className="text-sm font-bold text-gray-800 dark:text-dark-text">No compliance documents found</h3>
+            <h3 className="text-sm font-bold text-gray-800 dark:text-dark-text">{t('No compliance documents found', 'No compliance documents found')}</h3>
             <p className="text-xs text-gray-500 max-w-sm mx-auto">
               {search || categoryFilter !== 'All' || statusFilter !== 'all'
-                ? 'Try adjusting your search criteria or resetting filters.'
-                : 'Upload your factory quality manual, NABL lab test reports, or raw material certificates to start.'}
+                ? t('Try adjusting your search criteria or resetting filters.', 'Try adjusting your search criteria or resetting filters.')
+                : t('Upload your factory quality manual, NABL lab test reports, or raw material certificates to start.', 'Upload your factory quality manual, NABL lab test reports, or raw material certificates to start.')}
             </p>
             {(search || categoryFilter !== 'All' || statusFilter !== 'all') && (
               <button
@@ -440,7 +442,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                 onClick={() => { setSearch(''); setCategoryFilter('All'); setStatusFilter('all') }}
                 className="btn-gov-outline text-xs py-1.5 px-3"
               >
-                Reset All Filters
+                {t('Reset All Filters', 'Reset All Filters')}
               </button>
             )}
           </div>
@@ -493,16 +495,16 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
 
                       {/* Technical specifications subline */}
                       <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-dark-text-muted flex-wrap pt-0.5">
-                        <span>Format: <strong>{doc.fileType || 'PDF'}</strong></span>
+                        <span>{t('Format:', 'Format:')} <strong>{doc.fileType || 'PDF'}</strong></span>
                         <span>·</span>
-                        <span>Size: <strong>{formatFileSize(doc.size || doc.file_size)}</strong></span>
+                        <span>{t('Size:', 'Size:')} <strong>{formatFileSize(doc.size || doc.file_size)}</strong></span>
                         <span>·</span>
-                        <span>Uploaded: <strong>{formatDate(doc.uploaded || doc.uploaded_at)}</strong></span>
+                        <span>{t('Uploaded:', 'Uploaded:')} <strong>{formatDate(doc.uploaded || doc.uploaded_at)}</strong></span>
                         {doc.validUntil && (
                           <>
                             <span>·</span>
                             <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                              Valid until {formatDate(doc.validUntil)}
+                              {t('Valid until', 'Valid until')} {formatDate(doc.validUntil)}
                             </span>
                           </>
                         )}
@@ -515,17 +517,17 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                     <div>
                       {isApproved && (
                         <span className="badge-gov status-approved text-xs px-2.5 py-1 flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Verified &amp; Approved
+                          <CheckCircle2 className="w-3.5 h-3.5" /> {t('Verified & Approved', 'Verified & Approved')}
                         </span>
                       )}
                       {isReview && (
                         <span className="badge-gov bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800 text-xs px-2.5 py-1 flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" /> Under Scrutiny
+                          <Clock className="w-3.5 h-3.5" /> {t('Under Scrutiny', 'Under Scrutiny')}
                         </span>
                       )}
                       {isAction && (
                         <span className="badge-gov bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-red-200 dark:border-red-800 text-xs px-2.5 py-1 flex items-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5" /> Action Required
+                          <AlertTriangle className="w-3.5 h-3.5" /> {t('Action Required', 'Action Required')}
                         </span>
                       )}
                     </div>
@@ -535,7 +537,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                         type="button"
                         onClick={() => setSelectedDoc(doc)}
                         className="p-2 rounded-gov text-gray-500 hover:text-bis-navy dark:hover:text-blue-300 hover:bg-slate-100 dark:hover:bg-dark-bg-secondary transition-colors"
-                        title="Deep Document Inspection"
+                        title={t('Deep Document Inspection', 'Deep Document Inspection')}
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -544,7 +546,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                         type="button"
                         onClick={() => handleDownloadDoc(doc)}
                         className="p-2 rounded-gov text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-slate-100 dark:hover:bg-dark-bg-secondary transition-colors"
-                        title="Download Document"
+                        title={t('Download Document', 'Download Document')}
                       >
                         <Download className="w-4 h-4" />
                       </button>
@@ -553,7 +555,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                         type="button"
                         onClick={() => setDocToDelete(doc)}
                         className="p-2 rounded-gov text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                        title="Remove Document"
+                        title={t('Remove Document', 'Remove Document')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -602,35 +604,35 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               {/* Technical Metadata Grid */}
               <div className="grid grid-cols-2 gap-2.5 p-3.5 bg-slate-50 dark:bg-dark-bg-secondary rounded-gov border border-slate-200 dark:border-dark-border">
                 <div>
-                  <span className="text-gray-400 block mb-0.5">Classification</span>
-                  <span className="font-semibold text-gray-800 dark:text-dark-text">{selectedDoc.category}</span>
+                  <span className="text-gray-400 block mb-0.5">{t('Classification', 'Classification')}</span>
+                  <span className="font-semibold text-gray-800 dark:text-dark-text">{t(selectedDoc.category, selectedDoc.category)}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block mb-0.5">Governing Indian Standard</span>
+                  <span className="text-gray-400 block mb-0.5">{t('Governing Indian Standard', 'Governing Indian Standard')}</span>
                   <span className="font-mono font-bold text-bis-navy dark:text-blue-400">
                     {selectedDoc.standardCode || selectedDoc.standard_code || 'General Scheme-I'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block mb-0.5">File Format &amp; Size</span>
+                  <span className="text-gray-400 block mb-0.5">{t('File Format & Size', 'File Format & Size')}</span>
                   <span className="font-semibold text-gray-800 dark:text-dark-text">
                     {selectedDoc.fileType || 'PDF'} · {formatFileSize(selectedDoc.size || selectedDoc.file_size)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block mb-0.5">Version &amp; Revision</span>
+                  <span className="text-gray-400 block mb-0.5">{t('Version & Revision', 'Version & Revision')}</span>
                   <span className="font-mono font-bold text-gray-800 dark:text-dark-text">v{selectedDoc.version || '1.0'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block mb-0.5">Uploaded On</span>
+                  <span className="text-gray-400 block mb-0.5">{t('Uploaded On', 'Uploaded On')}</span>
                   <span className="font-semibold text-gray-800 dark:text-dark-text">
                     {formatDate(selectedDoc.uploaded || selectedDoc.uploaded_at)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block mb-0.5">Validity Milestone</span>
+                  <span className="text-gray-400 block mb-0.5">{t('Validity Milestone', 'Validity Milestone')}</span>
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                    {selectedDoc.validUntil ? formatDate(selectedDoc.validUntil) : 'Annual Surveillance Period'}
+                    {selectedDoc.validUntil ? formatDate(selectedDoc.validUntil) : t('Annual Surveillance Period', 'Annual Surveillance Period')}
                   </span>
                 </div>
               </div>
@@ -639,41 +641,41 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               <div className="p-3 bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 rounded-gov">
                 <div className="font-bold text-blue-900 dark:text-blue-300 mb-1 flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span>BIS Scrutiny &amp; Verification Remarks</span>
+                  <span>{t('BIS Scrutiny & Verification Remarks', 'BIS Scrutiny & Verification Remarks')}</span>
                 </div>
                 <p className="text-blue-800 dark:text-blue-200 leading-relaxed text-[11px]">
-                  {selectedDoc.reviewNotes || selectedDoc.review_notes || 'Verified during technical inspection by the Bureau of Indian Standards Scrutiny Cell.'}
+                  {selectedDoc.reviewNotes || selectedDoc.review_notes || t('Verified during technical inspection by the Bureau of Indian Standards Scrutiny Cell.', 'Verified during technical inspection by the Bureau of Indian Standards Scrutiny Cell.')}
                 </p>
               </div>
 
               {/* Statutory Compliance Integrity Checklist */}
               <div className="space-y-2 p-3 bg-gray-50 dark:bg-dark-bg-secondary rounded-gov border border-gray-200 dark:border-dark-border">
                 <span className="font-bold text-gray-800 dark:text-white block uppercase tracking-wider text-[10px]">
-                  BIS Statutory Compliance Checklist
+                  {t('BIS Statutory Compliance Checklist', 'BIS Statutory Compliance Checklist')}
                 </span>
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                     <Check className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                    <span>NABL ISO/IEC 17025 testing scope alignment verified</span>
+                    <span>{t('NABL ISO/IEC 17025 testing scope alignment verified', 'NABL ISO/IEC 17025 testing scope alignment verified')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                     <Check className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                    <span>Authorized factory technical personnel digital signature validated</span>
+                    <span>{t('Authorized factory technical personnel digital signature validated', 'Authorized factory technical personnel digital signature validated')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                     <Check className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                    <span>Traceability calibrated to National Physical Laboratory (NPL) standards</span>
+                    <span>{t('Traceability calibrated to National Physical Laboratory (NPL) standards', 'Traceability calibrated to National Physical Laboratory (NPL) standards')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                     <Check className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                    <span>Scheme-I Quality Control Order (QCO) mandatory clauses confirmed</span>
+                    <span>{t('Scheme-I Quality Control Order (QCO) mandatory clauses confirmed', 'Scheme-I Quality Control Order (QCO) mandatory clauses confirmed')}</span>
                   </div>
                 </div>
               </div>
 
               {/* Cryptographic Checksum Banner */}
               <div className="p-2.5 bg-slate-100 dark:bg-dark-bg rounded-gov flex items-center justify-between text-[11px] font-mono">
-                <span className="text-gray-500">SHA-256 Hash:</span>
+                <span className="text-gray-500">SHA-256:</span>
                 <span className="font-bold text-gray-700 dark:text-gray-300 truncate max-w-[280px]">
                   {selectedDoc.checksum || 'SHA256:8f4c2e5b927a4d1e8c046a77d'}
                 </span>
@@ -698,7 +700,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                 onClick={() => handleDownloadDoc(selectedDoc)}
                 className="btn-saffron text-xs py-2 px-3.5 flex items-center gap-1.5"
               >
-                <Download className="w-3.5 h-3.5" /> Download Document Record
+                <Download className="w-3.5 h-3.5" /> {t('Download Document Record', 'Download Document Record')}
               </button>
 
               <button
@@ -706,7 +708,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                 onClick={() => setSelectedDoc(null)}
                 className="btn-gov-outline text-xs py-2 px-4"
               >
-                Close
+                {t('Close', 'Close')}
               </button>
             </div>
           </div>
@@ -724,9 +726,9 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-gray-900 dark:text-white font-heading">
-                    Upload Compliance Document
+                    {t('Upload Compliance Document', 'Upload Compliance Document')}
                   </h3>
-                  <p className="text-[11px] text-gray-500">BIS Factory &amp; Product Certification Scheme</p>
+                  <p className="text-[11px] text-gray-500">{t('BIS Factory & Product Certification Scheme', 'BIS Factory & Product Certification Scheme')}</p>
                 </div>
               </div>
               <button
@@ -742,7 +744,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               {/* Document Title */}
               <div>
                 <label className="block font-semibold text-gray-700 dark:text-dark-text mb-1">
-                  Document Title *
+                  {t('Document Title *', 'Document Title *')}
                 </label>
                 <input
                   type="text"
@@ -758,7 +760,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-gray-700 dark:text-dark-text mb-1">
-                    Document Category *
+                    {t('Document Category *', 'Document Category *')}
                   </label>
                   <select
                     value={formCategory}
@@ -766,14 +768,14 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                     className="input-gov text-xs"
                   >
                     {DOCUMENT_CATEGORIES.filter((c) => c !== 'All').map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
+                      <option key={cat} value={cat}>{t(cat, cat)}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block font-semibold text-gray-700 dark:text-dark-text mb-1">
-                    Related Standard (IS Code) *
+                    {t('Related Standard (IS Code) *', 'Related Standard (IS Code) *')}
                   </label>
                   <input
                     type="text"
@@ -788,7 +790,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
 
               {/* Quick Standard Chips */}
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] text-gray-400 font-semibold">Common Standards:</span>
+                <span className="text-[10px] text-gray-400 font-semibold">{t('Common Standards:', 'Common Standards:')}</span>
                 {STANDARD_SUGGESTIONS.map((chip) => (
                   <button
                     key={chip}
@@ -805,7 +807,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-gray-700 dark:text-dark-text mb-1">
-                    Document Version
+                    {t('Document Version', 'Document Version')}
                   </label>
                   <input
                     type="text"
@@ -818,7 +820,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
 
                 <div>
                   <label className="block font-semibold text-gray-700 dark:text-dark-text mb-1">
-                    Validity / Renewal Date (Optional)
+                    {t('Validity / Renewal Date (Optional)', 'Validity / Renewal Date (Optional)')}
                   </label>
                   <input
                     type="date"
@@ -832,7 +834,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               {/* Review Notes / Technical Description */}
               <div>
                 <label className="block font-semibold text-gray-700 dark:text-dark-text mb-1">
-                  Compliance Summary / Officer Notes
+                  {t('Compliance Summary / Officer Notes', 'Compliance Summary / Officer Notes')}
                 </label>
                 <textarea
                   rows={2}
@@ -846,7 +848,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               {/* File Attachment Selector */}
               <div>
                 <label className="block font-semibold text-gray-700 dark:text-dark-text mb-1">
-                  Attach Official File (PDF, DOCX, XLSX)
+                  {t('Attach Official File (PDF, DOCX, XLSX)', 'Attach Official File (PDF, DOCX, XLSX)')}
                 </label>
                 <div
                   onClick={() => modalFileInputRef.current?.click()}
@@ -858,7 +860,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                       {selectedFile.name} ({formatFileSize(selectedFile.size)})
                     </div>
                   ) : (
-                    <span className="text-gray-500 text-[11px]">Click to select document file</span>
+                    <span className="text-gray-500 text-[11px]">{t('Click to select document file', 'Click to select document file')}</span>
                   )}
                   <input
                     ref={modalFileInputRef}
@@ -882,13 +884,13 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                   onClick={() => setShowUploadModal(false)}
                   className="btn-gov-outline text-xs py-2 px-3"
                 >
-                  Cancel
+                  {t('Cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   className="btn-saffron text-xs py-2 px-4"
                 >
-                  Save &amp; Queue for Scrutiny
+                  {t('Save & Queue for Scrutiny', 'Save & Queue for Scrutiny')}
                 </button>
               </div>
             </form>
@@ -906,13 +908,13 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
               </div>
               <div>
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white font-heading">
-                  Remove Document?
+                  {t('Remove Document?', 'Remove Document?')}
                 </h3>
-                <p className="text-xs text-gray-500">Permanent vault removal</p>
+                <p className="text-xs text-gray-500">{t('Permanent vault removal', 'Permanent vault removal')}</p>
               </div>
             </div>
             <p className="text-xs text-gray-600 dark:text-dark-text-muted mb-5 leading-relaxed">
-              Are you sure you want to permanently delete <strong className="text-gray-900 dark:text-white">&ldquo;{docToDelete.name}&rdquo;</strong> ({docToDelete.id}) from your compliance vault?
+              {t('Are you sure you want to permanently delete', 'Are you sure you want to permanently delete')} <strong className="text-gray-900 dark:text-white">&ldquo;{docToDelete.name}&rdquo;</strong> ({docToDelete.id}) {t('from your compliance vault?', 'from your compliance vault?')}
             </p>
             <div className="flex items-center justify-end gap-2">
               <button
@@ -920,7 +922,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                 onClick={() => setDocToDelete(null)}
                 className="btn-gov-outline text-xs py-1.5 px-3"
               >
-                Cancel
+                {t('Cancel', 'Cancel')}
               </button>
               <button
                 type="button"
@@ -931,7 +933,7 @@ Issuer / Repository   : BIS Government Cloud Secure Vault (MeitY Approved)
                 }}
                 className="btn-gov bg-red-600 hover:bg-red-700 text-xs py-1.5 px-3"
               >
-                Confirm Delete
+                {t('Confirm Delete', 'Confirm Delete')}
               </button>
             </div>
           </div>

@@ -9,8 +9,10 @@ import { toast } from 'sonner'
 import useAuthStore from '@/store/authStore'
 import useDataStore from '@/store/dataStore'
 import { cn, formatDateTime, formatDate } from '@/lib/utils'
+import { useTranslation } from '@/lib/i18n'
 
 export default function NotificationCenter({ role = 'consumer' }) {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const {
     notifications,
@@ -93,28 +95,28 @@ export default function NotificationCenter({ role = 'consumer' }) {
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
             <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
-            Urgent Directive
+            {t('Urgent Directive', 'Urgent Directive')}
           </span>
         )
       case 'warning':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
             <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400" />
-            Advisory
+            {t('Advisory', 'Advisory')}
           </span>
         )
       case 'success':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
             <CheckCircle2 className="w-3 h-3" />
-            Active Benefit
+            {t('Active Benefit', 'Active Benefit')}
           </span>
         )
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
             <Info className="w-3 h-3" />
-            Information
+            {t('Information', 'Information')}
           </span>
         )
     }
@@ -136,18 +138,18 @@ export default function NotificationCenter({ role = 'consumer' }) {
               <Bell className="w-4 h-4" />
             </div>
             <h1 className="text-xl font-bold font-heading text-gray-900 dark:text-dark-text">
-              {role === 'consumer' ? 'Official Citizen Notifications' : 'MSME Directives & Circulars'}
+              {role === 'consumer' ? t('Official Citizen Notifications', 'Official Citizen Notifications') : t('MSME Directives & Circulars', 'MSME Directives & Circulars')}
             </h1>
             {unreadCount > 0 && (
               <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white font-mono shadow-xs">
-                {unreadCount} unread
+                {unreadCount} {t('unread', 'unread')}
               </span>
             )}
           </div>
           <p className="text-sm text-gray-500 dark:text-dark-text-muted">
             {role === 'consumer'
-              ? 'Real-time alerts, safety advisories, and gazette notifications broadcasted by BIS authorities.'
-              : 'Regulatory mandates, QCO deadlines, standard revisions, and scheme concessions broadcasted by BIS.'}
+              ? t('Real-time alerts, safety advisories, and gazette notifications broadcasted by BIS authorities.', 'Real-time alerts, safety advisories, and gazette notifications broadcasted by BIS authorities.')
+              : t('Regulatory mandates, QCO deadlines, standard revisions, and scheme concessions broadcasted by BIS.', 'Regulatory mandates, QCO deadlines, standard revisions, and scheme concessions broadcasted by BIS.')}
           </p>
         </div>
 
@@ -158,7 +160,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
               className="btn-gov-outline text-xs py-2 px-3 flex items-center gap-1.5 shadow-xs"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>Mark All as Read</span>
+              <span>{t('Mark All as Read', 'Mark All as Read')}</span>
             </button>
           )}
         </div>
@@ -178,7 +180,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
                   : 'bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-dark-text hover:bg-gray-200'
               )}
             >
-              All ({roleNotifications.length})
+              {t('All', 'All')} ({roleNotifications.length})
             </button>
 
             <button
@@ -190,7 +192,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
                   : 'bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-dark-text hover:bg-gray-200'
               )}
             >
-              <span>Unread</span>
+              <span>{t('Unread', 'Unread')}</span>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/30 text-white font-mono font-bold">
                   {unreadCount}
@@ -208,7 +210,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
               )}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
-              <span>Urgent ({urgentCount})</span>
+              <span>{t('Urgent', 'Urgent')} ({urgentCount})</span>
             </button>
 
             {categories.map((cat) => (
@@ -222,7 +224,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
                     : 'bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-dark-text hover:bg-gray-200'
                 )}
               >
-                {cat}
+                {t(cat, cat)}
               </button>
             ))}
           </div>
@@ -234,7 +236,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search circulars, topics..."
+              placeholder={t('Search circulars, topics...', 'Search circulars, topics...')}
               className="input-gov pl-8 pr-3 py-1.5 text-xs w-full"
             />
           </div>
@@ -248,11 +250,11 @@ export default function NotificationCenter({ role = 'consumer' }) {
             <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 text-bis-navy dark:text-blue-400 flex items-center justify-center mx-auto mb-3">
               <Bell className="w-6 h-6 opacity-60" />
             </div>
-            <h3 className="font-bold text-gray-800 dark:text-dark-text text-sm">No notifications found</h3>
+            <h3 className="font-bold text-gray-800 dark:text-dark-text text-sm">{t('No notifications found', 'No notifications found')}</h3>
             <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-1 max-w-sm mx-auto">
               {searchQuery || activeFilter !== 'all'
-                ? 'Try adjusting your search or category filter.'
-                : 'You are all caught up! Official updates and directives broadcasted by BIS will appear here.'}
+                ? t('Try adjusting your search or category filter.', 'Try adjusting your search or category filter.')
+                : t('You are all caught up! Official updates and directives broadcasted by BIS will appear here.', 'You are all caught up! Official updates and directives broadcasted by BIS will appear here.')}
             </p>
           </div>
         ) : (
@@ -290,7 +292,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
                       <div className="flex items-center gap-2 flex-wrap">
                         {getPriorityBadge(notif.priority)}
                         <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-dark-text-muted border border-gray-200/60 dark:border-dark-border/60">
-                          {notif.category}
+                          {t(notif.category, notif.category)}
                         </span>
                         <span className="text-[11px] text-gray-400 dark:text-dark-text-muted">
                           · {formatDateTime(notif.created)}
@@ -303,11 +305,11 @@ export default function NotificationCenter({ role = 'consumer' }) {
                           ? 'font-semibold text-gray-800 dark:text-dark-text'
                           : 'font-bold text-gray-900 dark:text-white'
                       )}>
-                        {notif.title}
+                        {t(notif.title, notif.title)}
                       </h3>
 
                       <p className="text-xs text-gray-600 dark:text-dark-text-muted line-clamp-2 leading-relaxed">
-                        {notif.message}
+                        {t(notif.message, notif.message)}
                       </p>
 
                       <div className="flex items-center gap-3 pt-1 text-[11px] text-gray-400 dark:text-dark-text-muted">
@@ -317,7 +319,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
                         </span>
                         {notif.targetRole === 'all' && (
                           <span className="px-1.5 py-0.2 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-medium">
-                            Public &amp; MSME Broadcast
+                            {t('Public & MSME Broadcast', 'Public & MSME Broadcast')}
                           </span>
                         )}
                       </div>
@@ -331,7 +333,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
                         to={notif.actionUrl}
                         className="btn-gov-outline text-xs py-1.5 px-2.5 inline-flex items-center gap-1 shadow-xs"
                       >
-                        <span>Open Details</span>
+                        <span>{t('Open Details', 'Open Details')}</span>
                         <ArrowRight className="w-3 h-3" />
                       </Link>
                     )}
@@ -339,7 +341,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
                       type="button"
                       onClick={(e) => handleToggleRead(notif, e)}
                       className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-bg text-gray-400 hover:text-bis-navy dark:hover:text-blue-400 transition-colors"
-                      title={isRead ? 'Read' : 'Mark as read'}
+                      title={isRead ? t('Read', 'Read') : t('Mark as read', 'Mark as read')}
                     >
                       <Check className={cn('w-4 h-4', isRead ? 'text-green-500' : 'text-gray-400')} />
                     </button>
@@ -360,14 +362,14 @@ export default function NotificationCenter({ role = 'consumer' }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   {getPriorityBadge(selectedNotif.priority)}
                   <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 dark:bg-dark-bg text-gray-700 dark:text-dark-text border border-gray-200 dark:border-dark-border">
-                    {selectedNotif.category}
+                    {t(selectedNotif.category, selectedNotif.category)}
                   </span>
                 </div>
                 <h2 className="text-base font-bold text-gray-900 dark:text-white font-heading mt-1">
-                  {selectedNotif.title}
+                  {t(selectedNotif.title, selectedNotif.title)}
                 </h2>
                 <div className="text-[11px] text-gray-400 dark:text-dark-text-muted flex items-center gap-2">
-                  <span>Official Circular: {selectedNotif.id}</span>
+                  <span>{t('Official Circular', 'Official Circular')}: {selectedNotif.id}</span>
                   <span>·</span>
                   <span>{formatDateTime(selectedNotif.created)}</span>
                 </div>
@@ -381,13 +383,13 @@ export default function NotificationCenter({ role = 'consumer' }) {
             </div>
 
             <div className="py-2 text-xs sm:text-sm text-gray-700 dark:text-dark-text leading-relaxed bg-gray-50 dark:bg-dark-bg p-4 rounded-gov border border-gray-100 dark:border-dark-border space-y-2">
-              <p className="whitespace-pre-line">{selectedNotif.message}</p>
+              <p className="whitespace-pre-line">{t(selectedNotif.message, selectedNotif.message)}</p>
             </div>
 
             <div className="flex items-center justify-between text-xs text-gray-500 dark:text-dark-text-muted pt-2">
               <div className="flex items-center gap-1.5">
                 <Shield className="w-3.5 h-3.5 text-bis-navy dark:text-blue-400" />
-                <span>Issued by: <strong>{selectedNotif.sender}</strong></span>
+                <span>{t('Issued by', 'Issued by')}: <strong>{selectedNotif.sender}</strong></span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -395,7 +397,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
                   onClick={() => setSelectedNotif(null)}
                   className="btn-gov-outline text-xs py-1.5 px-3"
                 >
-                  Close
+                  {t('Close', 'Close')}
                 </button>
                 {selectedNotif.actionUrl && (
                   <Link
@@ -403,7 +405,7 @@ export default function NotificationCenter({ role = 'consumer' }) {
                     onClick={() => setSelectedNotif(null)}
                     className="btn-gov text-xs py-1.5 px-3.5 flex items-center gap-1.5 shadow-xs"
                   >
-                    <span>Proceed to Portal Service</span>
+                    <span>{t('Proceed to Portal Service', 'Proceed to Portal Service')}</span>
                     <ExternalLink className="w-3 h-3" />
                   </Link>
                 )}
