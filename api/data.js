@@ -44,29 +44,57 @@ export default async function handler(req, res) {
     if (type === 'complaints') {
       if (req.method === 'GET') {
         const rows = await sql`
-          SELECT id, subject, product, location, description, status, date
+          SELECT id, user_id as "userId", user_email as "userEmail", subject, product,
+                 location, description, status, remarks, date, updated
           FROM complaints
           ORDER BY date DESC
         `
         return res.status(200).json({ complaints: rows || [] })
       }
       if (req.method === 'POST') {
-        const { id, subject, product, location = 'New Delhi', description = '' } = req.body || {}
+        const { id, subject, product, location = 'New Delhi', description = '', status = 'pending', userEmail: bodyEmail } = req.body || {}
         if (!subject || !product) return res.status(400).json({ error: 'Subject and product are required' })
         const compId = id || `COMP-${Date.now().toString().slice(-6)}`
-        const userId = user?.id || null
-        const userEmail = user?.email || 'consumer@bis.gov.in'
+        const userId = user?.id ? parseInt(user.id, 10) : null
+        const userEmail = bodyEmail || user?.email || 'consumer@bis.gov.in'
         const [newRow] = await sql`
-          INSERT INTO complaints (id, user_id, user_email, subject, product, location, description, status)
-          VALUES (${compId}, ${userId}, ${userEmail}, ${subject}, ${product}, ${location}, ${description}, 'pending')
-          RETURNING *
+          INSERT INTO complaints (id, user_id, user_email, subject, product, location, description, status, remarks, date, updated)
+          VALUES (${compId}, ${userId}, ${userEmail}, ${subject}, ${product}, ${location}, ${description}, ${status}, '', NOW(), NOW())
+          RETURNING id, user_id as "userId", user_email as "userEmail", subject, product,
+                    location, description, status, remarks, date, updated
         `
+        await sql`
+          INSERT INTO audit_logs (user_email, action, resource, ip_address, created_at)
+          VALUES (${userEmail}, 'COMPLAINT_FILED', ${'Complaint ' + compId + ' registered for ' + product}, '127.0.0.1', NOW())
+        `.catch(() => {})
+
         return res.status(201).json({ complaint: newRow })
       }
       if (req.method === 'PUT') {
-        const { id, status } = req.body || {}
-        const [updated] = await sql`UPDATE complaints SET status = ${status} WHERE id = ${id} RETURNING *`
+        const { id, status, remarks } = req.body || {}
+        if (!id) return res.status(400).json({ error: 'Complaint ID is required' })
+        const [updated] = await sql`
+          UPDATE complaints 
+          SET status = COALESCE(${status}, status),
+              remarks = COALESCE(${remarks}, remarks),
+              updated = NOW()
+          WHERE id = ${id} 
+          RETURNING id, user_id as "userId", user_email as "userEmail", subject, product,
+                    location, description, status, remarks, date, updated
+        `
+        const userEmail = user?.email || 'admin@bis.gov.in'
+        await sql`
+          INSERT INTO audit_logs (user_email, action, resource, ip_address, created_at)
+          VALUES (${userEmail}, 'COMPLAINT_STATUS_UPDATED', ${'Complaint ' + id + ' marked as ' + status}, '127.0.0.1', NOW())
+        `.catch(() => {})
+
         return res.status(200).json({ complaint: updated })
+      }
+      if (req.method === 'DELETE') {
+        const compId = req.query?.id || req.body?.id
+        if (!compId) return res.status(400).json({ error: 'Complaint ID is required' })
+        await sql`DELETE FROM complaints WHERE id = ${compId}`
+        return res.status(200).json({ success: true, deletedId: compId })
       }
     }
 
@@ -74,28 +102,58 @@ export default async function handler(req, res) {
     if (type === 'certifications') {
       if (req.method === 'GET') {
         const rows = await sql`
-          SELECT id, product, standard, category, lab, status, applied, updated, validity
+          SELECT id, user_id as "userId", user_email as "userEmail", product, standard,
+                 category, lab, status, remarks, validity, applied, updated
           FROM certifications
           ORDER BY applied DESC
         `
         return res.status(200).json({ certifications: rows || [] })
       }
       if (req.method === 'POST') {
-        const { id, product, standard, category = 'ISI Mark', lab = 'Central Lab Sahibabad' } = req.body || {}
+        const { id, product, standard, category = 'ISI Mark', lab = 'Central Lab Sahibabad', status = 'pending', validity = 'Under Review', userEmail: bodyEmail } = req.body || {}
+        if (!product || !standard) return res.status(400).json({ error: 'Product and standard are required' })
         const certId = id || `CM/L-${Math.floor(1000000 + Math.random() * 9000000)}`
-        const userId = user?.id || null
-        const userEmail = user?.email || 'msme@bis.gov.in'
+        const userId = user?.id ? parseInt(user.id, 10) : null
+        const userEmail = bodyEmail || user?.email || 'msme@bis.gov.in'
         const [newRow] = await sql`
-          INSERT INTO certifications (id, user_id, user_email, product, standard, category, lab, status, validity)
-          VALUES (${certId}, ${userId}, ${userEmail}, ${product}, ${standard}, ${category}, ${lab}, 'pending', 'Under Review')
-          RETURNING *
+          INSERT INTO certifications (id, user_id, user_email, product, standard, category, lab, status, remarks, validity, applied, updated)
+          VALUES (${certId}, ${userId}, ${userEmail}, ${product}, ${standard}, ${category}, ${lab}, ${status}, '', ${validity}, NOW(), NOW())
+          RETURNING id, user_id as "userId", user_email as "userEmail", product, standard,
+                    category, lab, status, remarks, validity, applied, updated
         `
+        await sql`
+          INSERT INTO audit_logs (user_email, action, resource, ip_address, created_at)
+          VALUES (${userEmail}, 'CERTIFICATION_APPLIED', ${'Application ' + certId + ' submitted for ' + product}, '127.0.0.1', NOW())
+        `.catch(() => {})
+
         return res.status(201).json({ certification: newRow })
       }
       if (req.method === 'PUT') {
-        const { id, status } = req.body || {}
-        const [updated] = await sql`UPDATE certifications SET status = ${status}, updated = NOW() WHERE id = ${id} RETURNING *`
+        const { id, status, remarks, validity } = req.body || {}
+        if (!id) return res.status(400).json({ error: 'Certification ID is required' })
+        const [updated] = await sql`
+          UPDATE certifications 
+          SET status = COALESCE(${status}, status),
+              remarks = COALESCE(${remarks}, remarks),
+              validity = COALESCE(${validity}, validity),
+              updated = NOW()
+          WHERE id = ${id} 
+          RETURNING id, user_id as "userId", user_email as "userEmail", product, standard,
+                    category, lab, status, remarks, validity, applied, updated
+        `
+        const userEmail = user?.email || 'admin@bis.gov.in'
+        await sql`
+          INSERT INTO audit_logs (user_email, action, resource, ip_address, created_at)
+          VALUES (${userEmail}, 'CERTIFICATION_STATUS_UPDATED', ${'Certification ' + id + ' marked as ' + status}, '127.0.0.1', NOW())
+        `.catch(() => {})
+
         return res.status(200).json({ certification: updated })
+      }
+      if (req.method === 'DELETE') {
+        const certId = req.query?.id || req.body?.id
+        if (!certId) return res.status(400).json({ error: 'Certification ID is required' })
+        await sql`DELETE FROM certifications WHERE id = ${certId}`
+        return res.status(200).json({ success: true, deletedId: certId })
       }
     }
 
@@ -366,6 +424,112 @@ export default async function handler(req, res) {
           await sql`DELETE FROM chat_sessions WHERE id = ${sessId} AND user_id = ${numericUserId}`
         }
         return res.status(200).json({ success: true })
+      }
+    }
+
+    // 8. Live Database Analytics & KPI Metrics
+    if (type === 'analytics' || type === 'admin-stats') {
+      const [
+        userRows,
+        complaintRows,
+        certRows,
+        docRows,
+        logRows,
+        queryRows
+      ] = await Promise.all([
+        sql`SELECT role, count(*)::int as count FROM users GROUP BY role`.catch(() => []),
+        sql`SELECT status, count(*)::int as count FROM complaints GROUP BY status`.catch(() => []),
+        sql`SELECT status, count(*)::int as count FROM certifications GROUP BY status`.catch(() => []),
+        sql`SELECT category, count(*)::int as count FROM documents GROUP BY category`.catch(() => []),
+        sql`SELECT count(*)::int as count FROM audit_logs`.catch(() => [{ count: 0 }]),
+        sql`SELECT count(*)::int as count FROM chat_messages WHERE role = 'user'`.catch(() => [{ count: 0 }]),
+      ])
+
+      const totalUsers = (userRows || []).reduce((sum, r) => sum + (r.count || 0), 0)
+      const totalComplaints = (complaintRows || []).reduce((sum, r) => sum + (r.count || 0), 0)
+      const totalCertifications = (certRows || []).reduce((sum, r) => sum + (r.count || 0), 0)
+      const totalDocuments = (docRows || []).reduce((sum, r) => sum + (r.count || 0), 0)
+      const totalAuditLogs = logRows[0]?.count || 0
+      const totalQueries = queryRows[0]?.count || 0
+
+      const roleBreakdown = {
+        consumer: userRows.find(r => r.role === 'consumer')?.count || 0,
+        manufacturer: userRows.find(r => r.role === 'manufacturer')?.count || 0,
+        admin: userRows.find(r => r.role === 'admin')?.count || 0,
+      }
+
+      const complaintsByStatus = {}
+      for (const r of (complaintRows || [])) complaintsByStatus[r.status] = r.count
+
+      const certsByStatus = {}
+      for (const r of (certRows || [])) certsByStatus[r.status] = r.count
+
+      return res.status(200).json({
+        success: true,
+        realtime: true,
+        timestamp: new Date().toISOString(),
+        metrics: {
+          totalUsers,
+          roleBreakdown,
+          totalComplaints,
+          complaintsByStatus,
+          totalCertifications,
+          certsByStatus,
+          totalDocuments,
+          totalAuditLogs,
+          totalQueries,
+        }
+      })
+    }
+
+    // 9. Users Management API
+    if (type === 'users') {
+      if (req.method === 'GET') {
+        const rows = await sql`
+          SELECT id, name, email, role, organization as "org", is_active as "status", created_at as "created"
+          FROM users
+          ORDER BY created_at DESC
+        `
+        const mappedUsers = (rows || []).map(u => ({
+          ...u,
+          status: u.status ? 'active' : 'inactive'
+        }))
+        return res.status(200).json({ users: mappedUsers })
+      }
+      if (req.method === 'POST') {
+        const { name, email, role = 'consumer', org = '-', status = 'active' } = req.body || {}
+        if (!name || !email) return res.status(400).json({ error: 'Name and email are required' })
+        const defaultHash = '$2a$12$4L64j0j8jLZZwYFw51wK3e6V7R0zH3gO4lH8cM1F0tQ5a3S2r9aG.'
+        const isActive = status === 'active'
+        const [newUser] = await sql`
+          INSERT INTO users (name, email, role, organization, password_hash, is_active, created_at)
+          VALUES (${name}, ${email}, ${role}, ${org}, ${defaultHash}, ${isActive}, NOW())
+          RETURNING id, name, email, role, organization as "org", is_active as "status", created_at as "created"
+        `
+        const formatted = { ...newUser, status: newUser.status ? 'active' : 'inactive' }
+        return res.status(201).json({ user: formatted })
+      }
+      if (req.method === 'PUT') {
+        const { id, name, role, org, status } = req.body || {}
+        if (!id) return res.status(400).json({ error: 'User ID is required' })
+        const isActive = status !== undefined ? (status === 'active' || status === true) : undefined
+        const [updated] = await sql`
+          UPDATE users
+          SET name = COALESCE(${name}, name),
+              role = COALESCE(${role}, role),
+              organization = COALESCE(${org}, organization),
+              is_active = COALESCE(${isActive}, is_active)
+          WHERE id = ${id}
+          RETURNING id, name, email, role, organization as "org", is_active as "status", created_at as "created"
+        `
+        const formatted = updated ? { ...updated, status: updated.status ? 'active' : 'inactive' } : null
+        return res.status(200).json({ user: formatted })
+      }
+      if (req.method === 'DELETE') {
+        const userId = req.query?.id || req.body?.id
+        if (!userId) return res.status(400).json({ error: 'User ID is required' })
+        await sql`DELETE FROM users WHERE id = ${userId}`
+        return res.status(200).json({ success: true, deletedId: userId })
       }
     }
 

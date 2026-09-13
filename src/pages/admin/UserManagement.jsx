@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   Users, Search, Plus, Edit2, Trash2, Shield, User,
-  Building2, Filter, CheckCircle2, XCircle, X, UserCheck
+  Building2, Filter, CheckCircle2, XCircle, X, UserCheck, RefreshCw
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, getRoleLabel, getRoleColor, formatDate } from '@/lib/utils'
@@ -13,7 +13,7 @@ const ROLE_ICON = { [ROLES.CONSUMER]: User, [ROLES.MANUFACTURER]: Building2, [RO
 
 export default function UserManagement() {
   const { t } = useTranslation()
-  const { users, addUser, updateUser, toggleUserStatus, deleteUser } = useDataStore()
+  const { users, addUser, updateUser, toggleUserStatus, deleteUser, syncWithDb, isDbSyncing, lastSyncedAt } = useDataStore()
 
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
@@ -91,9 +91,24 @@ export default function UserManagement() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('User Management', 'User Management')}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('User Management', 'User Management')}</h1>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live DB Synced (5s)
+            </span>
+            <button
+              onClick={() => syncWithDb()}
+              disabled={isDbSyncing}
+              title="Force sync now"
+              className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isDbSyncing ? 'animate-spin text-emerald-600' : ''}`} />
+            </button>
+          </div>
           <p className="text-sm text-gray-500 dark:text-dark-text-muted">
             {users.length} {t('total registered users across all roles (Real-Time Database)', 'total registered users across all roles (Real-Time Database)')}
+            {lastSyncedAt && <span className="ml-2 text-xs">· Synced {new Date(lastSyncedAt).toLocaleTimeString()}</span>}
           </p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-gov bg-red-600 hover:bg-red-700 text-sm">

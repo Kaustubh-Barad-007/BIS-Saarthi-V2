@@ -126,12 +126,15 @@ export async function initDb(sql) {
   try {
     await sql`ALTER TABLE complaints ADD COLUMN IF NOT EXISTS user_email TEXT`
     await sql`ALTER TABLE complaints ADD COLUMN IF NOT EXISTS location TEXT`
+    await sql`ALTER TABLE complaints ADD COLUMN IF NOT EXISTS remarks TEXT`
     await sql`ALTER TABLE complaints ADD COLUMN IF NOT EXISTS date TIMESTAMP DEFAULT NOW()`
+    await sql`ALTER TABLE complaints ADD COLUMN IF NOT EXISTS updated TIMESTAMP DEFAULT NOW()`
     await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS user_email TEXT`
     await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS standard TEXT`
     await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS category TEXT`
     await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS lab TEXT`
     await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`
+    await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS remarks TEXT`
     await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS applied TIMESTAMP DEFAULT NOW()`
     await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS updated TIMESTAMP DEFAULT NOW()`
     await sql`ALTER TABLE certifications ADD COLUMN IF NOT EXISTS validity TEXT DEFAULT 'Under Review'`
@@ -140,6 +143,7 @@ export async function initDb(sql) {
     await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'General'`
     await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS sender TEXT DEFAULT 'BIS Official'`
     await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS action_url TEXT`
+    await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_by TEXT[] DEFAULT '{}'`
     await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`
     await sql`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_email TEXT`
     await sql`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS ip_address TEXT`

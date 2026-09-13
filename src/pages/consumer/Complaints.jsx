@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { AlertTriangle, Plus, Clock, CheckCircle2, XCircle, FileText, X, Eye, ChevronRight, Shield, ExternalLink, Image as ImageIcon } from 'lucide-react'
+import { AlertTriangle, Plus, Clock, CheckCircle2, XCircle, FileText, X, Eye, ChevronRight, Shield, ExternalLink, Image as ImageIcon, RefreshCw } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
@@ -8,22 +8,29 @@ import { useTranslation } from '@/lib/i18n'
 
 export default function Complaints() {
   const { t } = useTranslation()
-  const { complaints, fileComplaint, knowledgeDocs } = useDataStore()
+  const {
+    complaints, fileComplaint, knowledgeDocs,
+    lastSyncedAt, isLiveConnected, syncWithDb, isLoadingDb
+  } = useDataStore()
   const [showForm, setShowForm] = useState(false)
   const [selectedComplaint, setSelectedComplaint] = useState(null)
   const [previewDoc, setPreviewDoc] = useState(null)
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
 
-  const onSubmit = (data) => {
-    const newComp = fileComplaint({
-      subject: data.subject.trim(),
-      product: data.product.trim(),
-      location: data.location?.trim() || 'Not specified',
-      description: data.description.trim(),
-    })
-    toast.success(`Complaint ${newComp.id} registered and saved in real-time database!`)
-    reset()
-    setShowForm(false)
+  const onSubmit = async (data) => {
+    try {
+      const newComp = await fileComplaint({
+        subject: data.subject.trim(),
+        product: data.product.trim(),
+        location: data.location?.trim() || 'Not specified',
+        description: data.description.trim(),
+      })
+      toast.success(`Complaint ${newComp?.id || ''} registered and saved in real-time database!`)
+      reset()
+      setShowForm(false)
+    } catch (err) {
+      toast.error('Failed to submit complaint. Please try again.')
+    }
   }
 
   const statusInfo = {
@@ -37,16 +44,32 @@ export default function Complaints() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('Consumer Complaints', 'Consumer Complaints')}</h1>
-          <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-            {t('Report substandard products, misleading ISI claims, or violations of BIS standards.', 'Report substandard products, misleading ISI claims, or violations of BIS standards.')}
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <p className="text-sm text-gray-500 dark:text-dark-text-muted">
+              {t('Report substandard products, misleading ISI claims, or violations of BIS standards.', 'Report substandard products, misleading ISI claims, or violations of BIS standards.')}
+            </p>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+              <span className={`w-1.5 h-1.5 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+              Live DB Synced
+            </span>
+          </div>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-gov shadow-xs">
-          <Plus className="w-4 h-4" /> {t('File Complaint', 'File Complaint')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => syncWithDb()}
+            disabled={isLoadingDb}
+            className="btn-gov-outline text-xs p-2"
+            title="Refresh database records now"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingDb ? 'animate-spin' : ''}`} />
+          </button>
+          <button onClick={() => setShowForm(true)} className="btn-gov shadow-xs">
+            <Plus className="w-4 h-4" /> {t('File Complaint', 'File Complaint')}
+          </button>
+        </div>
       </div>
 
       {/* File complaint form */}

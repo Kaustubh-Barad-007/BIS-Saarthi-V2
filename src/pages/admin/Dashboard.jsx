@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import {
   Users, MessageSquare, Database, ClipboardList, TrendingUp,
-  Activity, ArrowRight, Shield, AlertTriangle, BadgeCheck
+  Activity, ArrowRight, Shield, AlertTriangle, BadgeCheck, RefreshCw
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
@@ -20,7 +20,10 @@ export default function AdminDashboard() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const { isDark } = useThemeStore()
-  const { getAdminStats, getRoleDistribution, auditLogs, queryCount, users } = useDataStore()
+  const {
+    getAdminStats, getRoleDistribution, auditLogs, queryCount, users,
+    lastSyncedAt, isLiveConnected, syncWithDb, isLoadingDb
+  } = useDataStore()
 
   const adminStats = getAdminStats()
   const roleDist = getRoleDistribution()
@@ -65,7 +68,26 @@ export default function AdminDashboard() {
             <Shield className="w-5 h-5 text-bis-navy dark:text-blue-400" />
             <h1 className="text-xl font-bold font-heading text-gray-900 dark:text-dark-text">{t('Admin Control Panel', 'Admin Control Panel')}</h1>
           </div>
-          <p className="text-sm text-gray-500 dark:text-dark-text-muted">{t('Welcome,', 'Welcome,')} {user?.name} · {t('Bureau of Indian Standards Official', 'Bureau of Indian Standards Official')}</p>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-dark-text-muted">
+            <span>{t('Welcome,', 'Welcome,')} {user?.name} · {t('Bureau of Indian Standards Official', 'Bureau of Indian Standards Official')}</span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+              <span className={`w-2 h-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+              Live DB Synced (5s)
+            </span>
+            {lastSyncedAt && (
+              <span className="text-xs text-gray-400 hidden sm:inline">
+                {new Date(lastSyncedAt).toLocaleTimeString()}
+              </span>
+            )}
+            <button
+              onClick={() => syncWithDb()}
+              disabled={isLoadingDb}
+              className="text-xs text-gray-500 hover:text-bis-navy dark:hover:text-blue-400 inline-flex items-center gap-1 transition-colors"
+              title="Refresh database records now"
+            >
+              <RefreshCw className={`w-3 h-3 ${isLoadingDb ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link to={ROUTES.ADMIN_COMPLAINTS} className="btn-gov-outline text-xs flex items-center gap-1.5 shadow-xs">

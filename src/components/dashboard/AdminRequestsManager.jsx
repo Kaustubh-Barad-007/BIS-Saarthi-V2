@@ -19,7 +19,8 @@ export default function AdminRequestsManager({
   const { t } = useTranslation()
   const {
     complaints, certifications,
-    updateComplaintStatus, updateCertStatus
+    updateComplaintStatus, updateCertStatus,
+    syncWithDb, isLoadingDb
   } = useDataStore()
 
   const [activeTab, setActiveTab] = useState(filterMode || initialTab) // 'all' | 'complaints' | 'certs'
@@ -217,9 +218,21 @@ export default function AdminRequestsManager({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 dark:text-dark-text-muted">
-            {t('Live Sync:', 'Live Sync:')} <strong className="text-green-600 dark:text-green-400 font-mono">{totalCount}</strong> {t('active', 'active')} {filterMode === 'complaints' ? t('complaints', 'complaints') : filterMode === 'certs' ? t('applications', 'applications') : t('cases', 'cases')}
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Live DB Synced (5s)
           </span>
+          <span className="text-xs text-gray-500 dark:text-dark-text-muted hidden md:inline">
+            <strong className="text-green-600 dark:text-green-400 font-mono">{totalCount}</strong> {t('active', 'active')} {filterMode === 'complaints' ? t('complaints', 'complaints') : filterMode === 'certs' ? t('applications', 'applications') : t('cases', 'cases')}
+          </span>
+          <button
+            onClick={() => syncWithDb()}
+            disabled={isLoadingDb}
+            className="btn-gov-outline text-xs p-1.5"
+            title="Refresh database records now"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingDb ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 

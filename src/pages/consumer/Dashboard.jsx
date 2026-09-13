@@ -16,7 +16,7 @@ export default function ConsumerDashboard() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const { sessions, messages } = useChatStore()
-  const { complaints, notifications } = useDataStore()
+  const { complaints, notifications, isLiveConnected, lastSyncedAt } = useDataStore()
 
   const liveNotifs = (notifications || [])
     .filter((n) => n.targetRole === 'consumer' || n.targetRole === 'all')
@@ -38,11 +38,17 @@ export default function ConsumerDashboard() {
       {/* Welcome banner */}
       <div className="bg-gov-gradient text-white rounded-gov-xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-gov-md">
         <div>
-          <h1 className="text-xl font-bold font-heading mb-1">
-            {t('welcome_citizen', 'Welcome, Citizen!')} 👋
-          </h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-xl font-bold font-heading">
+              {t('welcome_citizen', 'Welcome, Citizen!')} 👋
+            </h1>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
+              <span className={`w-1.5 h-1.5 rounded-full ${isLiveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-300'}`} />
+              Live DB
+            </span>
+          </div>
           <p className="text-blue-100 text-sm">
-            {t('citizen_guide_sub', 'Your official AI-powered guide to Indian Standards and consumer protection.')}
+            {t('citizen_guide_sub', 'Your official AI-powered guide to Indian Standards and consumer protection (Real-Time Database Connected).')}
           </p>
         </div>
         <Link to={ROUTES.CONSUMER_CHAT} className="btn-saffron text-sm inline-flex items-center justify-center shadow-xs shrink-0 self-start sm:self-auto">

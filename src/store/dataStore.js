@@ -31,66 +31,117 @@ export const useDataStore = create((set, get) => ({
   queryCount: 0,
   notifications: [],
   isLoadingDb: false,
+  isLiveConnected: true,
+  lastSyncedAt: null,
+  realtimeTimer: null,
+  isSyncing: false,
+
+  // Start continuous 5-second background polling
+  startRealtimeSync: (intervalMs = 5000) => {
+    const current = get()
+    if (current.realtimeTimer) return
+
+    // Immediate initial sync
+    current.syncWithDb()
+
+    const timer = setInterval(() => {
+      get().syncWithDb()
+    }, intervalMs)
+
+    if (typeof document !== 'undefined') {
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          get().syncWithDb()
+        }
+      }
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+    }
+
+    set({ realtimeTimer: timer, isLiveConnected: true })
+  },
+
+  // Stop background polling
+  stopRealtimeSync: () => {
+    const { realtimeTimer } = get()
+    if (realtimeTimer) {
+      clearInterval(realtimeTimer)
+      set({ realtimeTimer: null })
+    }
+  },
 
   // Synchronize state directly from Neon DB endpoints
   syncWithDb: async () => {
-    set({ isLoadingDb: true })
+    if (get().isSyncing) return
+    set({ isSyncing: true })
     const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
     const headers = { 'Content-Type': 'application/json' }
     if (token) headers['Authorization'] = `Bearer ${token}`
 
     try {
-      const [uRes, lRes, dRes, cRes, certRes, nRes, mDocRes] = await Promise.allSettled([
-        fetch('/api/admin/users', { headers }),
+      const [uRes, lRes, dRes, cRes, certRes, nRes, mDocRes, aRes] = await Promise.allSettled([
+        fetch('/api/data?type=users', { headers }),
         fetch('/api/data?type=audit-logs', { headers }),
         fetch('/api/data?type=documents', { headers }),
         fetch('/api/data?type=complaints', { headers }),
         fetch('/api/data?type=certifications', { headers }),
         fetch('/api/data?type=notifications', { headers }),
         fetch('/api/data?type=manufacturer-documents', { headers }),
+        fetch('/api/data?type=analytics', { headers }),
       ])
 
-      const updates = {}
+      const updates = {
+        lastSyncedAt: new Date().toISOString(),
+        isLiveConnected: true,
+      }
+
       if (uRes.status === 'fulfilled' && uRes.value.ok) {
         const data = await uRes.value.json()
-        if (data.users) updates.users = data.users
+        if (data.users && Array.isArray(data.users)) updates.users = data.users
       }
       if (lRes.status === 'fulfilled' && lRes.value.ok) {
         const data = await lRes.value.json()
-        if (data.logs) updates.auditLogs = data.logs
+        if (data.logs && Array.isArray(data.logs)) updates.auditLogs = data.logs
       }
       if (dRes.status === 'fulfilled' && dRes.value.ok) {
         const data = await dRes.value.json()
-        if (data.documents) updates.knowledgeDocs = data.documents
+        if (data.documents && Array.isArray(data.documents)) updates.knowledgeDocs = data.documents
       }
       if (cRes.status === 'fulfilled' && cRes.value.ok) {
         const data = await cRes.value.json()
-        if (data.complaints) updates.complaints = data.complaints
+        if (data.complaints && Array.isArray(data.complaints)) updates.complaints = data.complaints
       }
       if (certRes.status === 'fulfilled' && certRes.value.ok) {
         const data = await certRes.value.json()
-        if (data.certifications) updates.certifications = data.certifications
+        if (data.certifications && Array.isArray(data.certifications)) updates.certifications = data.certifications
       }
       if (nRes.status === 'fulfilled' && nRes.value.ok) {
         const data = await nRes.value.json()
-        if (data.notifications) updates.notifications = data.notifications
+        if (data.notifications && Array.isArray(data.notifications)) updates.notifications = data.notifications
       }
       if (mDocRes.status === 'fulfilled' && mDocRes.value.ok) {
         const data = await mDocRes.value.json()
-        if (data.documents) updates.manufacturerDocs = data.documents
+        if (data.documents && Array.isArray(data.documents)) updates.manufacturerDocs = data.documents
+      }
+      if (aRes.status === 'fulfilled' && aRes.value.ok) {
+        const data = await aRes.value.json()
+        if (data.metrics?.totalQueries !== undefined) {
+          updates.queryCount = data.metrics.totalQueries
+        }
       }
 
-      set({ ...updates, isLoadingDb: false })
+      set({ ...updates, isLoadingDb: false, isSyncing: false })
+      savePersistedData(get())
     } catch (_) {
-      set({ isLoadingDb: false })
+      set({ isLoadingDb: false, isSyncing: false, isLiveConnected: false })
     }
   },
 
   // ── AUDIT LOGGING ──
   logAction: ({ user = 'System', action = 'ACTION', resource = '', ip = '10.0.0.1' }) => {
+    const userEmail = typeof user === 'string' ? user : user?.email || 'user@bis.gov.in'
     const newLog = {
       id: Date.now(),
-      user: typeof user === 'string' ? user : user?.email || 'user@bis.gov.in',
+      user: userEmail,
       action: action.toUpperCase(),
       resource: resource || 'Resource accessed',
       ip: ip || '10.0.0.1',
@@ -101,11 +152,24 @@ export const useDataStore = create((set, get) => ({
       savePersistedData(next)
       return next
     })
+
+    // Fire-and-forget DB audit log persistence
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      fetch('/api/data?type=audit-logs', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ user: userEmail, action, resource, ip }),
+      }).catch(() => {})
+    } catch (_) {}
+
     return newLog
   },
 
   // ── USER MANAGEMENT CRUD ──
-  addUser: (userData) => {
+  addUser: async (userData) => {
     const newUser = {
       id: Date.now(),
       name: userData.name,
@@ -125,10 +189,23 @@ export const useDataStore = create((set, get) => ({
       action: 'USER_CREATE',
       resource: `User account created: ${newUser.name} (${newUser.role})`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch('/api/admin/users', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(userData),
+      })
+      get().syncWithDb()
+    } catch (_) {}
+
     return newUser
   },
 
-  updateUser: (id, updates) => {
+  updateUser: async (id, updates) => {
     set((s) => {
       const next = {
         ...s,
@@ -143,9 +220,21 @@ export const useDataStore = create((set, get) => ({
       action: 'USER_UPDATE',
       resource: `Updated user profile: ${targetUser?.name || id}`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ id, ...updates }),
+      })
+      get().syncWithDb()
+    } catch (_) {}
   },
 
-  toggleUserStatus: (id) => {
+  toggleUserStatus: async (id) => {
     let updatedStatus = 'active'
     let updatedName = ''
     set((s) => {
@@ -166,9 +255,21 @@ export const useDataStore = create((set, get) => ({
       action: updatedStatus === 'active' ? 'USER_ACTIVATE' : 'USER_DEACTIVATE',
       resource: `${updatedName || 'User'} marked as ${updatedStatus}`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ id, status: updatedStatus, is_active: updatedStatus === 'active' }),
+      })
+      get().syncWithDb()
+    } catch (_) {}
   },
 
-  deleteUser: (id) => {
+  deleteUser: async (id) => {
     const targetUser = get().users.find((u) => u.id === id)
     set((s) => {
       const next = { ...s, users: s.users.filter((u) => u.id !== id) }
@@ -180,6 +281,17 @@ export const useDataStore = create((set, get) => ({
       action: 'DELETE',
       resource: `Deleted user: ${targetUser?.name || id} (${targetUser?.email || ''})`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch(`/api/admin/users?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers,
+      })
+      get().syncWithDb()
+    } catch (_) {}
   },
 
   // ── KNOWLEDGE BASE CRUD ──
@@ -243,7 +355,7 @@ export const useDataStore = create((set, get) => ({
   },
 
   // ── COMPLAINTS CRUD ──
-  fileComplaint: (complaintData) => {
+  fileComplaint: async (complaintData) => {
     const compId = `COMP-2025-${Math.floor(100 + Math.random() * 900)}`
     const newComp = {
       id: compId,
@@ -253,6 +365,8 @@ export const useDataStore = create((set, get) => ({
       description: complaintData.description,
       status: 'pending',
       date: new Date().toISOString(),
+      updated: new Date().toISOString(),
+      userEmail: complaintData.userEmail || 'consumer@bis.gov.in',
     }
     set((s) => {
       const next = { ...s, complaints: [newComp, ...s.complaints] }
@@ -264,10 +378,26 @@ export const useDataStore = create((set, get) => ({
       action: 'COMPLAINT',
       resource: `Filed quality complaint ${compId} for ${complaintData.product}`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch('/api/data?type=complaints', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          id: compId,
+          ...complaintData,
+        }),
+      })
+      get().syncWithDb()
+    } catch (_) {}
+
     return newComp
   },
 
-  updateComplaintStatus: (id, status, remarks = '') => {
+  updateComplaintStatus: async (id, status, remarks = '') => {
     set((s) => {
       const next = {
         ...s,
@@ -290,10 +420,22 @@ export const useDataStore = create((set, get) => ({
       action: 'COMPLAINT_STATUS',
       resource: `Complaint ${id} status updated to ${status}${remarks ? ` - Note: "${remarks}"` : ''}`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch('/api/data?type=complaints', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ id, status, remarks }),
+      })
+      get().syncWithDb()
+    } catch (_) {}
   },
 
   // ── CERTIFICATIONS CRUD ──
-  applyCertification: (certData) => {
+  applyCertification: async (certData) => {
     const certId = `CM/L-70${Math.floor(10000 + Math.random() * 90000)}`
     const newCert = {
       id: certId,
@@ -305,6 +447,7 @@ export const useDataStore = create((set, get) => ({
       applied: new Date().toISOString(),
       updated: new Date().toISOString(),
       validity: 'Under Review',
+      userEmail: certData.userEmail || 'msme@bis.gov.in',
     }
     set((s) => {
       const next = { ...s, certifications: [newCert, ...s.certifications] }
@@ -316,10 +459,26 @@ export const useDataStore = create((set, get) => ({
       action: 'APPLY',
       resource: `Applied for certification ${certId}: ${certData.product}`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch('/api/data?type=certifications', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          id: certId,
+          ...certData,
+        }),
+      })
+      get().syncWithDb()
+    } catch (_) {}
+
     return newCert
   },
 
-  updateCertStatus: (id, status, remarks = '') => {
+  updateCertStatus: async (id, status, remarks = '') => {
     set((s) => {
       const next = {
         ...s,
@@ -342,6 +501,18 @@ export const useDataStore = create((set, get) => ({
       action: 'CERT_STATUS',
       resource: `Certification ${id} status updated to ${status}${remarks ? ` - Note: "${remarks}"` : ''}`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch('/api/data?type=certifications', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ id, status, remarks }),
+      })
+      get().syncWithDb()
+    } catch (_) {}
   },
 
   // ── MANUFACTURER DOCUMENTS CRUD ──
@@ -428,7 +599,7 @@ export const useDataStore = create((set, get) => ({
   },
 
   // ── NOTIFICATIONS & BROADCAST OPERATIONS ──
-  broadcastNotification: (notifData) => {
+  broadcastNotification: async (notifData) => {
     const id = `NOTIF-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
     const newNotif = {
       id,
@@ -457,6 +628,18 @@ export const useDataStore = create((set, get) => ({
       action: 'BROADCAST',
       resource: `Broadcast ${newNotif.id} (${newNotif.targetRole.toUpperCase()}): "${newNotif.title}"`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch('/api/data?type=notifications', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(newNotif),
+      })
+      get().syncWithDb()
+    } catch (_) {}
 
     return newNotif
   },
@@ -495,7 +678,7 @@ export const useDataStore = create((set, get) => ({
     })
   },
 
-  deleteNotification: (id) => {
+  deleteNotification: async (id) => {
     const target = get().notifications.find((n) => n.id === id)
     set((s) => {
       const next = {
@@ -510,6 +693,17 @@ export const useDataStore = create((set, get) => ({
       action: 'DELETE',
       resource: `Recalled broadcast notification: ${target?.title || id}`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch(`/api/data?type=notifications&id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers,
+      })
+      get().syncWithDb()
+    } catch (_) {}
   },
 
   getNotificationsForRole: (role) => {
@@ -531,13 +725,15 @@ export const useDataStore = create((set, get) => ({
 
   // ── DYNAMIC METRIC COMPUTATIONS ──
   getAdminStats: () => {
-    const { users, knowledgeDocs, queryCount } = get()
-    const activeUsers = users.filter((u) => u.status === 'active').length
+    const { users, complaints, certifications, queryCount } = get()
+    const activeUsers = users.filter((u) => u.status === 'active' || u.status === true).length
+    const pendingComplaints = (complaints || []).filter(c => c.status === 'pending').length
+    const pendingCerts = (certifications || []).filter(c => c.status === 'pending' || c.status === 'under_review').length
     return [
-      { label: 'Total Users',      value: users.length,  delta: '+12%', color: 'blue',   icon: 'Users' },
-      { label: 'Active Sessions',  value: activeUsers,   delta: '+5%',  color: 'green',  icon: 'Activity' },
-      { label: 'Queries Logged',   value: queryCount,    delta: '+18%', color: 'purple', icon: 'MessageSquare' },
-      { label: 'Active Standards', value: '22,000+',     delta: 'Live', color: 'orange', icon: 'Database' },
+      { label: 'Total Users',      value: users.length,       delta: 'DB Live', color: 'blue',   icon: 'Users' },
+      { label: 'Active Users',     value: activeUsers,        delta: 'Verified', color: 'green',  icon: 'Activity' },
+      { label: 'Queries Logged',   value: queryCount,         delta: 'Real-Time', color: 'purple', icon: 'MessageSquare' },
+      { label: 'Pending Inquiries', value: pendingComplaints + pendingCerts, delta: `${complaints.length} Comp / ${certifications.length} Cert`, color: 'orange', icon: 'Database' },
     ]
   },
 

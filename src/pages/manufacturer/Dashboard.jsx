@@ -1,7 +1,7 @@
 import React from 'react'
 import {
   BadgeCheck, FileText, FlaskConical, MessageSquare,
-  Clock, ArrowRight, CheckCircle2
+  Clock, ArrowRight, CheckCircle2, RefreshCw
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import useAuthStore from '@/store/authStore'
@@ -21,7 +21,7 @@ const STATUS_STYLE = {
 export default function ManufacturerDashboard() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
-  const { certifications, manufacturerDocs } = useDataStore()
+  const { certifications, manufacturerDocs, syncWithDb, isDbSyncing, lastSyncedAt } = useDataStore()
 
   const activeCerts = certifications.filter((c) => c.status === 'approved').length
   const pendingCerts = certifications.filter((c) => c.status !== 'approved').length
@@ -31,9 +31,24 @@ export default function ManufacturerDashboard() {
       {/* Welcome banner */}
       <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-gov-xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-gov-md">
         <div>
-          <h1 className="text-xl font-bold font-heading mb-1">{t('Welcome', 'Welcome')}, {user?.name?.split(' ')[0]}!</h1>
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <h1 className="text-xl font-bold font-heading">{t('Welcome', 'Welcome')}, {user?.name?.split(' ')[0]}!</h1>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping inline-block" />
+              <span>Live DB Synced (5s)</span>
+            </span>
+            <button
+              onClick={() => syncWithDb()}
+              disabled={isDbSyncing}
+              title="Force sync now"
+              className="p-1 rounded-full hover:bg-white/20 transition-colors text-white/80 hover:text-white disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isDbSyncing ? 'animate-spin text-white' : ''}`} />
+            </button>
+          </div>
           <p className="text-orange-100 text-sm">
             {user?.organization || t('enterprise_portal_sub', 'Your Enterprise Portal · MSME / Manufacturer (Real-Time Database Live)')}
+            {lastSyncedAt && <span className="ml-2 text-xs opacity-80">· Synced {new Date(lastSyncedAt).toLocaleTimeString()}</span>}
           </p>
         </div>
         <Link to={ROUTES.MANUFACTURER_CHAT} className="bg-white dark:bg-dark-bg-card text-orange-600 dark:text-orange-400 font-semibold text-sm px-4 py-2 rounded-gov hover:bg-orange-50 dark:hover:bg-dark-bg-secondary transition-colors inline-flex items-center justify-center gap-2 shadow-xs shrink-0 self-start sm:self-auto">

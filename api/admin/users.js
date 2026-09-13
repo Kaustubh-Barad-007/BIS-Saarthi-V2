@@ -38,10 +38,37 @@ export default async function handler(req, res) {
       return res.status(200).json({ users: [] })
     }
 
-    if (req.method === 'PUT') {
-      const { id, is_active, role } = req.body || {}
+    if (req.method === 'POST') {
+      const { name, email, role = 'consumer', org = '', organization = '', status = 'active' } = req.body || {}
+      if (!name || !email) return res.status(400).json({ error: 'Name and email are required' })
+      const defaultHash = '$2a$12$4L64j0j8jLZZwYFw51wK3e6V7R0zH3gO4lH8cM1F0tQ5a3S2r9aG.'
+      const userOrg = org || organization || null
+      const isActive = status === 'active' || status === true
       if (sql) {
-        const [user] = await sql`UPDATE users SET is_active=${is_active}, role=${role} WHERE id=${id} RETURNING id, name, email, role, is_active`
+        const [newUser] = await sql`
+          INSERT INTO users (name, email, role, organization, password_hash, is_active, created_at)
+          VALUES (${name}, ${email}, ${role}, ${userOrg}, ${defaultHash}, ${isActive}, NOW())
+          RETURNING id, name, email, role, organization, is_active, created_at
+        `
+        return res.status(201).json({ user: newUser })
+      }
+      return res.status(201).json({ user: { id: Date.now(), name, email, role, organization: userOrg, is_active: isActive } })
+    }
+
+    if (req.method === 'PUT') {
+      const { id, name, is_active, status, role, org, organization } = req.body || {}
+      const userOrg = org || organization
+      const activeVal = is_active !== undefined ? is_active : (status !== undefined ? (status === 'active') : undefined)
+      if (sql) {
+        const [user] = await sql`
+          UPDATE users 
+          SET name = COALESCE(${name}, name),
+              role = COALESCE(${role}, role),
+              organization = COALESCE(${userOrg}, organization),
+              is_active = COALESCE(${activeVal}, is_active)
+          WHERE id=${id} 
+          RETURNING id, name, email, role, organization, is_active
+        `
         return res.status(200).json({ user })
       }
       return res.status(200).json({ message: 'User updated' })

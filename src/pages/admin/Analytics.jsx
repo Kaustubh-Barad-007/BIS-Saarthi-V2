@@ -4,6 +4,7 @@ import {
   PieChart, Pie, Cell, XAxis, YAxis, Tooltip, CartesianGrid,
   ResponsiveContainer, Legend
 } from 'recharts'
+import { RefreshCw } from 'lucide-react'
 import useThemeStore from '@/store/themeStore'
 import useDataStore from '@/store/dataStore'
 import { useTranslation } from '@/lib/i18n'
@@ -13,7 +14,10 @@ const COLORS = ['#003580', '#FF9933', '#138808', '#C8A951', '#8B5CF6']
 export default function Analytics() {
   const { t } = useTranslation()
   const { isDark } = useThemeStore()
-  const { users, complaints, certifications, knowledgeDocs, queryCount } = useDataStore()
+  const {
+    users, complaints, certifications, knowledgeDocs, queryCount,
+    lastSyncedAt, isLiveConnected, syncWithDb, isLoadingDb
+  } = useDataStore()
 
   // Real-time monthly growth metrics dynamically computed from live platform activity
   const monthlyData = useMemo(() => {
@@ -73,11 +77,32 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('Analytics & Reporting', 'Analytics & Reporting')}</h1>
-        <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-          {t('Platform usage metrics, real-time query trends, and verified performance indicators.', 'Platform usage metrics, real-time query trends, and verified performance indicators.')}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('Analytics & Reporting', 'Analytics & Reporting')}</h1>
+          <p className="text-sm text-gray-500 dark:text-dark-text-muted">
+            {t('Platform usage metrics, real-time query trends, and verified performance indicators.', 'Platform usage metrics, real-time query trends, and verified performance indicators.')}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+            <span className={`w-2 h-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+            Live DB Synced (5s)
+          </span>
+          {lastSyncedAt && (
+            <span className="text-xs text-gray-400 hidden sm:inline">
+              {new Date(lastSyncedAt).toLocaleTimeString()}
+            </span>
+          )}
+          <button
+            onClick={() => syncWithDb()}
+            disabled={isLoadingDb}
+            className="btn-gov-outline text-xs p-1.5"
+            title="Refresh database records now"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingDb ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* KPI cards */}

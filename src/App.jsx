@@ -78,9 +78,13 @@ export default function App() {
 
   useEffect(() => {
     fetchMe().finally(() => {
-      useDataStore.getState().syncWithDb()
+      useDataStore.getState().startRealtimeSync(5000)
       setReady(true)
     })
+
+    return () => {
+      useDataStore.getState().stopRealtimeSync()
+    }
   }, [])
 
   if (!ready) return <PageLoader text="Initializing BIS Saarthi..." />

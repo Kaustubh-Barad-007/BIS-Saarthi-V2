@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { BadgeCheck, Plus, Search, FlaskConical, Clock, CheckCircle2, AlertTriangle, X, Download, FileCheck, Eye, Shield } from 'lucide-react'
+import { BadgeCheck, Plus, Search, FlaskConical, Clock, CheckCircle2, AlertTriangle, X, Download, FileCheck, Eye, Shield, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, formatDate } from '@/lib/utils'
 import useDataStore from '@/store/dataStore'
@@ -21,7 +21,10 @@ const STATUS_BADGE = {
 
 export default function Certification() {
   const { t } = useTranslation()
-  const { certifications, applyCertification } = useDataStore()
+  const {
+    certifications, applyCertification,
+    lastSyncedAt, isLiveConnected, syncWithDb, isLoadingDb
+  } = useDataStore()
   const [tab, setTab]               = useState('mine')
   const [showApply, setShowApply]   = useState(false)
   const [labSearch, setLabSearch]   = useState('')
@@ -35,24 +38,28 @@ export default function Certification() {
     lab: LABS[0].name,
   })
 
-  const handleApplySubmit = (e) => {
+  const handleApplySubmit = async (e) => {
     e.preventDefault()
     if (!formData.product.trim() || !formData.standard.trim()) {
       toast.error('Please enter product name and applicable standard')
       return
     }
 
-    const newCert = applyCertification({
-      product: formData.product.trim(),
-      standard: formData.standard.trim(),
-      category: formData.category,
-      lab: formData.lab,
-    })
+    try {
+      const newCert = await applyCertification({
+        product: formData.product.trim(),
+        standard: formData.standard.trim(),
+        category: formData.category,
+        lab: formData.lab,
+      })
 
-    toast.success(`Application ${newCert.id} registered in real-time database! Sample collection scheduled.`)
-    setShowApply(false)
-    setFormData({ product: '', standard: '', category: 'Electrotechnical', lab: LABS[0].name })
-    setTab('mine')
+      toast.success(`Application ${newCert?.id || ''} registered in real-time database! Sample collection scheduled.`)
+      setShowApply(false)
+      setFormData({ product: '', standard: '', category: 'Electrotechnical', lab: LABS[0].name })
+      setTab('mine')
+    } catch (err) {
+      toast.error('Failed to submit application. Please try again.')
+    }
   }
 
   const filteredLabs = LABS.filter((l) => {
@@ -62,16 +69,32 @@ export default function Certification() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('BIS Certifications', 'BIS Certifications')}</h1>
-          <p className="text-sm text-gray-500 dark:text-dark-text-muted">
-            {t('Manage ISI Mark, CRS, and other BIS certifications for your manufacturing line.', 'Manage ISI Mark, CRS, and other BIS certifications for your manufacturing line.')}
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <p className="text-sm text-gray-500 dark:text-dark-text-muted">
+              {t('Manage ISI Mark, CRS, and other BIS certifications for your manufacturing line.', 'Manage ISI Mark, CRS, and other BIS certifications for your manufacturing line.')}
+            </p>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+              <span className={`w-1.5 h-1.5 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+              Live DB Synced
+            </span>
+          </div>
         </div>
-        <button onClick={() => setShowApply(true)} className="btn-saffron text-sm shadow-xs">
-          <Plus className="w-4 h-4" /> {t('Apply for New License', 'Apply for Certification')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => syncWithDb()}
+            disabled={isLoadingDb}
+            className="btn-gov-outline text-xs p-2"
+            title="Refresh database records now"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingDb ? 'animate-spin' : ''}`} />
+          </button>
+          <button onClick={() => setShowApply(true)} className="btn-saffron text-sm shadow-xs">
+            <Plus className="w-4 h-4" /> {t('Apply for New License', 'Apply for Certification')}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
