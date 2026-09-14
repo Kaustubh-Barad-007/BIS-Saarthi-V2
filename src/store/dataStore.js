@@ -295,15 +295,21 @@ export const useDataStore = create((set, get) => ({
   },
 
   // ── KNOWLEDGE BASE CRUD ──
-  addKnowledgeDoc: (docData) => {
+  addKnowledgeDoc: async (docData) => {
+    const docId = docData.id || `DOC-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`
     const newDoc = {
-      id: Date.now(),
+      id: docId,
       title: docData.title,
+      fileName: docData.fileName || `${docData.title.replace(/[^a-z0-9]/gi, '_')}.pdf`,
       category: docData.category || 'Standard',
       version: docData.version || '1.0',
       size: docData.size || 1500000,
+      fileSize: docData.size || 1500000,
+      fileType: docData.fileType || 'application/pdf',
       status: docData.status || 'review',
+      dataBase64: docData.dataBase64 || '',
       uploaded: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
       chunks: Math.floor(30 + Math.random() * 80),
     }
     set((s) => {
@@ -316,10 +322,23 @@ export const useDataStore = create((set, get) => ({
       action: 'UPLOAD',
       resource: `Uploaded KB document: ${newDoc.title}`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch('/api/data?type=documents', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(newDoc),
+      })
+      get().syncWithDb()
+    } catch (_) {}
+
     return newDoc
   },
 
-  publishKnowledgeDoc: (id) => {
+  publishKnowledgeDoc: async (id) => {
     let docTitle = ''
     set((s) => {
       const nextDocs = s.knowledgeDocs.map((d) => {
@@ -336,11 +355,23 @@ export const useDataStore = create((set, get) => ({
     get().logAction({
       user: 'admin@bis.gov.in',
       action: 'PUBLISH',
-      resource: `Published to AI Knowledge Layer: ${docTitle}`,
+      resource: `Published to AI Knowledge Layer: ${docTitle || id}`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch('/api/data?type=documents', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ id, status: 'published' }),
+      })
+      get().syncWithDb()
+    } catch (_) {}
   },
 
-  deleteKnowledgeDoc: (id) => {
+  deleteKnowledgeDoc: async (id) => {
     const targetDoc = get().knowledgeDocs.find((d) => d.id === id)
     set((s) => {
       const next = { ...s, knowledgeDocs: s.knowledgeDocs.filter((d) => d.id !== id) }
@@ -352,6 +383,17 @@ export const useDataStore = create((set, get) => ({
       action: 'DELETE',
       resource: `Removed KB document: ${targetDoc?.title || id}`,
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch(`/api/data?type=documents&id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers,
+      })
+      get().syncWithDb()
+    } catch (_) {}
   },
 
   // ── COMPLAINTS CRUD ──
@@ -520,14 +562,18 @@ export const useDataStore = create((set, get) => ({
     const newDoc = {
       id: docData.id || `DOC-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
       name: docData.name,
+      title: docData.name,
       category: docData.category || 'Compliance Document',
       standardCode: docData.standardCode || 'IS 10500:2012',
-      fileType: docData.fileType || 'PDF',
+      fileType: docData.fileType || 'application/pdf',
       size: docData.size || 1500000,
+      fileSize: docData.size || 1500000,
       version: docData.version || '1.0',
       uploaded: new Date().toISOString(),
       status: docData.status || 'pending',
       reviewNotes: docData.reviewNotes || 'Submitted for technical scrutiny',
+      description: docData.reviewNotes || 'Submitted for technical scrutiny',
+      dataBase64: docData.dataBase64 || '',
       checksum: docData.checksum || `SHA256:${Math.random().toString(36).substring(2, 12)}`,
       validUntil: docData.validUntil || null,
     }
@@ -644,38 +690,73 @@ export const useDataStore = create((set, get) => ({
     return newNotif
   },
 
-  markNotificationAsRead: (id, userEmail) => {
+  markNotificationAsRead: async (id, userEmail) => {
     if (!userEmail) return
+    let updatedReadBy = []
     set((s) => {
       const next = {
         ...s,
         notifications: s.notifications.map((n) => {
           if (n.id !== id) return n
           const readBy = Array.isArray(n.readBy) ? n.readBy : []
-          if (readBy.includes(userEmail)) return n
-          return { ...n, readBy: [...readBy, userEmail] }
+          if (readBy.includes(userEmail)) {
+            updatedReadBy = readBy
+            return n
+          }
+          updatedReadBy = [...readBy, userEmail]
+          return { ...n, readBy: updatedReadBy }
         }),
       }
       savePersistedData(next)
       return next
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch('/api/data?type=notifications', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ id, userEmail }),
+      })
+    } catch (_) {}
   },
 
-  markAllNotificationsAsRead: (role, userEmail) => {
+  markAllNotificationsAsRead: async (role, userEmail) => {
     if (!userEmail) return
+    const idsToUpdate = []
     set((s) => {
       const next = {
         ...s,
         notifications: s.notifications.map((n) => {
           if (role !== 'admin' && n.targetRole !== 'all' && n.targetRole !== role) return n
           const readBy = Array.isArray(n.readBy) ? n.readBy : []
-          if (readBy.includes(userEmail)) return n
-          return { ...n, readBy: [...readBy, userEmail] }
+          if (!readBy.includes(userEmail)) {
+            idsToUpdate.push(n.id)
+            return { ...n, readBy: [...readBy, userEmail] }
+          }
+          return n
         }),
       }
       savePersistedData(next)
       return next
     })
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bis_token') : null
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await Promise.allSettled(
+        idsToUpdate.map((id) =>
+          fetch('/api/data?type=notifications', {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({ id, userEmail }),
+          })
+        )
+      )
+    } catch (_) {}
   },
 
   deleteNotification: async (id) => {

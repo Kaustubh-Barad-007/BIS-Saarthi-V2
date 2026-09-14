@@ -1,9 +1,7 @@
 // api/auth/register.js — Registration endpoint
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { getDb } from '../_lib/db.js'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'bis-saarthi-dev-secret-2024'
+import { getDb, JWT_SECRET } from '../_lib/db.js'
 
 // In-memory store for demo (when no DB)
 const memUsers = []

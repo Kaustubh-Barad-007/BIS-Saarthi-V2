@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ClipboardList, Search, Download } from 'lucide-react'
+import { ClipboardList, Search, Download, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDateTime } from '@/lib/utils'
 import useDataStore from '@/store/dataStore'
@@ -22,7 +22,7 @@ const ACTION_COLOR = {
 
 export default function AuditLog() {
   const { t } = useTranslation()
-  const { auditLogs } = useDataStore()
+  const { auditLogs, syncWithDb, isDbSyncing, lastSyncedAt } = useDataStore()
   const [search, setSearch] = useState('')
   const [actionFilter, setActionFilter] = useState('')
 
@@ -57,11 +57,26 @@ export default function AuditLog() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('System Audit Log', 'System Audit Log')}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('System Audit Log', 'System Audit Log')}</h1>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live DB Synced (5s)
+            </span>
+            <button
+              onClick={() => syncWithDb()}
+              disabled={isDbSyncing}
+              title="Force sync now"
+              className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isDbSyncing ? 'animate-spin text-emerald-600' : ''}`} />
+            </button>
+          </div>
           <p className="text-sm text-gray-500 dark:text-dark-text-muted">
             {t('Real-time immutable trail of all administrative and user activities.', 'Real-time immutable trail of all administrative and user activities.')}
+            {lastSyncedAt && <span className="ml-2 text-xs">· Synced {new Date(lastSyncedAt).toLocaleTimeString()}</span>}
           </p>
         </div>
         <button onClick={handleExportCSV} className="btn-gov-outline text-sm flex items-center gap-1.5 shadow-xs">

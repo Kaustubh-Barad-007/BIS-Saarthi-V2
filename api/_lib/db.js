@@ -1,6 +1,8 @@
 // api/db.js — NeonDB connection with mock fallback
 import { neon } from '@neondatabase/serverless'
 
+export const JWT_SECRET = process.env.JWT_SECRET || 'bis-saarthi-jwt-production-secret-2026-safe-secure-token'
+
 let sql = null
 let dbInitialized = false
 
@@ -151,6 +153,7 @@ export async function initDb(sql) {
     await sql`ALTER TABLE documents ADD COLUMN IF NOT EXISTS role_access TEXT DEFAULT 'all'`
     await sql`ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_type TEXT DEFAULT 'application/pdf'`
     await sql`ALTER TABLE documents ADD COLUMN IF NOT EXISTS standard_code TEXT`
+    await sql`ALTER TABLE documents ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'review'`
   } catch (_) {}
 
   // 1. Seed demo users if users table is empty

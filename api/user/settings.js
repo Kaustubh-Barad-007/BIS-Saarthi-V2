@@ -1,8 +1,6 @@
 // api/user/settings.js — User Settings Persistence Endpoint
 import jwt from 'jsonwebtoken'
-import { getDb } from '../_lib/db.js'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'bis-saarthi-dev-secret-2024'
+import { getDb, JWT_SECRET } from '../_lib/db.js'
 
 // In-memory fallback settings store for demo & serverless instances
 let inMemorySettings = {

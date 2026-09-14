@@ -16,6 +16,9 @@ export default function AdminNotifications() {
     notifications,
     broadcastNotification,
     deleteNotification,
+    syncWithDb,
+    isDbSyncing,
+    lastSyncedAt,
   } = useDataStore()
 
   // Form State
@@ -205,16 +208,29 @@ export default function AdminNotifications() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <div className="w-8 h-8 rounded-gov bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-bis-navy dark:text-blue-400">
               <Radio className="w-4 h-4" />
             </div>
             <h1 className="text-xl font-bold font-heading text-gray-900 dark:text-dark-text">
               Broadcast Notifications &amp; Alerts Operations
             </h1>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live DB Synced (5s)
+            </span>
+            <button
+              onClick={() => syncWithDb()}
+              disabled={isDbSyncing}
+              title="Force sync now"
+              className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isDbSyncing ? 'animate-spin text-emerald-600' : ''}`} />
+            </button>
           </div>
           <p className="text-sm text-gray-500 dark:text-dark-text-muted">
             Issue and manage targeted notifications, QCO mandates, and public safety circulars for Consumers and MSMEs.
+            {lastSyncedAt && <span className="ml-2 text-xs">· Synced {new Date(lastSyncedAt).toLocaleTimeString()}</span>}
           </p>
         </div>
 

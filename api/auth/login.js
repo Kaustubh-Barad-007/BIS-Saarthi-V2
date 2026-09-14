@@ -1,7 +1,7 @@
 // api/auth/login.js — Login endpoint
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { getDb, errorResponse, jsonResponse, corsHeaders } from '../_lib/db.js'
+import { getDb, JWT_SECRET, errorResponse, jsonResponse, corsHeaders } from '../_lib/db.js'
 
 // Demo users (hardcoded fallback when no DB)
 const DEMO_USERS = [
@@ -10,7 +10,6 @@ const DEMO_USERS = [
   { id: 4, email: 'admin@bis.gov.in',    password: 'Admin@123',    name: 'Admin Officer',  role: 'admin',        organization: 'BIS HQ Delhi',      phone: '9876543213', is_active: true },
 ]
 
-const JWT_SECRET  = process.env.JWT_SECRET  || 'bis-saarthi-dev-secret-2024'
 const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '7d'
 
 export default async function handler(req, res) {

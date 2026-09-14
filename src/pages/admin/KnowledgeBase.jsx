@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Database, Upload, Search, CheckCircle2, Trash2, Eye, Plus, X, Check, Download } from 'lucide-react'
+import { Database, Upload, Search, CheckCircle2, Trash2, Eye, Plus, X, Check, Download, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDate, formatFileSize } from '@/lib/utils'
 import useDataStore from '@/store/dataStore'
@@ -12,6 +12,9 @@ export default function KnowledgeBase() {
     addKnowledgeDoc,
     publishKnowledgeDoc,
     deleteKnowledgeDoc,
+    syncWithDb,
+    isDbSyncing,
+    lastSyncedAt,
   } = useDataStore()
 
   const [search, setSearch] = useState('')
@@ -23,39 +26,68 @@ export default function KnowledgeBase() {
   const [formTitle, setFormTitle]     = useState('')
   const [formCategory, setFormCat]   = useState('Standard')
   const [formVersion, setFormVersion] = useState('1.0')
+  const [attachedFile, setAttachedFile] = useState(null)
+  const [attachedBase64, setAttachedBase64] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleUploadSubmit = (e) => {
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAttachedFile(file)
+    if (!formTitle.trim()) {
+      setFormTitle(file.name.replace(/\.[^/.]+$/, ''))
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      setAttachedBase64(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleUploadSubmit = async (e) => {
     e.preventDefault()
     if (!formTitle.trim()) {
       toast.error('Document title is required')
       return
     }
 
-    addKnowledgeDoc({
-      title: formTitle.trim(),
-      category: formCategory,
-      version: formVersion.trim() || '1.0',
-      size: 1500000,
-      status: 'review',
-    })
+    setIsSubmitting(true)
+    try {
+      await addKnowledgeDoc({
+        title: formTitle.trim(),
+        fileName: attachedFile?.name || `${formTitle.trim().replace(/[^a-z0-9]/gi, '_')}.pdf`,
+        category: formCategory,
+        version: formVersion.trim() || '1.0',
+        size: attachedFile?.size || 1500000,
+        fileSize: attachedFile?.size || 1500000,
+        dataBase64: attachedBase64 || '',
+        status: 'review',
+      })
 
-    toast.success(`"${formTitle}" added to database and queued for review!`)
-    setShowUpload(false)
-    setFormTitle('')
-    setFormVersion('1.0')
+      toast.success(`"${formTitle}" saved to live database and queued for review!`)
+      setShowUpload(false)
+      setFormTitle('')
+      setFormVersion('1.0')
+      setAttachedFile(null)
+      setAttachedBase64('')
+    } catch (err) {
+      toast.error('Failed to upload document: ' + err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const filtered = knowledgeDocs.filter((d) =>
     !search || d.title.toLowerCase().includes(search.toLowerCase()) || d.category.toLowerCase().includes(search.toLowerCase())
   )
 
-  const handlePublish = (id) => {
-    publishKnowledgeDoc(id)
+  const handlePublish = async (id) => {
+    await publishKnowledgeDoc(id)
     toast.success('Document published to BIS AI Knowledge Base')
   }
 
-  const handleDeleteDoc = (id) => {
-    deleteKnowledgeDoc(id)
+  const handleDeleteDoc = async (id) => {
+    await deleteKnowledgeDoc(id)
     toast.success('Document removed from database')
   }
 
@@ -74,11 +106,26 @@ export default function KnowledgeBase() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('Knowledge Base Management', 'Knowledge Base Management')}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-dark-text font-heading">{t('Knowledge Base Management', 'Knowledge Base Management')}</h1>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live DB Synced (5s)
+            </span>
+            <button
+              onClick={() => syncWithDb()}
+              disabled={isDbSyncing}
+              title="Force sync now"
+              className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-bg-secondary transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isDbSyncing ? 'animate-spin text-emerald-600' : ''}`} />
+            </button>
+          </div>
           <p className="text-sm text-gray-500 dark:text-dark-text-muted">
             {t('Upload, review, and publish documents to the BIS AI knowledge layer (Real-Time Database).', 'Upload, review, and publish documents to the BIS AI knowledge layer (Real-Time Database).')}
+            {lastSyncedAt && <span className="ml-2 text-xs">· Synced {new Date(lastSyncedAt).toLocaleTimeString()}</span>}
           </p>
         </div>
         <button onClick={() => setShowUpload(true)} className="btn-gov bg-red-600 hover:bg-red-700 shadow-xs">
@@ -140,11 +187,27 @@ export default function KnowledgeBase() {
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-dark-text mb-1.5">{t('Attach Document File', 'Attach Document File')}</label>
-              <input type="file" accept=".pdf,.doc,.docx" className="input-gov text-sm file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-bis-navy file:text-white file:text-xs" />
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFileChange}
+                className="input-gov text-sm file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-bis-navy file:text-white file:text-xs"
+              />
+              {attachedFile && (
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                  Attached: {attachedFile.name} ({formatFileSize(attachedFile.size)})
+                </p>
+              )}
             </div>
           </div>
           <div className="flex gap-3 mt-5">
-            <button type="submit" className="btn-gov bg-red-600 hover:bg-red-700">{t('Upload & Queue for Review', 'Upload & Queue for Review')}</button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn-gov bg-red-600 hover:bg-red-700 disabled:opacity-50"
+            >
+              {isSubmitting ? t('Saving to Database...', 'Saving to Database...') : t('Upload & Queue for Review', 'Upload & Queue for Review')}
+            </button>
             <button type="button" onClick={() => setShowUpload(false)} className="btn-gov-outline">{t('Cancel', 'Cancel')}</button>
           </div>
         </form>

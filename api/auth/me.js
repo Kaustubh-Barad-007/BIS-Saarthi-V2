@@ -1,7 +1,6 @@
 // api/auth/me.js — Get current user from JWT
 import jwt from 'jsonwebtoken'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'bis-saarthi-dev-secret-2024'
+import { JWT_SECRET } from '../_lib/db.js'
 
 const DEMO_USERS = {
   'consumer@bis.gov.in': { id: 1, email: 'consumer@bis.gov.in', name: 'Priya Sharma',   role: 'consumer',     organization: null             },

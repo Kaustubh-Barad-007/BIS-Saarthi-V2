@@ -1,8 +1,6 @@
 // api/data.js — Unified Database Data Dispatcher (Complaints, Certs, Docs, Notifs, Logs, Standards)
 import jwt from 'jsonwebtoken'
-import { getDb, initDb } from './_lib/db.js'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'bis-saarthi-dev-secret-2024'
+import { getDb, initDb, JWT_SECRET } from './_lib/db.js'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -163,22 +161,66 @@ export default async function handler(req, res) {
     if (type === 'notifications') {
       if (req.method === 'GET') {
         const rows = await sql`
-          SELECT id, title, message, target_role as "targetRole", priority, category, sender, action_url as "actionUrl", created_at as "created"
+          SELECT id, title, message, target_role as "targetRole", priority, category, sender, action_url as "actionUrl",
+                 COALESCE(read_by, '{}') as "readBy", created_at as "created"
           FROM notifications
           ORDER BY created_at DESC
-          LIMIT 20
+          LIMIT 50
         `
         return res.status(200).json({ notifications: rows || [] })
       }
       if (req.method === 'POST') {
-        const { title, message, targetRole = 'all', priority = 'info', category = 'Gazette', sender = 'BIS Directorate', actionUrl = '' } = req.body || {}
-        const notifId = `NOTIF-${Date.now().toString().slice(-6)}`
+        const { id, title, message, targetRole = 'all', priority = 'info', category = 'Gazette Circular', sender = 'BIS Central Directorate', actionUrl = '' } = req.body || {}
+        if (!title || !message) return res.status(400).json({ error: 'Title and message are required' })
+        const notifId = id || `NOTIF-${Date.now().toString().slice(-6)}`
         const [newRow] = await sql`
-          INSERT INTO notifications (id, title, message, target_role, priority, category, sender, action_url)
-          VALUES (${notifId}, ${title}, ${message}, ${targetRole}, ${priority}, ${category}, ${sender}, ${actionUrl})
-          RETURNING id, title, message, target_role as "targetRole", priority, category, sender, action_url as "actionUrl", created_at as "created"
+          INSERT INTO notifications (id, title, message, target_role, priority, category, sender, action_url, read_by, created_at)
+          VALUES (${notifId}, ${title}, ${message}, ${targetRole}, ${priority}, ${category}, ${sender}, ${actionUrl}, '{}', NOW())
+          RETURNING id, title, message, target_role as "targetRole", priority, category, sender, action_url as "actionUrl",
+                    COALESCE(read_by, '{}') as "readBy", created_at as "created"
         `
         return res.status(201).json({ notification: newRow })
+      }
+      if (req.method === 'PUT') {
+        const { id, readBy, userEmail, title, message, priority, category } = req.body || {}
+        if (!id) return res.status(400).json({ error: 'Notification ID is required' })
+
+        let updated
+        if (Array.isArray(readBy)) {
+          [updated] = await sql`
+            UPDATE notifications
+            SET read_by = ${readBy}
+            WHERE id = ${id}
+            RETURNING id, title, message, target_role as "targetRole", priority, category, sender, action_url as "actionUrl",
+                      COALESCE(read_by, '{}') as "readBy", created_at as "created"
+          `
+        } else if (userEmail) {
+          [updated] = await sql`
+            UPDATE notifications
+            SET read_by = array_append(ARRAY_REMOVE(COALESCE(read_by, '{}'), ${userEmail}), ${userEmail})
+            WHERE id = ${id}
+            RETURNING id, title, message, target_role as "targetRole", priority, category, sender, action_url as "actionUrl",
+                      COALESCE(read_by, '{}') as "readBy", created_at as "created"
+          `
+        } else {
+          [updated] = await sql`
+            UPDATE notifications
+            SET title = COALESCE(${title}, title),
+                message = COALESCE(${message}, message),
+                priority = COALESCE(${priority}, priority),
+                category = COALESCE(${category}, category)
+            WHERE id = ${id}
+            RETURNING id, title, message, target_role as "targetRole", priority, category, sender, action_url as "actionUrl",
+                      COALESCE(read_by, '{}') as "readBy", created_at as "created"
+          `
+        }
+        return res.status(200).json({ notification: updated })
+      }
+      if (req.method === 'DELETE') {
+        const notifId = req.query?.id || req.body?.id
+        if (!notifId) return res.status(400).json({ error: 'Notification ID is required' })
+        await sql`DELETE FROM notifications WHERE id = ${notifId}`
+        return res.status(200).json({ success: true, deletedId: notifId })
       }
     }
 
@@ -188,18 +230,20 @@ export default async function handler(req, res) {
         let rows = []
         if (type === 'manufacturer-documents') {
           rows = await sql`
-            SELECT id, title, file_name as "fileName", file_type as "fileType", file_size as "fileSize",
+            SELECT id, title, file_name as "fileName", file_name as "name", file_type as "fileType", file_size as "fileSize", file_size as "size",
                    category, role_access as "roleAccess", uploader_email as "uploaderEmail",
-                   description, data_base64 as "dataBase64", standard_code as "standardCode", created_at as "createdAt"
+                   description, description as "reviewNotes", data_base64 as "dataBase64", standard_code as "standardCode",
+                   COALESCE(status, 'review') as "status", created_at as "createdAt", created_at as "uploaded"
             FROM documents
             WHERE role_access IN ('all', 'manufacturer')
             ORDER BY created_at DESC
           `
         } else {
           rows = await sql`
-            SELECT id, title, file_name as "fileName", file_type as "fileType", file_size as "fileSize",
+            SELECT id, title, file_name as "fileName", file_name as "name", file_type as "fileType", file_size as "fileSize", file_size as "size",
                    category, role_access as "roleAccess", uploader_email as "uploaderEmail",
-                   description, data_base64 as "dataBase64", standard_code as "standardCode", created_at as "createdAt"
+                   description, description as "reviewNotes", data_base64 as "dataBase64", standard_code as "standardCode",
+                   COALESCE(status, 'review') as "status", created_at as "createdAt", created_at as "uploaded"
             FROM documents
             ORDER BY created_at DESC
           `
@@ -209,38 +253,64 @@ export default async function handler(req, res) {
 
       if (req.method === 'POST') {
         const {
-          title,
-          fileName,
+          id,
+          title: rawTitle,
+          name: rawName,
+          fileName: rawFileName,
           fileType = 'application/pdf',
-          fileSize = 524288,
+          fileSize: rawSize,
+          size: rawNumSize,
           category = 'standard',
-          roleAccess = 'all',
-          description = '',
+          roleAccess: rawRole,
+          uploaderEmail: rawEmail,
+          description: rawDesc,
+          reviewNotes: rawNotes,
           dataBase64 = '',
-          standardCode = ''
+          standardCode = '',
+          status = 'review'
         } = req.body || {}
 
-        if (!title || !fileName) {
-          return res.status(400).json({ error: 'Title and file name are required' })
-        }
-
-        const docId = `DOC-${Date.now().toString().slice(-6)}`
-        const uploaderEmail = user?.email || (type === 'manufacturer-documents' ? 'msme@bis.gov.in' : 'admin@bis.gov.in')
+        const title = rawTitle || rawName || rawFileName || 'Untitled Document'
+        const fileName = rawFileName || rawName || rawTitle || `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`
+        const fileSize = rawSize || rawNumSize || 524288
+        const description = rawDesc || rawNotes || ''
+        const roleAccess = rawRole || (type === 'manufacturer-documents' ? 'manufacturer' : 'all')
+        const docId = id || `DOC-${Date.now().toString().slice(-6)}`
+        const uploaderEmail = rawEmail || user?.email || (type === 'manufacturer-documents' ? 'msme@bis.gov.in' : 'admin@bis.gov.in')
 
         const [newDoc] = await sql`
           INSERT INTO documents (
             id, title, file_name, file_type, file_size, category, role_access,
-            uploader_email, description, data_base64, standard_code
+            uploader_email, description, data_base64, standard_code, status, created_at
           )
           VALUES (
             ${docId}, ${title}, ${fileName}, ${fileType}, ${fileSize}, ${category}, ${roleAccess},
-            ${uploaderEmail}, ${description}, ${dataBase64}, ${standardCode}
+            ${uploaderEmail}, ${description}, ${dataBase64}, ${standardCode}, ${status}, NOW()
           )
-          RETURNING id, title, file_name as "fileName", file_type as "fileType", file_size as "fileSize",
+          RETURNING id, title, file_name as "fileName", file_name as "name", file_type as "fileType", file_size as "fileSize", file_size as "size",
                     category, role_access as "roleAccess", uploader_email as "uploaderEmail",
-                    description, data_base64 as "dataBase64", standard_code as "standardCode", created_at as "createdAt"
+                    description, description as "reviewNotes", data_base64 as "dataBase64", standard_code as "standardCode",
+                    COALESCE(status, 'review') as "status", created_at as "createdAt", created_at as "uploaded"
         `
         return res.status(201).json({ document: newDoc })
+      }
+
+      if (req.method === 'PUT') {
+        const { id, status, title, description, reviewNotes } = req.body || {}
+        if (!id) return res.status(400).json({ error: 'Document ID is required' })
+        const finalDesc = description || reviewNotes
+        const [updated] = await sql`
+          UPDATE documents
+          SET status = COALESCE(${status}, status),
+              title = COALESCE(${title}, title),
+              description = COALESCE(${finalDesc}, description)
+          WHERE id = ${id}
+          RETURNING id, title, file_name as "fileName", file_name as "name", file_type as "fileType", file_size as "fileSize", file_size as "size",
+                    category, role_access as "roleAccess", uploader_email as "uploaderEmail",
+                    description, description as "reviewNotes", data_base64 as "dataBase64", standard_code as "standardCode",
+                    COALESCE(status, 'review') as "status", created_at as "createdAt", created_at as "uploaded"
+        `
+        return res.status(200).json({ document: updated })
       }
 
       if (req.method === 'DELETE') {
@@ -316,16 +386,16 @@ export default async function handler(req, res) {
         }
       } catch (_) {}
 
-      // 3. If user searches, also query live Render RAG search dynamically
-      if (search && search.trim()) {
-        const q = search.trim().toLowerCase()
+      // 3. Query live Render RAG search dynamically (zero static data)
+      const searchQuery = search && search.trim() ? search.trim().toLowerCase() : (list.length < 8 ? 'Indian Standard' : '')
+      if (searchQuery) {
         try {
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 2500)
           const ragRes = await fetch(`${process.env.RAG_API_BASE || 'https://bis-saarthi-api.onrender.com'}/api/v1/search`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: q, limit: 10 }),
+            body: JSON.stringify({ query: searchQuery, limit: 20 }),
             signal: controller.signal
           }).catch(() => null)
           clearTimeout(timeoutId)
@@ -349,7 +419,10 @@ export default async function handler(req, res) {
           }
         } catch (_) {}
 
-        list = list.filter((s) => s.id.toLowerCase().includes(q) || s.title.toLowerCase().includes(q) || s.scope.toLowerCase().includes(q))
+        if (search && search.trim()) {
+          const q = search.trim().toLowerCase()
+          list = list.filter((s) => s.id.toLowerCase().includes(q) || s.title.toLowerCase().includes(q) || s.scope.toLowerCase().includes(q))
+        }
       }
 
       return res.status(200).json({ standards: list.slice(0, 50) })

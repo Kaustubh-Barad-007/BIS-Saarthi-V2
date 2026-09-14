@@ -1,8 +1,6 @@
 // api/chat/query.js — 100% Dynamic RAG AI Chat Query Endpoint with Multi-Turn Context & Structured Markdown Formatting
 import jwt from 'jsonwebtoken'
-import { getDb } from '../_lib/db.js'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'bis-saarthi-jwt-production-secret-2026-safe-secure-token'
+import { getDb, JWT_SECRET } from '../_lib/db.js'
 
 const KEY_PREFIX = 'AQ.'
 const RAW_KEY_SUFFIXES = [
