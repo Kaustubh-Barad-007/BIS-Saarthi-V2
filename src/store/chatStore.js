@@ -82,6 +82,52 @@ function getStoredRagApiKey() {
   return localStorage.getItem('bis_rag_api_key') || ''
 }
 
+// Intelligently detect if user requested a specific language in the query text
+export function detectRequestedLanguage(queryText, fallbackLang = 'en') {
+  if (!queryText || typeof queryText !== 'string') return fallbackLang || 'en'
+  const text = queryText.trim()
+
+  if (/\b(?:in\s+hindi|hindi\s+mein|hindi\s+me|reply\s+in\s+hindi|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+hindi|explain\s+in\s+hindi|answer\s+in\s+hindi|respond\s+in\s+hindi|tell\s+(?:me\s+)?in\s+hindi|translate\s+(?:to|in)\s+hindi|provide\s+in\s+hindi|hindi\s+please|in\s+hindhi)\b/i.test(text)) return 'hi'
+  if (/\b(?:in\s+marathi|marathi\s+madhe|reply\s+in\s+marathi|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+marathi|explain\s+in\s+marathi|answer\s+in\s+marathi|respond\s+in\s+marathi|tell\s+(?:me\s+)?in\s+marathi|translate\s+(?:to|in)\s+marathi|provide\s+in\s+marathi|marathi\s+please)\b/i.test(text)) return 'mr'
+  if (/\b(?:in\s+tamil|reply\s+in\s+tamil|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+tamil|explain\s+in\s+tamil|answer\s+in\s+tamil|respond\s+in\s+tamil|tell\s+(?:me\s+)?in\s+tamil|translate\s+(?:to|in)\s+tamil|provide\s+in\s+tamil|tamil\s+please)\b/i.test(text)) return 'ta'
+  if (/\b(?:in\s+telugu|reply\s+in\s+telugu|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+telugu|explain\s+in\s+telugu|answer\s+in\s+telugu|respond\s+in\s+telugu|tell\s+(?:me\s+)?in\s+telugu|translate\s+(?:to|in)\s+telugu|provide\s+in\s+telugu|telugu\s+please)\b/i.test(text)) return 'te'
+  if (/\b(?:in\s+bengali|in\s+bangla|reply\s+in\s+bengali|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+bengali|explain\s+in\s+bengali|answer\s+in\s+bengali|respond\s+in\s+bengali|tell\s+(?:me\s+)?in\s+bengali|translate\s+(?:to|in)\s+bengali|provide\s+in\s+bengali|bengali\s+please)\b/i.test(text)) return 'bn'
+  if (/\b(?:in\s+gujarati|reply\s+in\s+gujarati|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+gujarati|explain\s+in\s+gujarati|answer\s+in\s+gujarati|respond\s+in\s+gujarati|tell\s+(?:me\s+)?in\s+gujarati|translate\s+(?:to|in)\s+gujarati|provide\s+in\s+gujarati|gujarati\s+please)\b/i.test(text)) return 'gu'
+  if (/\b(?:in\s+kannada|reply\s+in\s+kannada|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+kannada|explain\s+in\s+kannada|answer\s+in\s+kannada|respond\s+in\s+kannada|tell\s+(?:me\s+)?in\s+kannada|translate\s+(?:to|in)\s+kannada|provide\s+in\s+kannada|kannada\s+please)\b/i.test(text)) return 'kn'
+  if (/\b(?:in\s+malayalam|reply\s+in\s+malayalam|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+malayalam|explain\s+in\s+malayalam|answer\s+in\s+malayalam|respond\s+in\s+malayalam|tell\s+(?:me\s+)?in\s+malayalam|translate\s+(?:to|in)\s+malayalam|provide\s+in\s+malayalam|malayalam\s+please)\b/i.test(text)) return 'ml'
+  if (/\b(?:in\s+punjabi|reply\s+in\s+punjabi|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+punjabi|explain\s+in\s+punjabi|answer\s+in\s+punjabi|respond\s+in\s+punjabi|tell\s+(?:me\s+)?in\s+punjabi|translate\s+(?:to|in)\s+punjabi|provide\s+in\s+punjabi|punjabi\s+please)\b/i.test(text)) return 'pa'
+  if (/\b(?:in\s+odia|in\s+oriya|reply\s+in\s+odia|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+odia|explain\s+in\s+odia|answer\s+in\s+odia|respond\s+in\s+odia|tell\s+(?:me\s+)?in\s+odia|translate\s+(?:to|in)\s+odia|provide\s+in\s+odia|odia\s+please)\b/i.test(text)) return 'or'
+  if (/\b(?:in\s+english|reply\s+in\s+english|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+english|explain\s+in\s+english|answer\s+in\s+english|respond\s+in\s+english|english\s+please)\b/i.test(text)) return 'en'
+
+  if (/हिंदी\s*(?:में|मे)?|हिन्दी\s*(?:में|मे)?/i.test(text)) return 'hi'
+  if (/मराठी\s*(?:मध्ये|त|तच)?/i.test(text)) return 'mr'
+  if (/தமிழில்|தமிழ்/i.test(text)) return 'ta'
+  if (/తెలుగులో|తెలుగు/i.test(text)) return 'te'
+  if (/বাংলায়|বাংলা/i.test(text)) return 'bn'
+  if (/ગુજરાતીમાં|ગુજરાતી/i.test(text)) return 'gu'
+  if (/ಕನ್ನಡದಲ್ಲಿ|ಕನ್ನಡ/i.test(text)) return 'kn'
+  if (/മലയാളത്തിൽ|മലയാളം/i.test(text)) return 'ml'
+  if (/ਪੰਜਾਬੀ\s*(?:ਵਿੱਚ)?|ਪੰਜਾਬੀ/i.test(text)) return 'pa'
+  if (/ଓଡ଼ିଆରେ|ଓଡ଼ିଆ/i.test(text)) return 'or'
+
+  if (/[\u0B80-\u0BFF]/.test(text)) return 'ta'
+  if (/[\u0C00-\u0C7F]/.test(text)) return 'te'
+  if (/[\u0980-\u09FF]/.test(text)) return 'bn'
+  if (/[\u0A80-\u0AFF]/.test(text)) return 'gu'
+  if (/[\u0C80-\u0CFF]/.test(text)) return 'kn'
+  if (/[\u0D00-\u0D7F]/.test(text)) return 'ml'
+  if (/[\u0A00-\u0A7F]/.test(text)) return 'pa'
+  if (/[\u0B00-\u0B7F]/.test(text)) return 'or'
+  if (/[\u0900-\u097F]/.test(text)) {
+    if (/(?:आहे|आहेत|करा|करावे|सांगा|मध्ये|माहिती|तक्रार|नोंदणी|नियम|कशी|कसा|काय|दागिन|सोन्या|पाहिजे)/i.test(text)) {
+      return 'mr'
+    }
+    return 'hi'
+  }
+
+  return fallbackLang || 'en'
+}
+
 // Helper to guarantee the query sent to the RAG database is in English for 100% accurate BIS standard retrieval
 export async function ensureEnglishQuery(text, selectedLang = 'en') {
   if (!text || typeof text !== 'string') return ''
@@ -349,14 +395,16 @@ const useChatStore = create((set, get) => ({
           role: m.role,
           content: typeof m.content === 'string' ? m.content : (m.content?.text || m.content?.original || ''),
         }))
-        const englishPrompt = await ensureEnglishQuery(content, selectedLanguage)
+        const effectiveLang = detectRequestedLanguage(content, selectedLanguage)
+        const englishPrompt = await ensureEnglishQuery(content, effectiveLang)
 
         const apiRes = await chatApi.query({
           sessionId,
-          content: englishPrompt,
+          content,
+          englishQuery: englishPrompt,
           originalQuery: content,
           chatHistory,
-          language: selectedLanguage,
+          language: effectiveLang,
           mode: readingMode,
           role,
           manufacturerProfile,
@@ -375,11 +423,10 @@ const useChatStore = create((set, get) => ({
         aiContent = `### ⚠️ API Connection Error\n\n**Error:** ${err.message || 'Unknown network error'}\n\nUnable to retrieve records from the connected BIS database. Please try again.`
       }
 
-      // If backend returned English fallback but user selected an Indian language, translate it
-      if (selectedLanguage && selectedLanguage !== 'en' && aiContent && !/[\u0900-\u0DFF]/.test(aiContent)) {
-        try {
-          aiContent = await translateToTargetLanguage(aiContent, selectedLanguage)
-        } catch (_) {}
+      // Sync UI language if a regional language was requested
+      if (apiRes?.language && apiRes.language !== selectedLanguage && apiRes.language !== 'en') {
+        set({ selectedLanguage: apiRes.language })
+        try { localStorage.setItem('bis_selected_lang', apiRes.language) } catch (_) {}
       }
 
       const top5Sources = (citations || []).slice(0, 5).map(resolveDetailedCitation).filter(Boolean)
@@ -487,14 +534,16 @@ const useChatStore = create((set, get) => ({
           content: typeof m.content === 'string' ? m.content : (m.content?.text || m.content?.original || ''),
         }))
 
-        const englishPrompt = await ensureEnglishQuery(lastUserMsg.content, selectedLanguage)
+        const effectiveLang = detectRequestedLanguage(lastUserMsg.content, selectedLanguage)
+        const englishPrompt = await ensureEnglishQuery(lastUserMsg.content, effectiveLang)
 
         const apiRes = await chatApi.query({
           sessionId: currentSessionId,
-          content: englishPrompt,
+          content: lastUserMsg.content,
+          englishQuery: englishPrompt,
           originalQuery: lastUserMsg.content,
           chatHistory,
-          language: selectedLanguage,
+          language: effectiveLang,
           mode: readingMode,
           role: currentRole,
           manufacturerProfile,
@@ -513,10 +562,10 @@ const useChatStore = create((set, get) => ({
         aiContent = `### ⚠️ API Connection Error\n\n**Error:** ${err.message || 'Unknown network error'}\n\nUnable to retrieve records from the connected BIS database. Please try again.`
       }
 
-      if (selectedLanguage && selectedLanguage !== 'en' && aiContent && !/[\u0900-\u0DFF]/.test(aiContent)) {
-        try {
-          aiContent = await translateToTargetLanguage(aiContent, selectedLanguage)
-        } catch (_) {}
+      // Sync UI language if a regional language was requested
+      if (apiRes?.language && apiRes.language !== selectedLanguage && apiRes.language !== 'en') {
+        set({ selectedLanguage: apiRes.language })
+        try { localStorage.setItem('bis_selected_lang', apiRes.language) } catch (_) {}
       }
 
       const top5Sources = (citations || []).slice(0, 5).map(resolveDetailedCitation).filter(Boolean)
@@ -589,14 +638,16 @@ const useChatStore = create((set, get) => ({
           content: typeof m.content === 'string' ? m.content : (m.content?.text || m.content?.original || ''),
         }))
 
-        const englishPrompt = await ensureEnglishQuery(newContent, selectedLanguage)
+        const effectiveLang = detectRequestedLanguage(newContent, selectedLanguage)
+        const englishPrompt = await ensureEnglishQuery(newContent, effectiveLang)
 
         const apiRes = await chatApi.query({
           sessionId: currentSessionId,
-          content: englishPrompt,
+          content: newContent,
+          englishQuery: englishPrompt,
           originalQuery: newContent,
           chatHistory,
-          language: selectedLanguage,
+          language: effectiveLang,
           mode: readingMode,
           role: currentRole,
           manufacturerProfile,
@@ -615,10 +666,10 @@ const useChatStore = create((set, get) => ({
         aiContent = `### ⚠️ API Connection Error\n\n**Error:** ${err.message || 'Unknown network error'}\n\nUnable to retrieve records from the connected BIS database. Please try again.`
       }
 
-      if (selectedLanguage && selectedLanguage !== 'en' && aiContent && !/[\u0900-\u0DFF]/.test(aiContent)) {
-        try {
-          aiContent = await translateToTargetLanguage(aiContent, selectedLanguage)
-        } catch (_) {}
+      // Sync UI language if a regional language was requested
+      if (apiRes?.language && apiRes.language !== selectedLanguage && apiRes.language !== 'en') {
+        set({ selectedLanguage: apiRes.language })
+        try { localStorage.setItem('bis_selected_lang', apiRes.language) } catch (_) {}
       }
 
       const top5Sources = (citations || []).slice(0, 5).map(resolveDetailedCitation).filter(Boolean)

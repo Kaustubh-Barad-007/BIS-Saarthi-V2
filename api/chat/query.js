@@ -1,4 +1,4 @@
-// api/chat/query.js — Dynamic RAG AI Chat Query Endpoint with Gemini 3.1/3.6 Synthesis
+// api/chat/query.js — Dynamic RAG AI Chat Query Endpoint with Multi-Lingual Gemini 3.1/3.6 Synthesis
 import jwt from 'jsonwebtoken'
 import { getDb, JWT_SECRET } from '../_lib/db.js'
 
@@ -59,7 +59,90 @@ async function getActiveRAGToken(providedToken) {
   return DEFAULT_RAG_TOKEN
 }
 
-// ── 1. CONVERSATIONAL CONTEXT EXTRACTOR ──
+// ── 1. MULTI-LINGUAL INTENT & SCRIPT DETECTOR ──
+export function detectRequestedLanguage(queryText, fallbackLang = 'en') {
+  if (!queryText || typeof queryText !== 'string') return fallbackLang || 'en'
+  const text = queryText.trim()
+
+  // 1. Explicit English phrasing asking for a language
+  if (/\b(?:in\s+hindi|hindi\s+mein|hindi\s+me|reply\s+in\s+hindi|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+hindi|explain\s+in\s+hindi|answer\s+in\s+hindi|respond\s+in\s+hindi|tell\s+(?:me\s+)?in\s+hindi|translate\s+(?:to|in)\s+hindi|provide\s+in\s+hindi|hindi\s+please|in\s+hindhi)\b/i.test(text)) {
+    return 'hi'
+  }
+  if (/\b(?:in\s+marathi|marathi\s+madhe|reply\s+in\s+marathi|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+marathi|explain\s+in\s+marathi|answer\s+in\s+marathi|respond\s+in\s+marathi|tell\s+(?:me\s+)?in\s+marathi|translate\s+(?:to|in)\s+marathi|provide\s+in\s+marathi|marathi\s+please)\b/i.test(text)) {
+    return 'mr'
+  }
+  if (/\b(?:in\s+tamil|reply\s+in\s+tamil|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+tamil|explain\s+in\s+tamil|answer\s+in\s+tamil|respond\s+in\s+tamil|tell\s+(?:me\s+)?in\s+tamil|translate\s+(?:to|in)\s+tamil|provide\s+in\s+tamil|tamil\s+please)\b/i.test(text)) {
+    return 'ta'
+  }
+  if (/\b(?:in\s+telugu|reply\s+in\s+telugu|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+telugu|explain\s+in\s+telugu|answer\s+in\s+telugu|respond\s+in\s+telugu|tell\s+(?:me\s+)?in\s+telugu|translate\s+(?:to|in)\s+telugu|provide\s+in\s+telugu|telugu\s+please)\b/i.test(text)) {
+    return 'te'
+  }
+  if (/\b(?:in\s+bengali|in\s+bangla|reply\s+in\s+bengali|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+bengali|explain\s+in\s+bengali|answer\s+in\s+bengali|respond\s+in\s+bengali|tell\s+(?:me\s+)?in\s+bengali|translate\s+(?:to|in)\s+bengali|provide\s+in\s+bengali|bengali\s+please)\b/i.test(text)) {
+    return 'bn'
+  }
+  if (/\b(?:in\s+gujarati|reply\s+in\s+gujarati|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+gujarati|explain\s+in\s+gujarati|answer\s+in\s+gujarati|respond\s+in\s+gujarati|tell\s+(?:me\s+)?in\s+gujarati|translate\s+(?:to|in)\s+gujarati|provide\s+in\s+gujarati|gujarati\s+please)\b/i.test(text)) {
+    return 'gu'
+  }
+  if (/\b(?:in\s+kannada|reply\s+in\s+kannada|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+kannada|explain\s+in\s+kannada|answer\s+in\s+kannada|respond\s+in\s+kannada|tell\s+(?:me\s+)?in\s+kannada|translate\s+(?:to|in)\s+kannada|provide\s+in\s+kannada|kannada\s+please)\b/i.test(text)) {
+    return 'kn'
+  }
+  if (/\b(?:in\s+malayalam|reply\s+in\s+malayalam|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+malayalam|explain\s+in\s+malayalam|answer\s+in\s+malayalam|respond\s+in\s+malayalam|tell\s+(?:me\s+)?in\s+malayalam|translate\s+(?:to|in)\s+malayalam|provide\s+in\s+malayalam|malayalam\s+please)\b/i.test(text)) {
+    return 'ml'
+  }
+  if (/\b(?:in\s+punjabi|reply\s+in\s+punjabi|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+punjabi|explain\s+in\s+punjabi|answer\s+in\s+punjabi|respond\s+in\s+punjabi|tell\s+(?:me\s+)?in\s+punjabi|translate\s+(?:to|in)\s+punjabi|provide\s+in\s+punjabi|punjabi\s+please)\b/i.test(text)) {
+    return 'pa'
+  }
+  if (/\b(?:in\s+odia|in\s+oriya|reply\s+in\s+odia|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+odia|explain\s+in\s+odia|answer\s+in\s+odia|respond\s+in\s+odia|tell\s+(?:me\s+)?in\s+odia|translate\s+(?:to|in)\s+odia|provide\s+in\s+odia|odia\s+please)\b/i.test(text)) {
+    return 'or'
+  }
+  if (/\b(?:in\s+english|reply\s+in\s+english|give\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+english|explain\s+in\s+english|answer\s+in\s+english|respond\s+in\s+english|english\s+please)\b/i.test(text)) {
+    return 'en'
+  }
+
+  // 2. Explicit Indic phrasing asking for language in script
+  if (/हिंदी\s*(?:में|मे)?|हिन्दी\s*(?:में|मे)?/i.test(text)) return 'hi'
+  if (/मराठी\s*(?:मध्ये|त|तच)?/i.test(text)) return 'mr'
+  if (/தமிழில்|தமிழ்/i.test(text)) return 'ta'
+  if (/తెలుగులో|తెలుగు/i.test(text)) return 'te'
+  if (/বাংলায়|বাংলা/i.test(text)) return 'bn'
+  if (/ગુજરાતીમાં|ગુજરાતી/i.test(text)) return 'gu'
+  if (/ಕನ್ನಡದಲ್ಲಿ|ಕನ್ನಡ/i.test(text)) return 'kn'
+  if (/മലയാളത്തിൽ|മലയാളം/i.test(text)) return 'ml'
+  if (/ਪੰਜਾਬੀ\s*(?:ਵਿੱਚ)?|ਪੰਜਾਬੀ/i.test(text)) return 'pa'
+  if (/ଓଡ଼ିଆରେ|ଓଡ଼ିଆ/i.test(text)) return 'or'
+
+  // 3. Indic script detection
+  if (/[\u0B80-\u0BFF]/.test(text)) return 'ta'
+  if (/[\u0C00-\u0C7F]/.test(text)) return 'te'
+  if (/[\u0980-\u09FF]/.test(text)) return 'bn'
+  if (/[\u0A80-\u0AFF]/.test(text)) return 'gu'
+  if (/[\u0C80-\u0CFF]/.test(text)) return 'kn'
+  if (/[\u0D00-\u0D7F]/.test(text)) return 'ml'
+  if (/[\u0A00-\u0A7F]/.test(text)) return 'pa'
+  if (/[\u0B00-\u0B7F]/.test(text)) return 'or'
+  if (/[\u0900-\u097F]/.test(text)) {
+    if (/(?:आहे|आहेत|करा|करावे|सांगा|मध्ये|माहिती|तक्रार|नोंदणी|नियम|कशी|कसा|काय|दागिन|सोन्या|पाहिजे)/i.test(text)) {
+      return 'mr'
+    }
+    return 'hi'
+  }
+
+  return fallbackLang || 'en'
+}
+
+function stripLanguageRequestPhrases(text) {
+  if (!text || typeof text !== 'string') return ''
+  return text
+    .replace(/\b(?:in\s+(?:hindi|marathi|tamil|telugu|bengali|bangla|gujarati|kannada|malayalam|punjabi|odia|oriya|english))\b/gi, '')
+    .replace(/\b(?:reply|give|explain|answer|respond|tell\s+me|translate|provide)\s+(?:it\s+|this\s+|me\s+|response\s+|answer\s+)?in\s+[a-z]+\b/gi, '')
+    .replace(/\b(?:hindi\s+mein|hindi\s+me|marathi\s+madhe)\b/gi, '')
+    .replace(/हिंदी\s*(?:में|मे)?|हिन्दी\s*(?:में|मे)?|मराठी\s*(?:मध्ये|त)?|தமிழில்|తెలుగులో|বাংলায়|ગુજરાતીમાં|ಕನ್ನಡದಲ್ಲಿ|മലയാളത്തിൽ|ਪੰਜਾਬੀ\s*ਵਿੱਚ|ଓଡ଼ିଆରେ/gi, '')
+    .replace(/\b(?:please|can\s+you)\b/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+// ── 2. CONVERSATIONAL CONTEXT EXTRACTOR ──
 function extractContextKeywords(chatHistory) {
   if (!Array.isArray(chatHistory) || chatHistory.length === 0) return ''
   const recent = chatHistory.slice(-6)
@@ -71,7 +154,7 @@ function extractContextKeywords(chatHistory) {
   return uniqueStds.join(' ')
 }
 
-// ── 2. PURE DYNAMIC RAG & DATABASE EXTRACTION ENGINE ──
+// ── 3. PURE DYNAMIC RAG & DATABASE EXTRACTION ENGINE ──
 async function queryRenderRAG(searchQ, cleanQ, ragApiKey, role, language) {
   const matches = []
   const citations = []
@@ -202,22 +285,26 @@ async function queryRenderRAG(searchQ, cleanQ, ragApiKey, role, language) {
 async function extractRAGGroundingData(query, ragApiKey, role = 'consumer', language = 'en', chatHistory = []) {
   const cleanQ = (query || '').trim()
 
+  // Strip explicit language request phrasing for clean semantic vector retrieval
+  const strippedQ = stripLanguageRequestPhrases(cleanQ)
+  const coreQuery = strippedQ && strippedQ.length >= 3 ? strippedQ : cleanQ
+
   // Contextual query expansion for pronouns / follow-up queries
   const contextKeywords = extractContextKeywords(chatHistory)
-  const hasPronounOrFollowUp = /\b(it|its|this|these|that|those|the standard|fees?|cost|concession|testing|tests?|lab|laboratory|license|licence|process|steps?|procedure|penalty|scheme|sit)\b/i.test(cleanQ)
-  const searchQ = (contextKeywords && (cleanQ.split(/\s+/).length <= 6 || hasPronounOrFollowUp))
-    ? `${contextKeywords} ${cleanQ}`
-    : cleanQ
+  const hasPronounOrFollowUp = /\b(it|its|this|these|that|those|the standard|fees?|cost|concession|testing|tests?|lab|laboratory|license|licence|process|steps?|procedure|penalty|scheme|sit)\b/i.test(coreQuery)
+  const searchQ = (contextKeywords && (coreQuery.split(/\s+/).length <= 6 || hasPronounOrFollowUp))
+    ? `${contextKeywords} ${coreQuery}`
+    : coreQuery
 
   // 1. Query Render RAG service
-  const ragResult = await queryRenderRAG(searchQ, cleanQ, ragApiKey, role, language)
+  const ragResult = await queryRenderRAG(searchQ, coreQuery, ragApiKey, role, language)
 
   // 2. Query Neon PostgreSQL documents & certifications to augment if sources are sparse
   const sql = getDb()
   if (sql && ragResult.sources.length < 3) {
     try {
-      const searchKeywords = cleanQ.split(/\s+/).filter(w => w.length > 2)
-      const primaryTerm = searchKeywords[0] || cleanQ
+      const searchKeywords = coreQuery.split(/\s+/).filter(w => w.length > 2)
+      const primaryTerm = searchKeywords[0] || coreQuery
 
       const docRows = await sql`
         SELECT id, title, file_name, category, description, standard_code
@@ -326,7 +413,7 @@ function buildContextString(matches) {
   return ctx.trim()
 }
 
-// ── 3. RESILIENT GEMINI ENGINE ──
+// ── 4. RESILIENT GEMINI ENGINE ──
 async function callGeminiApi(promptText, apiKeyOverride) {
   let keysToTry = []
   if (apiKeyOverride && apiKeyOverride.trim()) {
@@ -382,7 +469,7 @@ async function callGeminiApi(promptText, apiKeyOverride) {
   return null
 }
 
-// ── 4. STRUCTURED GEMINI PROMPT BUILDER ──
+// ── 5. STRUCTURED GEMINI PROMPT BUILDER ──
 async function formatRAGResponseWithGemini(userQuery, dbContext, chatHistory, geminiKey, role = 'consumer', language = 'en') {
   const historyStr = Array.isArray(chatHistory) && chatHistory.length > 0
     ? chatHistory.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n\n')
@@ -396,6 +483,7 @@ async function formatRAGResponseWithGemini(userQuery, dbContext, chatHistory, ge
     bn: 'Bengali (বাংলা)',
     gu: 'Gujarati (ગુજરાતી)',
     kn: 'Kannada (ಕನ್ನಡ)',
+    ml: 'Malayalam (മലയാളം)',
     pa: 'Punjabi (ਪੰਜਾਬੀ)',
     or: 'Odia (ଓଡ଼ିଆ)',
     en: 'English'
@@ -439,7 +527,12 @@ Respond ONLY with a single valid JSON object. Do not wrap in markdown code block
 }
 
 === 4. MANDATORY LANGUAGE REQUIREMENT ===
-${language !== 'en' ? `The user selected ${targetLang}. The ENTIRE "formattedContent" and ALL "suggestedFollowUpQuestions" MUST be written fluently in ${targetLang}. Retain standard numbers and statutory acronyms (BIS, ISI, HUID, SIT) in English.` : 'Provide your response in clear, authoritative, and natural English.'}
+${language !== 'en' ? `The user specifically requested the response in ${targetLang}.
+CRITICAL INSTRUCTION:
+The ENTIRE "formattedContent" and ALL "suggestedFollowUpQuestions" MUST be written 100% fluently, naturally, and completely in ${targetLang}.
+- Do NOT reply in English.
+- Every sentence, paragraph, bullet point, heading, and follow-up question MUST be in ${targetLang}.
+- Retain ONLY standard numbers (e.g., IS 14543, IS 10500, IS 1417) and statutory acronyms (BIS, ISI, CRS, HUID, NABL) in English or Latin script.` : 'Provide your response in clear, authoritative, and natural English.'}
 
 ------------------------------
 <conversation_history>
@@ -455,7 +548,7 @@ Current User Query: ${userQuery}`
   return await callGeminiApi(prompt, geminiKey)
 }
 
-// ── 5. CLEAN FALLBACK DYNAMIC RESPONSE FORMATTER ──
+// ── 6. CLEAN FALLBACK DYNAMIC RESPONSE FORMATTER ──
 function formatResponseAccordingToQuery(userQuery, rawAnswer, top5Sources, role = 'consumer', language = 'en') {
   let text = (rawAnswer || '').trim()
 
@@ -535,6 +628,7 @@ export default async function handler(req, res) {
   const {
     content: rawContent,
     query: rawQuery,
+    originalQuery,
     sessionId,
     chatHistory = [],
     language = 'en',
@@ -548,6 +642,12 @@ export default async function handler(req, res) {
   if (!content) {
     return res.status(400).json({ error: 'Query content is required' })
   }
+
+  // Intelligently detect if the user asked for a specific language in the query text
+  const effectiveLanguage = detectRequestedLanguage(
+    content,
+    originalQuery ? detectRequestedLanguage(originalQuery, language) : language
+  )
 
   const providedRagKey = (
     bodyRagKey ||
@@ -573,7 +673,7 @@ export default async function handler(req, res) {
       content,
       ragApiKey,
       role,
-      language,
+      effectiveLanguage,
       chatHistory
     )
 
@@ -595,7 +695,7 @@ export default async function handler(req, res) {
 
     const dbContext = buildContextString(matches)
 
-    // 3. Synthesize rich, adaptive, context-aware answer with Gemini using RAG context
+    // 3. Synthesize rich, adaptive, context-aware answer with Gemini in the requested language
     let formattedContent = ''
     let followUps = []
     let finalSources = [...top5Sources]
@@ -606,7 +706,7 @@ export default async function handler(req, res) {
       chatHistory,
       geminiApiKey,
       role,
-      language
+      effectiveLanguage
     )
 
     if (geminiRaw) {
@@ -642,10 +742,10 @@ export default async function handler(req, res) {
 
     // Fallback if Gemini returned empty
     if (!formattedContent) {
-      formattedContent = formatResponseAccordingToQuery(content, ragAnswer, top5Sources, role, language)
+      formattedContent = formatResponseAccordingToQuery(content, ragAnswer, top5Sources, role, effectiveLanguage)
     }
     if (followUps.length === 0) {
-      followUps = generateFollowUps(content, top5Sources, relatedQuestions, language)
+      followUps = generateFollowUps(content, top5Sources, relatedQuestions, effectiveLanguage)
     }
 
     const latencyMs = Date.now() - startTime
@@ -655,6 +755,7 @@ export default async function handler(req, res) {
       sources: finalSources,
       citations: finalSources,
       followUps,
+      language: effectiveLanguage,
       latency: `${latencyMs}ms`,
       canVerify: finalSources.length > 0,
       ragExtracted: matches.length > 0,
@@ -692,17 +793,17 @@ export default async function handler(req, res) {
 
           await sql`
             INSERT INTO chat_messages (session_id, role, content, metadata)
-            VALUES (${sessionId}, 'user', ${content}, ${JSON.stringify({ language, userRole: user.role, userId: numericUserId })}::jsonb)
+            VALUES (${sessionId}, 'user', ${content}, ${JSON.stringify({ language: effectiveLanguage, userRole: user.role, userId: numericUserId })}::jsonb)
           `.catch(() => {})
 
           await sql`
             INSERT INTO chat_messages (session_id, role, content, metadata)
-            VALUES (${sessionId}, 'assistant', ${formattedContent}, ${JSON.stringify({ citations: leanCitations, userRole: user.role })}::jsonb)
+            VALUES (${sessionId}, 'assistant', ${formattedContent}, ${JSON.stringify({ citations: leanCitations, userRole: user.role, language: effectiveLanguage })}::jsonb)
           `.catch(() => {})
 
           await sql`
             INSERT INTO audit_logs (user_id, user_email, action, resource, details)
-            VALUES (${numericUserId}, ${user.email}, 'CHAT_QUERY', ${'Chat session ' + sessionId}, ${JSON.stringify({ role: user.role, standard: leanCitations[0]?.source || null })}::jsonb)
+            VALUES (${numericUserId}, ${user.email}, 'CHAT_QUERY', ${'Chat session ' + sessionId}, ${JSON.stringify({ role: user.role, standard: leanCitations[0]?.source || null, language: effectiveLanguage })}::jsonb)
           `.catch(() => {})
         }
       } catch (dbErr) {
@@ -722,6 +823,7 @@ export default async function handler(req, res) {
         'What are the mandatory testing requirements under IS 14543?',
         'What is the procedure for obtaining an ISI mark?'
       ],
+      language: effectiveLanguage,
       latency: `${Date.now() - startTime}ms`,
       canVerify: false,
       ragExtracted: false,
