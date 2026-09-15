@@ -227,8 +227,7 @@ export default function Complaints() {
               {/* Official Evidence link if available in database */}
               {(() => {
                 const linkedDoc = (knowledgeDocs || []).find(d =>
-                  (selectedComplaint.product && selectedComplaint.product.includes('Helmet') && d.id === 'DOC-IMG-HELMET') ||
-                  (selectedComplaint.product && selectedComplaint.product.includes('Water') && d.id === 'DOC-TEST-840')
+                  (selectedComplaint.product && selectedComplaint.product.includes('Helmet') && d.id === 'DOC-IMG-HELMET')
                 )
                 if (!linkedDoc) return null
                 return (

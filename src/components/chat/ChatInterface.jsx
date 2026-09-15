@@ -109,6 +109,9 @@ function MessageBubble({
   const [showOriginal, setShowOriginal] = useState(false)
   const isUser = message.role === 'user'
   const { t } = useTranslation()
+  const messageSources = useMemo(() => {
+    return (message.sources && message.sources.length > 0 ? message.sources : (message.citations || [])).slice(0, 5)
+  }, [message.sources, message.citations])
 
   const copyContent = () => {
     navigator.clipboard.writeText(message.content)
@@ -222,6 +225,91 @@ function MessageBubble({
                   </div>
                 )}
                 <ReactMarkdown>{showOriginal ? message.content : (translatedContent || message.content)}</ReactMarkdown>
+
+                {/* ── Sources Section: Top 5 Results from Backend As-Is ── */}
+                {!isUser && messageSources.length > 0 && (
+                  <div className="mt-3.5 pt-3 border-t border-gray-100 dark:border-dark-border/60">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800 dark:text-gray-200">
+                        <BookOpen className="w-3.5 h-3.5 text-bis-navy dark:text-blue-400" />
+                        <span>{t('sources', 'Sources')} ({messageSources.length})</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onOpenSourcesSidebar?.(messageSources[0])}
+                        className="text-[10px] font-semibold text-bis-navy dark:text-blue-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                        title="View in Sources Sidebar"
+                      >
+                        <span>{t('view_in_sidebar', 'View in Sidebar')}</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {messageSources.map((source, sIdx) => {
+                        const stdCode = source.standard || source.source || `Source ${sIdx + 1}`
+                        const title = source.title || stdCode
+                        const location = source.section || (source.page ? `Page ${source.page}` : source.clause)
+                        const fileName = source.source_file || source.sourceFile
+                        const shortFileName = fileName ? fileName.split('\\').pop().split('/').pop() : null
+                        const scoreVal = source.score !== null && source.score !== undefined ? Number(source.score) : null
+
+                        return (
+                          <div
+                            key={sIdx}
+                            onClick={() => onOpenSourcesSidebar?.(source)}
+                            className="p-2.5 rounded-gov border border-gray-200/80 dark:border-dark-border bg-slate-50/80 dark:bg-dark-bg/60 hover:bg-white dark:hover:bg-dark-bg-card hover:border-bis-navy/40 dark:hover:border-blue-500/40 transition-all cursor-pointer text-left space-y-1.5 group/card shadow-2xs"
+                          >
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/50 text-bis-navy dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60 truncate">
+                                {stdCode}
+                              </span>
+                              {scoreVal !== null && (
+                                <span className="text-[9px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1 rounded border border-emerald-200/40 dark:border-emerald-800/30 shrink-0">
+                                  Score: {scoreVal.toFixed(2)}
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 line-clamp-1 group-hover/card:text-bis-navy dark:group-hover/card:text-blue-400" title={title}>
+                              {title}
+                            </p>
+
+                            {source.product && source.product !== title && (
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                                Product: {source.product}
+                              </p>
+                            )}
+
+                            {(source.text || source.content) && (
+                              <p className="text-[11px] text-gray-600 dark:text-gray-300 line-clamp-2 leading-relaxed bg-white/60 dark:bg-dark-bg/40 p-1.5 rounded border border-gray-100 dark:border-dark-border/40">
+                                {source.text || source.content}
+                              </p>
+                            )}
+
+                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 pt-0.5">
+                              {location && (
+                                <span className="font-medium text-gray-700 dark:text-gray-300">
+                                  {location}
+                                </span>
+                              )}
+                              {shortFileName && (
+                                <span className="truncate max-w-[130px]" title={fileName}>
+                                  • {shortFileName}
+                                </span>
+                              )}
+                              {source.document_status && (
+                                <span className="capitalize px-1 rounded bg-gray-100 dark:bg-dark-border text-gray-600 dark:text-gray-300 text-[9px] ml-auto">
+                                  {source.document_status}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -579,7 +667,7 @@ export default function ChatInterface({ role = 'consumer' }) {
   const [highlightedSourceKey, setHighlightedSourceKey]   = useState(null)
 
   // Unique citations extracted across current conversation (newest first)
-  // Merges both RAG citations (with full content/score data) and Gemini-cited sources
+  // Maps top 5 results coming directly from the backend data as-is
   const conversationCitations = useMemo(() => {
     const list = []
     const seen = new Set()
@@ -587,45 +675,19 @@ export default function ChatInterface({ role = 'consumer' }) {
       const msg = messages[i]
       if (msg.role !== 'assistant') continue
 
-      // Primary: full RAG citations with content, score, page, etc.
-      if (msg.citations && msg.citations.length > 0) {
-        for (const rawCite of msg.citations) {
-          const resolved = resolveDetailedCitation(rawCite)
-          if (!resolved) continue
-          const key = (resolved.source || '').toLowerCase().trim()
-          if (!seen.has(key)) {
-            seen.add(key)
-            list.push({
-              ...resolved,
-              // Preserve RAG-specific fields
-              content: rawCite.content || resolved.content || '',
-              score: rawCite.score ?? resolved.score ?? null,
-              page: rawCite.page ?? resolved.page ?? null,
-              sourceFile: rawCite.sourceFile || resolved.sourceFile || '',
-              chunkId: rawCite.chunkId || resolved.chunkId || '',
-              messageId: msg.id,
-              timestamp: msg.timestamp,
-            })
-          }
-        }
-      }
+      const msgSources = (msg.sources && msg.sources.length > 0 ? msg.sources : (msg.citations || [])).slice(0, 5)
 
-      // Secondary: Gemini-attributed sources (file + location pairs)
-      if (msg.sources && msg.sources.length > 0) {
-        for (const s of msg.sources) {
-          const key = (s.file || '').toLowerCase().trim()
-          if (key && !seen.has(key)) {
-            seen.add(key)
-            list.push({
-              source: s.file,
-              title: s.file,
-              clause: s.location || '',
-              type: 'standard',
-              ragGrounded: true,
-              messageId: msg.id,
-              timestamp: msg.timestamp,
-            })
-          }
+      for (const rawCite of msgSources) {
+        const resolved = resolveDetailedCitation(rawCite)
+        if (!resolved) continue
+        const key = (resolved.standard || resolved.source || resolved.title || '').toLowerCase().trim()
+        if (key && !seen.has(key)) {
+          seen.add(key)
+          list.push({
+            ...resolved,
+            messageId: msg.id,
+            timestamp: msg.timestamp,
+          })
         }
       }
     }
@@ -2036,11 +2098,11 @@ export default function ChatInterface({ role = 'consumer' }) {
                   {/* Badge & Status Row */}
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/50 text-bis-navy dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
-                      {cite.source}
+                      {cite.standard || cite.source}
                     </span>
                     <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      RAG Grounded
+                      Backend Grounded
                     </span>
                   </div>
 
@@ -2049,39 +2111,38 @@ export default function ChatInterface({ role = 'consumer' }) {
                     {cite.title}
                   </h4>
 
-                  {/* Simple summary or Product */}
-                  {cite.summary && (
-                    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {cite.summary}
+                  {/* Product */}
+                  {cite.product && cite.product !== cite.title && (
+                    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      Product: {cite.product}
                     </p>
                   )}
 
                   {/* RAG Extracted Content */}
-                  {cite.content && (
+                  {(cite.text || cite.content) && (
                     <div className="bg-gray-50/80 dark:bg-dark-bg/60 p-2.5 rounded-md border border-gray-100 dark:border-dark-border/60 mt-2">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">{t('extracted_text', 'Extracted Text')}</span>
-                        {cite.score !== null && (
+                        {cite.score !== null && cite.score !== undefined && (
                           <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
-                            Score: {Number(cite.score).toFixed(2)}
+                            Score: {typeof cite.score === 'number' ? cite.score.toFixed(2) : cite.score}
                           </span>
                         )}
                       </div>
                       <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-4 hover:line-clamp-none transition-all">
-                        {cite.content}
+                        {cite.text || cite.content}
                       </p>
                     </div>
                   )}
 
                   {/* Location Meta (Page, Clause, File) */}
-                  {(cite.clause || cite.page || cite.sourceFile) && (
+                  {(cite.clause || cite.section || cite.page || cite.sourceFile) && (
                     <div className="flex flex-wrap items-center gap-2 mt-2 text-[10px] text-gray-500 dark:text-gray-400">
                       {cite.clause && <span><span className="font-semibold text-gray-700 dark:text-gray-300">Clause:</span> {cite.clause}</span>}
-                      {cite.page && <span><span className="font-semibold text-gray-700 dark:text-gray-300">Page:</span> {cite.page}</span>}
+                      {(cite.section || cite.page) && <span><span className="font-semibold text-gray-700 dark:text-gray-300">Location:</span> {cite.section || `Page ${cite.page}`}</span>}
                       {cite.sourceFile && <span className="truncate max-w-[150px]" title={cite.sourceFile}><span className="font-semibold text-gray-700 dark:text-gray-300">File:</span> {cite.sourceFile.split('\\').pop().split('/').pop()}</span>}
                     </div>
                   )}
-
 
                   {/* Card Actions */}
                   <div className="pt-2 border-t border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
@@ -2098,7 +2159,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                       <button
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(`${cite.source} — ${cite.title} (${cite.clause})`)
+                          navigator.clipboard.writeText(`${cite.standard || cite.source} — ${cite.title} (${cite.clause || cite.section || ''})`)
                           toast.success('Reference copied')
                         }}
                         className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded hover:bg-gray-100 dark:hover:bg-dark-border transition-colors cursor-pointer"
@@ -2154,25 +2215,18 @@ export default function ChatInterface({ role = 'consumer' }) {
               <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-dark-border flex items-start justify-between gap-3 bg-slate-50/80 dark:bg-dark-bg/80">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-100/90 dark:bg-blue-900/40 text-bis-navy dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/70 dark:border-blue-800/60 mt-0.5">
-                    <ShieldCheck className="w-5 h-5" />
+                    <BookOpen className="w-5 h-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className={cn(
-                        'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border',
-                        cite.type === 'standard'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                          : cite.type === 'legislation'
-                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-800'
-                          : cite.type === 'order'
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                      )}>
-                        {cite.type === 'standard' ? 'Indian Standard' : cite.type === 'legislation' ? 'Act of Parliament' : cite.type === 'order' ? 'Quality Control Order' : cite.type === 'circular' ? 'Statutory Circular' : 'BIS Regulation'}
+                      <span className="font-mono font-black text-sm px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/50 text-bis-navy dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
+                        {cite.standard || cite.source}
                       </span>
-                      <span className="font-mono font-black text-sm text-gray-900 dark:text-white">
-                        {cite.source}
-                      </span>
+                      {cite.status && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 font-extrabold uppercase">
+                          {cite.status}
+                        </span>
+                      )}
                     </div>
                     <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white font-heading leading-snug">
                       {cite.title}
@@ -2182,7 +2236,7 @@ export default function ChatInterface({ role = 'consumer' }) {
                 <button
                   type="button"
                   onClick={() => setInspectCitation(null)}
-                  className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-dark-border transition-colors shrink-0"
+                  className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-dark-border transition-colors shrink-0 cursor-pointer"
                   aria-label="Close modal"
                 >
                   <X className="w-5 h-5" />
@@ -2191,102 +2245,75 @@ export default function ChatInterface({ role = 'consumer' }) {
 
               {/* Scrollable Body */}
               <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs">
-                {/* Status Bar */}
-                <div className="flex items-center justify-between p-3 rounded-gov bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <div>
-                      <div className="text-[10px] font-bold text-emerald-900 dark:text-emerald-300 uppercase tracking-wider">
-                        Enforcement & Conformity Status
-                      </div>
-                      <div className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">
-                        {cite.status}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 font-extrabold uppercase">
-                    Verified
-                  </span>
-                </div>
-
-                {/* 2-column Metadata Grid */}
+                {/* 2-column Backend Metadata Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted flex items-center gap-1">
-                      <Scale className="w-3 h-3 text-bis-navy dark:text-blue-400" />
-                      Legal Enabling Act
-                    </span>
-                    <p className="font-semibold text-gray-800 dark:text-dark-text text-[11px]">
-                      {cite.actReference}
-                    </p>
-                  </div>
+                  {cite.product && (
+                    <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted">
+                        Product Category
+                      </span>
+                      <p className="font-semibold text-gray-800 dark:text-dark-text text-[11px]">
+                        {cite.product}
+                      </p>
+                    </div>
+                  )}
 
-                  <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted flex items-center gap-1">
-                      <Building2 className="w-3 h-3 text-bis-navy dark:text-blue-400" />
-                      Sectional Committee
-                    </span>
-                    <p className="font-semibold text-gray-800 dark:text-dark-text text-[11px]">
-                      {cite.committee}
-                    </p>
-                  </div>
+                  {(cite.clause || cite.section || cite.page) && (
+                    <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted">
+                        Location in Document
+                      </span>
+                      <p className="font-bold text-blue-700 dark:text-blue-300 text-[11px]">
+                        {cite.clause ? `Clause ${cite.clause}` : (cite.section || `Page ${cite.page}`)}
+                      </p>
+                    </div>
+                  )}
 
-                  <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted flex items-center gap-1">
-                      <FileBadge className="w-3 h-3 text-bis-navy dark:text-blue-400" />
-                      Clause / Section Reference
-                    </span>
-                    <p className="font-bold text-blue-700 dark:text-blue-300 text-[11px]">
-                      {cite.clause}
-                    </p>
-                  </div>
+                  {cite.sourceFile && (
+                    <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted">
+                        Source File
+                      </span>
+                      <p className="font-semibold text-gray-800 dark:text-dark-text text-[11px] truncate" title={cite.sourceFile}>
+                        {cite.sourceFile.split('\\').pop().split('/').pop()}
+                      </p>
+                    </div>
+                  )}
 
-                  <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted flex items-center gap-1">
-                      <BookOpen className="w-3 h-3 text-bis-navy dark:text-blue-400" />
-                      Edition / Amendment
-                    </span>
-                    <p className="font-semibold text-gray-800 dark:text-dark-text text-[11px]">
-                      {cite.version}
-                    </p>
-                  </div>
+                  {cite.score !== null && cite.score !== undefined && (
+                    <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted">
+                        Relevance Score
+                      </span>
+                      <p className="font-mono font-bold text-emerald-700 dark:text-emerald-400 text-[11px]">
+                        {typeof cite.score === 'number' ? cite.score.toFixed(3) : cite.score}
+                      </p>
+                    </div>
+                  )}
+
+                  {cite.chunkId && (
+                    <div className="p-2.5 rounded-gov bg-gray-50 dark:bg-dark-bg border border-gray-200/70 dark:border-dark-border space-y-1 sm:col-span-2">
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-dark-text-muted">
+                        Chunk Identifier
+                      </span>
+                      <p className="font-mono text-gray-600 dark:text-gray-300 text-[10px] truncate">
+                        {cite.chunkId}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Scope & Mandate Summary */}
-                <div className="space-y-1.5">
-                  <h4 className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Statutory Scope & Legal Mandate
-                  </h4>
-                  <p className="text-xs text-gray-700 dark:text-gray-200 leading-relaxed bg-slate-50 dark:bg-dark-bg/80 p-3 rounded-gov border border-slate-200/80 dark:border-dark-border">
-                    {cite.summary}
-                  </p>
-                </div>
-
-                {/* Key Provisions */}
-                {cite.keyPoints && cite.keyPoints.length > 0 && (
+                {/* Extracted Backend Text */}
+                {(cite.text || cite.content) && (
                   <div className="space-y-1.5">
                     <h4 className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Key Technical & Compliance Mandates
+                      Extracted Source Text (Backend Data)
                     </h4>
-                    <div className="space-y-1.5">
-                      {cite.keyPoints.map((pt, pIdx) => (
-                        <div
-                          key={pIdx}
-                          className="flex items-start gap-2 p-2 rounded-gov bg-gray-50/80 dark:bg-dark-bg/60 border border-gray-100 dark:border-dark-border/60 text-gray-700 dark:text-gray-200"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-                          <span className="text-xs leading-relaxed">{pt}</span>
-                        </div>
-                      ))}
+                    <div className="text-xs text-gray-700 dark:text-gray-200 leading-relaxed bg-slate-50 dark:bg-dark-bg/80 p-3 rounded-gov border border-slate-200/80 dark:border-dark-border max-h-60 overflow-y-auto whitespace-pre-wrap font-mono text-[11px]">
+                      {cite.text || cite.content}
                     </div>
                   </div>
                 )}
-
-                {/* Authority Signature Note */}
-                <div className="text-[11px] text-gray-500 dark:text-dark-text-muted italic flex items-center gap-1.5 pt-1">
-                  <span>Issuing Authority:</span>
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">{cite.authority}</span>
-                </div>
               </div>
 
               {/* Modal Footer */}
@@ -2294,35 +2321,22 @@ export default function ChatInterface({ role = 'consumer' }) {
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText(`${cite.source} — ${cite.title} | ${cite.clause} | ${cite.actReference}`);
-                    toast.success('Full standard reference copied to clipboard');
+                    navigator.clipboard.writeText(`${cite.standard || cite.source} — ${cite.title} | ${cite.clause || cite.section || ''}`);
+                    toast.success('Source reference copied to clipboard');
                   }}
-                  className="px-3 py-1.5 rounded-gov bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-dark-border text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+                  className="px-3 py-1.5 rounded-gov bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-dark-border text-xs flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
                 >
                   <Copy className="w-3.5 h-3.5" />
-                  <span>{t('copy_reference', 'Copy Full Reference')}</span>
+                  <span>{t('copy_reference', 'Copy Reference')}</span>
                 </button>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setInspectCitation(null)}
-                    className="btn-gov-outline text-xs py-1.5 px-3"
-                  >
-                    Close
-                  </button>
-                  {cite.url && (
-                    <a
-                      href={cite.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-gov text-xs py-1.5 px-3 flex items-center gap-1.5 shadow-xs"
-                    >
-                      <span>Verify on {cite.portalName || 'BIS Portal'}</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setInspectCitation(null)}
+                  className="btn-gov text-xs py-1.5 px-4 cursor-pointer"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>

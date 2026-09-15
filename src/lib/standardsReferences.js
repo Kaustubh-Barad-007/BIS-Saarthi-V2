@@ -1,42 +1,44 @@
 // src/lib/standardsReferences.js
-// 100% Dynamic Citation & Evidence Resolver — Zero static hardcoded data.
-// All standards, clauses, evidence text, and scores are derived purely from live RAG & Database.
+// Maps and displays only attributes provided by backend source data.
+// Zero static/fabricated fields (no synthetic authority, committee, or act references).
 
 export const STANDARDS_REGISTRY = {}
 
 /**
- * Pure dynamic resolver that formats citations returned directly from RAG or Database.
- * Does not contain any hardcoded standard texts.
+ * Pure dynamic resolver that maps only attributes provided by the backend source data as-is.
  */
 export function resolveDetailedCitation(cite) {
   if (!cite) return null
-  const sourceKey = typeof cite === 'string' ? cite : cite.source
 
-  const sectionOrPage = cite.clause || (cite.page ? `Page ${cite.page}` : (cite.section || 'Statutory Requirement'))
+  const standard = cite.standard || cite.document_standard || cite.source || cite.standard_code || null
+  const title = cite.title || cite.product || standard || null
+  const clause = cite.clause || null
+  const section = cite.section || (cite.page ? `Page ${cite.page}` : null)
+  const page = cite.page || null
+  const product = cite.product || null
+  const sourceFile = cite.source_file || cite.sourceFile || null
+  const score = cite.score ?? cite.hybrid_score ?? null
+  const status = cite.document_status || cite.version || cite.status || null
+  const text = cite.text || cite.content || null
+  const chunkId = cite.chunk_id || cite.chunkId || null
+  const documentId = cite.document_id || cite.documentId || null
 
   return {
-    source: cite.source || sourceKey || 'BIS Regulatory Standard',
-    title: cite.title || cite.product || 'Official Indian Standard / Statutory Regulatory Document',
-    clause: sectionOrPage,
-    version: cite.version || cite.document_status || 'Active Enforceable Standard',
-    type: cite.type || 'standard',
-    authority: cite.authority || 'Bureau of Indian Standards (Govt. of India)',
-    committee: cite.committee || 'Sectional Technical Standardization Committee',
-    status: cite.status || 'Active & Mandatory under Indian Law',
-    actReference: cite.actReference || 'Bureau of Indian Standards Act, 2016',
-    summary: cite.summary || (cite.content ? cite.content.slice(0, 240) + '...' : 'Verified statutory regulatory standard from BIS RAG repository.'),
-    keyPoints: Array.isArray(cite.keyPoints) && cite.keyPoints.length > 0 ? cite.keyPoints : [
-      'Grounded directly in official Bureau of Indian Standards (BIS) vector database',
-      'Extracted from authentic gazette orders, testing manuals, and Indian Standard codes',
-      'Enforced under the Bureau of Indian Standards Act, 2016'
-    ],
-    content: cite.content || cite.text || '',
-    score: cite.score || cite.hybrid_score || null,
-    sourceFile: cite.sourceFile || cite.source_file || null,
-    extractedVia: cite.extractedVia || 'Render Vector RAG Engine',
+    source: standard || title || 'Statutory Source',
+    standard,
+    title,
+    product,
+    clause,
+    section,
+    page,
+    sourceFile,
+    score: score !== null ? Number(score) : null,
+    status,
+    content: text,
+    text,
+    chunkId,
+    documentId,
     ragGrounded: true,
-    url: cite.url || 'https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/knowyourstandards/indian_standards/isdetails',
-    portalName: cite.portalName || 'BIS Official Standards Portal',
   }
 }
 

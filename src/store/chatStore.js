@@ -49,69 +49,22 @@ const getUserStorageKeys = (user = null) => {
   }
 }
 
-const loadSavedSessions = (user = null) => {
-  if (typeof window === 'undefined') return []
-  try {
-    const { sessionsKey } = getUserStorageKeys(user)
-    const raw = localStorage.getItem(sessionsKey)
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) {
-        return parsed.map((s) => ({
-          ...s,
-          messages: (s.messages || []).map((m) => ({
-            ...m,
-            citations: (m.citations || []).map(resolveDetailedCitation).filter(Boolean),
-          })),
-        }))
-      }
-    }
-  } catch (_) {}
-  return []
-}
+const loadSavedSessions = () => []
 
-const loadSavedActiveSessionId = (sessions, user = null) => {
-  if (typeof window === 'undefined') return null
-  try {
-    const { activeKey } = getUserStorageKeys(user)
-    const active = localStorage.getItem(activeKey)
-    if (active && sessions.some((s) => s.id === active)) return active
-  } catch (_) {}
-  return sessions[0]?.id || null
-}
+const loadSavedActiveSessionId = () => null
 
-function persistSessions(sessions, activeId, user = null) {
-  if (typeof window === 'undefined') return
-  try {
-    const { sessionsKey, activeKey } = getUserStorageKeys(user)
-    // Sanitize sessions: store ONLY lean chat history, timestamps, and minimal citation tags.
-    // No raw bulky document dumps, schemas, or heavy payloads are stored.
-    const leanSessions = (sessions || []).map((s) => ({
-      id: s.id,
-      title: s.title,
-      createdAt: s.createdAt,
-      updatedAt: s.updatedAt,
-      messages: (s.messages || []).map((m) => ({
-        id: m.id,
-        role: m.role,
-        content: m.content,
-        timestamp: m.timestamp,
-        citations: (m.citations || []).map((c) => ({
-          source: c.source,
-          title: c.title,
-          clause: c.clause,
-        })),
-        followUps: m.followUps || [],
-      })),
-    }))
-
-    localStorage.setItem(sessionsKey, JSON.stringify(leanSessions))
-    if (activeId) {
-      localStorage.setItem(activeKey, activeId)
-    } else {
-      localStorage.removeItem(activeKey)
-    }
-  } catch (_) {}
+function persistSessions() {
+  // Pure ephemeral mode: Zero chat data or queries stored in localStorage or cache
+  if (typeof window !== 'undefined') {
+    try {
+      // Clean up any lingering chat session storage keys
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('bis_chat_sessions') || key.startsWith('bis_active_session')) {
+          localStorage.removeItem(key)
+        }
+      })
+    } catch (_) {}
+  }
 }
 
 const DEFAULT_FALLBACK_GEMINI_KEY = typeof atob !== 'undefined' ? atob('QVEuQWI4Uk42SllMX21rSkdfY01lS3E2SnhTOXdrWlFQaTBZcGkzeE81dG9WalZmY3hoNkE=') : ''
@@ -214,75 +167,21 @@ const useChatStore = create((set, get) => ({
   selectedLanguage:getInitialLanguage(),
   uploadedFiles:   [],
 
-  // Sync sessions when user logs in, switches accounts, or logs out
+  // Sync user state when user logs in, switches accounts, or logs out
   syncWithUser: async (user) => {
     const targetUser = user || getActiveUserFromStorage()
-    const { currentUserId, currentRole, messages, isStreaming, sessions } = get()
+    const { currentUserId, currentRole, isStreaming } = get()
 
-    // Do NOT wipe active chat state if user and role have not changed or if a query is streaming
     if (isStreaming) return
-    if (currentUserId === (targetUser?.id || null) && currentRole === (targetUser?.role || 'consumer') && (messages.length > 0 || sessions.length > 0)) {
+    if (currentUserId === (targetUser?.id || null) && currentRole === (targetUser?.role || 'consumer')) {
       return
     }
-
-    const localSessions = loadSavedSessions(targetUser)
-    let activeId = loadSavedActiveSessionId(localSessions, targetUser) || localSessions[0]?.id || null
 
     set({
       currentUserId: targetUser?.id || null,
       currentUserRole: targetUser?.role || 'consumer',
       currentRole: targetUser?.role || 'consumer',
-      sessions: localSessions,
-      currentSessionId: activeId,
-      messages: localSessions.find((s) => s.id === activeId)?.messages || [],
     })
-
-    // If user is authenticated, sync with PostgreSQL NeonDB under proper RBAC
-    if (targetUser?.id && targetUser.id !== 'guest') {
-      try {
-        const token = localStorage.getItem('bis_token')
-        if (token) {
-          const res = await fetch('/api/data?type=chat_sessions', {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-          if (res.ok) {
-            const data = await res.json()
-            if (Array.isArray(data.sessions)) {
-              const dbSessions = data.sessions.map((s) => ({
-                ...s,
-                messages: (s.messages || []).map((m) => ({
-                  ...m,
-                  citations: (m.citations || []).map(resolveDetailedCitation).filter(Boolean),
-                })),
-              }))
-
-              // Merge local + DB sessions (local takes precedence if matching id)
-              const sessionMap = new Map()
-              localSessions.forEach((s) => sessionMap.set(s.id, s))
-              dbSessions.forEach((s) => {
-                if (!sessionMap.has(s.id)) {
-                  sessionMap.set(s.id, s)
-                }
-              })
-
-              const merged = Array.from(sessionMap.values())
-              const validActiveId = activeId && merged.some((s) => s.id === activeId)
-                ? activeId
-                : merged[0]?.id || null
-
-              set({
-                sessions: merged,
-                currentSessionId: validActiveId,
-                messages: merged.find((s) => s.id === validActiveId)?.messages || [],
-              })
-              persistSessions(merged, validActiveId, targetUser)
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Chat DB sync error:', err.message)
-      }
-    }
   },
 
   // Manufacturer Intake Profile & Continuous Context
@@ -465,12 +364,12 @@ const useChatStore = create((set, get) => ({
         })
         if (apiRes?.content) {
           aiContent = apiRes.content
-          citations = apiRes.citations || []
+          citations = apiRes.sources || apiRes.citations || []
           canVerify = apiRes.canVerify ?? (citations.length > 0)
           apiLatency = apiRes.latency || ''
           if (Array.isArray(apiRes.followUps)) followUps = apiRes.followUps
         } else {
-          aiContent = '### ⚠️ No Database Response\n\nThe Bureau of Indian Standards database did not return any records for this query.'
+          aiContent = '### 📋 BIS Saarthi Guidance\n\nPlease specify an Indian Standard code or product category to view statutory specifications, testing parameters, and recognized laboratories.'
         }
       } catch (err) {
         aiContent = `### ⚠️ API Connection Error\n\n**Error:** ${err.message || 'Unknown network error'}\n\nUnable to retrieve records from the connected BIS database. Please try again.`
@@ -483,11 +382,14 @@ const useChatStore = create((set, get) => ({
         } catch (_) {}
       }
 
+      const top5Sources = (citations || []).slice(0, 5).map(resolveDetailedCitation).filter(Boolean)
+
       const aiMessage = {
         id:        genId('msg'),
         role:      'assistant',
         content:   aiContent,
-        citations: (citations || []).map(resolveDetailedCitation).filter(Boolean),
+        sources:   top5Sources,
+        citations: top5Sources,
         canVerify,
         followUps,
         readingMode,
@@ -600,12 +502,12 @@ const useChatStore = create((set, get) => ({
         })
         if (apiRes?.content) {
           aiContent = apiRes.content
-          citations = apiRes.citations || []
+          citations = apiRes.sources || apiRes.citations || []
           canVerify = apiRes.canVerify ?? (citations.length > 0)
           apiLatency = apiRes.latency || ''
           if (Array.isArray(apiRes.followUps)) followUps = apiRes.followUps
         } else {
-          aiContent = '### ⚠️ No Database Response\n\nThe Bureau of Indian Standards database did not return any records for this query.'
+          aiContent = '### 📋 BIS Saarthi Guidance\n\nPlease specify an Indian Standard code or product category to view statutory specifications, testing parameters, and recognized laboratories.'
         }
       } catch (err) {
         aiContent = `### ⚠️ API Connection Error\n\n**Error:** ${err.message || 'Unknown network error'}\n\nUnable to retrieve records from the connected BIS database. Please try again.`
@@ -617,11 +519,14 @@ const useChatStore = create((set, get) => ({
         } catch (_) {}
       }
 
+      const top5Sources = (citations || []).slice(0, 5).map(resolveDetailedCitation).filter(Boolean)
+
       const aiMessage = {
         id:        genId('msg'),
         role:      'assistant',
         content:   aiContent,
-        citations: (citations || []).map(resolveDetailedCitation).filter(Boolean),
+        sources:   top5Sources,
+        citations: top5Sources,
         canVerify,
         followUps,
         readingMode,
@@ -699,12 +604,12 @@ const useChatStore = create((set, get) => ({
         })
         if (apiRes?.content) {
           aiContent = apiRes.content
-          citations = apiRes.citations || []
+          citations = apiRes.sources || apiRes.citations || []
           canVerify = apiRes.canVerify ?? (citations.length > 0)
           apiLatency = apiRes.latency || ''
           if (Array.isArray(apiRes.followUps)) followUps = apiRes.followUps
         } else {
-          aiContent = '### ⚠️ No Database Response\n\nThe Bureau of Indian Standards database did not return any records for this query.'
+          aiContent = '### 📋 BIS Saarthi Guidance\n\nPlease specify an Indian Standard code or product category to view statutory specifications, testing parameters, and recognized laboratories.'
         }
       } catch (err) {
         aiContent = `### ⚠️ API Connection Error\n\n**Error:** ${err.message || 'Unknown network error'}\n\nUnable to retrieve records from the connected BIS database. Please try again.`
@@ -716,11 +621,14 @@ const useChatStore = create((set, get) => ({
         } catch (_) {}
       }
 
+      const top5Sources = (citations || []).slice(0, 5).map(resolveDetailedCitation).filter(Boolean)
+
       const aiMessage = {
         id:        genId('msg'),
         role:      'assistant',
         content:   aiContent,
-        citations: (citations || []).map(resolveDetailedCitation).filter(Boolean),
+        sources:   top5Sources,
+        citations: top5Sources,
         canVerify,
         followUps,
         readingMode,
@@ -761,21 +669,6 @@ const useChatStore = create((set, get) => ({
       currentSessionId: nextCurrentSessionId,
       messages: nextMessages,
     })
-    const activeUser = getActiveUserFromStorage()
-    persistSessions(updatedSessions, nextCurrentSessionId, activeUser)
-
-    // Delete in PostgreSQL DB if user is signed in
-    if (activeUser?.id && activeUser.id !== 'guest') {
-      try {
-        const token = localStorage.getItem('bis_token')
-        if (token) {
-          fetch(`/api/data?type=chat_sessions&sessionId=${sessionId}`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${token}` },
-          }).catch(() => {})
-        }
-      } catch (_) {}
-    }
   },
 
   // Language

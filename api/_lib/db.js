@@ -181,7 +181,7 @@ export async function initDb(sql) {
       await sql`
         INSERT INTO certifications (id, user_email, product, standard, category, lab, status, validity, applied)
         VALUES 
-          ('CM/L-8400123', 'msme@bis.gov.in', 'Packaged Drinking Water (Other than Natural Mineral Water)', 'IS 14543:2024', 'Food & Agriculture Products', 'Central Laboratory Sahibabad', 'active', 'Valid until 31 Mar 2026', NOW() - INTERVAL '120 days'),
+          ('CM/L-8400123', 'msme@bis.gov.in', 'Industrial Safety Helmets', 'IS 2925:1984', 'Mechanical Engineering', 'Central Laboratory Sahibabad', 'active', 'Valid until 31 Mar 2026', NOW() - INTERVAL '120 days'),
           ('CM/L-7200456', 'msme@bis.gov.in', 'Ordinary Portland Cement (43 Grade)', 'IS 269:2015', 'Civil Engineering Products', 'Western Regional Lab Mumbai', 'active', 'Valid until 15 Nov 2026', NOW() - INTERVAL '90 days'),
           ('CM/L-9100789', 'msme@bis.gov.in', 'Self-Ballasted LED Lamps for General Lighting Services', 'IS 16102 (Part 1):2012', 'Electrotechnical Products', 'National Test House Kolkata', 'active', 'Valid until 30 Sep 2025', NOW() - INTERVAL '45 days'),
           ('CM/L-6300112', 'msme@bis.gov.in', 'Secondary Cells and Batteries for Portable Applications', 'IS 16046 (Part 2):2018', 'IT & Electronics', 'ERDA Vadodara', 'in_progress', 'Under Factory Audit', NOW() - INTERVAL '20 days'),
@@ -202,7 +202,7 @@ export async function initDb(sql) {
           ('NOTIF-2025-01', 'Mandatory QCO for Electronics Goods & Batteries', 'Quality Control Order now enforced nationwide for IT hardware and lithium battery packs under IS 16046. Manufacture, import, or sale without BIS certification is strictly prohibited.', 'all', 'urgent', 'Gazette Order', 'BIS Directorate General', '/consumer/standards'),
           ('NOTIF-2025-02', '80% MSME Concession on Annual License & Marking Fees', 'Special incentive scheme active for registered Micro & Small Enterprises under Scheme-I. Submit valid Udyam Registration certificate to claim immediate fee waiver.', 'manufacturer', 'info', 'Fee Schedule', 'SME Promotion Cell', '/manufacturer/certification'),
           ('NOTIF-2025-03', 'Nationwide Expansion of Mandatory Gold Hallmarking (Phase-IV)', 'Phase-IV hallmarking orders now cover over 350 districts. All gold jewellery sold must carry 6-digit alphanumeric HUID and BIS triangular hallmark.', 'consumer', 'warning', 'Consumer Alert', 'Hallmarking Division', '/consumer/hallmarking'),
-          ('NOTIF-2025-04', 'Mandatory Monthly Microbiological Logs for Drinking Water', 'All licensees under IS 14543 must upload monthly in-house microbiological water testing logs by 5th of each month on the portal.', 'manufacturer', 'warning', 'Surveillance', 'Quality Assurance Dept', '/manufacturer/documents'),
+          ('NOTIF-2025-04', 'Mandatory Quality Audit for Electrical Cables', 'All licensees under IS 694 must upload routine compliance test logs by 5th of each month on the portal.', 'manufacturer', 'warning', 'Surveillance', 'Quality Assurance Dept', '/manufacturer/documents'),
           ('NOTIF-2025-05', 'BIS Care Mobile App v3.2 Released with AI Camera Verification', 'Citizens can now scan 6-digit HUID and ISI CM/L numbers directly using smartphone camera for instant authenticity verification.', 'all', 'info', 'Portal Update', 'IT & Digital Initiatives', '/consumer/dashboard'),
           ('NOTIF-2025-06', 'Strict Enforcement Raids on Counterfeit ISI Two-Wheeler Helmets', 'Over 45 enforcement raids conducted across transport hubs. Non-compliant manufacturers booked under Section 29 of BIS Act 2016.', 'consumer', 'urgent', 'Enforcement', 'Enforcement Wing', '/consumer/complaints')
         ON CONFLICT (id) DO NOTHING
@@ -219,8 +219,8 @@ export async function initDb(sql) {
         VALUES 
           ('COMP-2025-01', 'consumer@bis.gov.in', 'Protective Helmet (IS 4151)', 'Karol Bagh, New Delhi', 'Counterfeit ISI Mark on Two-Wheeler Helmet', 'Local dealer selling helmets stamped with duplicate ISI mark logo without valid 7-digit CM/L number. Helmet shell cracked on minor impact.', 'under_investigation', NOW() - INTERVAL '12 days'),
           ('COMP-2025-02', 'consumer@bis.gov.in', '22 Karat Gold Bangle', 'Zaveri Bazaar, Mumbai', 'Gold Jewellery Sold Without 6-Digit HUID', 'Jeweller failed to provide mandatory 6-digit alphanumeric HUID on bill or ornament as mandated under IS 1417. Refused hallmark verification certificate.', 'action_taken', NOW() - INTERVAL '9 days'),
-          ('COMP-2025-03', 'consumer@bis.gov.in', '20L Packaged Water Jar (IS 14543)', 'Whitefield, Bengaluru', 'Suspicious Packaged Drinking Water Without Seal', 'Water jars supplied without tamper-proof shrink sleeve and missing ISI CM/L license code. Water had abnormal chemical odor.', 'pending', NOW() - INTERVAL '5 days'),
-          ('COMP-2025-04', 'consumer@bis.gov.in', 'Water Heating Immersion Rod (IS 302)', 'Chandni Chowk, Delhi', 'Uncertified Substandard Electric Immersion Rod', 'Heating appliance sold without earthing wire and lacking BIS ISI certification mark, posing severe electrical shock risk.', 'under_investigation', NOW() - INTERVAL '3 days'),
+          ('COMP-2025-03', 'consumer@bis.gov.in', 'Electric Room Heater (IS 302)', 'Whitefield, Bengaluru', 'Suspicious Heating Appliance Without ISI Mark', 'Heating appliance supplied with damaged cord and missing ISI CM/L license code.', 'pending', NOW() - INTERVAL '5 days'),
+          ('COMP-2025-04', 'consumer@bis.gov.in', 'Electric Immersion Rod (IS 302)', 'Chandni Chowk, Delhi', 'Uncertified Substandard Electric Immersion Rod', 'Heating appliance sold without earthing wire and lacking BIS ISI certification mark, posing severe electrical shock risk.', 'under_investigation', NOW() - INTERVAL '3 days'),
           ('COMP-2025-05', 'consumer@bis.gov.in', 'Plastic Toys Set for Toddlers (IS 9873)', 'T. Nagar, Chennai', 'Imported Toxic Chemical Plastic Toys for Children', 'Plastic toy set sold without mandatory BIS ISI certification and lacking mandatory non-toxic paint safety warning labels.', 'resolved', NOW() - INTERVAL '15 days'),
           ('COMP-2025-06', 'consumer@bis.gov.in', 'Portland Pozzolana Cement (IS 1489)', 'Jaipur, Rajasthan', 'Adulterated Cement Supplied in Duplicate Bags', 'Contractor received counterfeit brand bags with fake ISI mark. Lab test confirmed substandard compressive strength.', 'action_taken', NOW() - INTERVAL '2 days')
         ON CONFLICT (id) DO NOTHING
@@ -236,13 +236,13 @@ export async function initDb(sql) {
         INSERT INTO audit_logs (user_email, action, resource, ip_address, created_at)
         VALUES 
           ('admin@bis.gov.in', 'BROADCAST_CREATED', 'Gazette QCO Electronics Order #NOTIF-2025-01', '10.24.11.2', NOW() - INTERVAL '1 hour'),
-          ('msme@bis.gov.in', 'DOCUMENT_UPLOADED', 'Factory Laboratory Water Test Report (Sahibabad Lab)', '49.36.120.4', NOW() - INTERVAL '3 hours'),
+          ('msme@bis.gov.in', 'DOCUMENT_UPLOADED', 'Factory Laboratory Quality Test Report (Sahibabad Lab)', '49.36.120.4', NOW() - INTERVAL '3 hours'),
           ('consumer@bis.gov.in', 'COMPLAINT_FILED', 'Complaint #COMP-2025-06: Adulterated Cement', '152.57.44.8', NOW() - INTERVAL '6 hours'),
-          ('admin@bis.gov.in', 'CERTIFICATION_APPROVED', 'License #CM/L-8400123: Packaged Drinking Water', '10.24.11.2', NOW() - INTERVAL '12 hours'),
+          ('admin@bis.gov.in', 'CERTIFICATION_APPROVED', 'License #CM/L-8400123: Industrial Safety Helmets', '10.24.11.2', NOW() - INTERVAL '12 hours'),
           ('msme@bis.gov.in', 'PORTAL_LOGIN', 'MSME Manufacturer Portal Session', '49.36.120.4', NOW() - INTERVAL '1 day'),
           ('consumer@bis.gov.in', 'HUID_VERIFIED', 'Hallmark Purity Verification: 6-Digit HUID #AB8934', '152.57.44.8', NOW() - INTERVAL '1 day'),
           ('admin@bis.gov.in', 'STATUS_UPDATED', 'Complaint #COMP-2025-02 marked as ACTION_TAKEN', '10.24.11.2', NOW() - INTERVAL '2 days'),
-          ('admin@bis.gov.in', 'KNOWLEDGE_DOC_ADDED', 'IS 10500:2012 Drinking Water Specification Dossier', '10.24.11.2', NOW() - INTERVAL '3 days')
+          ('admin@bis.gov.in', 'KNOWLEDGE_DOC_ADDED', 'IS 269:2015 Portland Cement Dossier', '10.24.11.2', NOW() - INTERVAL '3 days')
       `
     }
   } catch (_) {}
@@ -260,9 +260,9 @@ export async function initDb(sql) {
         INSERT INTO documents (id, title, file_name, file_type, file_size, category, role_access, uploader_email, description, data_base64, standard_code)
         VALUES 
           ('DOC-QCO-2025', 'Gazette Quality Control Order (QCO) 2025 on Mandatory Certification', 'QCO_Mandatory_Electronics_2025.pdf', 'application/pdf', 1048576, 'gazette', 'all', 'admin@bis.gov.in', 'Official Ministry of Consumer Affairs gazette notification ordering mandatory ISI marking and CRS registration.', ${qcoPdfUri}, 'IS 16046'),
-          ('DOC-IS10500', 'IS 10500:2012 Drinking Water Specification Full Standard Dossier', 'IS_10500_Drinking_Water_Specifications.pdf', 'application/pdf', 2097152, 'standard', 'all', 'admin@bis.gov.in', 'Comprehensive physical, chemical, and microbiological testing limits and sampling procedures for potable drinking water.', ${qcoPdfUri}, 'IS 10500'),
+          ('DOC-IS269', 'IS 269:2015 Ordinary Portland Cement Standard Dossier', 'IS_269_Portland_Cement_Specifications.pdf', 'application/pdf', 2097152, 'standard', 'all', 'admin@bis.gov.in', 'Comprehensive physical, chemical, and mechanical testing limits for Portland Cement.', ${qcoPdfUri}, 'IS 269'),
           ('DOC-IS1417', 'IS 1417:2016 Gold and Silver Hallmarking Purity & Sampling Guide', 'IS_1417_Gold_Silver_Hallmarking_Standard.pdf', 'application/pdf', 1572864, 'standard', 'all', 'admin@bis.gov.in', 'Official guidelines on 24K, 22K, 18K, and 14K gold testing, assaying centre standards, and 6-digit HUID registration.', ${qcoPdfUri}, 'IS 1417'),
-          ('DOC-TEST-840', 'Factory Laboratory Water Test Compliance Certificate (Sahibabad Lab)', 'Sahibabad_Lab_Water_Test_Report_CML8400123.pdf', 'application/pdf', 786432, 'test_report', 'manufacturer', 'msme@bis.gov.in', 'Official laboratory test report for license CM/L-8400123 verifying compliance across 48 chemical & bacteriological parameters.', ${qcoPdfUri}, 'IS 14543'),
+          ('DOC-TEST-840', 'Factory Laboratory Test Compliance Certificate (Sahibabad Lab)', 'Sahibabad_Lab_Test_Report_CML8400123.pdf', 'application/pdf', 786432, 'test_report', 'manufacturer', 'msme@bis.gov.in', 'Official laboratory test report for license CM/L-8400123 verifying compliance across standard parameters.', ${qcoPdfUri}, 'IS 2925'),
           ('DOC-IMG-HALLMARK', 'BIS Hallmark 3-Symbol Official Verification Graphic Guide', 'BIS_Hallmark_3_Symbols_Guide.svg', 'image/svg+xml', 314572, 'evidence', 'all', 'admin@bis.gov.in', 'Visual identifier reference showing triangular BIS logo, karat fineness (22K916), and 6-digit laser-engraved HUID number.', ${hallmarkImageUri}, 'IS 1417'),
           ('DOC-IMG-HELMET', 'Enforcement Evidence Photo: Counterfeit Two-Wheeler Helmet Seizure', 'Seized_Non_ISI_Helmet_Evidence.svg', 'image/svg+xml', 419430, 'evidence', 'admin', 'admin@bis.gov.in', 'Photographic evidence from Karol Bagh enforcement raid documenting duplicate stamped ISI mark lacking CM/L license.', ${helmetImageUri}, 'IS 4151')
         ON CONFLICT (id) DO NOTHING
