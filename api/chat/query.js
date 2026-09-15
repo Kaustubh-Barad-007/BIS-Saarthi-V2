@@ -833,6 +833,14 @@ Your mission is to synthesize the retrieved regulatory records and conversation 
 - For testing laboratories or recognized testing facilities:
   * When the user asks about laboratories for a product or location (e.g., Nagpur, Pune, Maharashtra, water testing), and matching facilities are in <retrieved_regulatory_records>, answer affirmatively ("Yes, ...") and ALWAYS explicitly present the matched laboratories with their full details: Laboratory Name, Lab Code, Full Address, Contact Phone, Email, and Recognized Testing Scope.
   * NEVER give generic advice telling the user to "visit the directory on Manakonline" when matching laboratory facilities are provided in <retrieved_regulatory_records>!
+- TABLE FORMATTING MANDATE:
+  * Whenever presenting tabular data (such as recognized laboratories, testing parameters, fee schedules, or standards requirements), ALWAYS use standard GitHub Flavored Markdown (GFM) table syntax.
+  * Every single table row MUST end with a newline character. NEVER concatenate multiple rows together onto a single line without newlines between them!
+  * Delimiter rows must properly separate the header from data rows (e.g., | :--- | :--- | :--- |).
+  * Example:
+    | Laboratory Name | Lab Code | Address | Contact | Recognized Scope |
+    | :--- | :--- | :--- | :--- | :--- |
+    | Lab Name | L-1001 | Full Address | Phone Number | Testing Scope |
 - For technical standards & testing parameters: present clean bullet points, tables, or highlighted lists with the exact parameters (microbiological, physical, chemical, safety tests) directly from the retrieved standard specifications.
 - For procedural steps (certification, MSME license verification, hallmarking, filing complaints): use clear numbered steps.
 - For general questions or greetings: provide an authoritative greeting and concise overview of BIS functions and key schemes (ISI mark, CRS, Hallmarking, Laboratory recognition).
@@ -879,7 +887,22 @@ Current User Query: ${userQuery}`
   return await callGeminiApi(prompt, geminiKey)
 }
 
-// ── 6. CLEAN FALLBACK DYNAMIC RESPONSE FORMATTER ──
+// ── 6. MARKDOWN TABLE NORMALIZER ──
+export function formatMarkdownTables(text) {
+  if (!text || typeof text !== 'string') return ''
+  return text
+    // Replace double pipe row boundaries | | or |  | with newline and pipe
+    .replace(/\|\s*\|\s*(?=[A-Za-z0-9\u0900-\u0D7F:\-])/g, '|\n| ')
+    // Ensure table rows don't have blank lines between them
+    .replace(/(\|[^\n]+\|)\n\s*\n(\|[ \t]*[:\-A-Za-z0-9\u0900-\u0D7F])/g, '$1\n$2')
+    .replace(/(\|[^\n]+\|)\n\s*\n(\|[ \t]*[:\-A-Za-z0-9\u0900-\u0D7F])/g, '$1\n$2')
+    // Ensure table is preceded by an empty line if attached to non-table text
+    .replace(/([^\n|])\n(\|[^\n]+\|)/g, '$1\n\n$2')
+    // Ensure table is followed by an empty line if attached to non-table text
+    .replace(/(\|[^\n]+\|)\n([^|\n\s])/g, '$1\n\n$2')
+}
+
+// ── 7. CLEAN FALLBACK DYNAMIC RESPONSE FORMATTER ──
 function formatResponseAccordingToQuery(userQuery, rawAnswer, top5Sources, role = 'consumer', language = 'en') {
   let text = (rawAnswer || '').trim()
 
@@ -926,13 +949,15 @@ function formatResponseAccordingToQuery(userQuery, rawAnswer, top5Sources, role 
   const isLabQuery = /lab|laboratory|laboratories|testing facilit|testing center/i.test(userQuery)
   const labSources = top5Sources.filter(s => s.clause?.includes('Laboratory') || s.title?.toLowerCase().includes('lab') || s.section?.toLowerCase().includes('lab'))
   if (isLabQuery && labSources.length > 0 && !text.includes('Testing Laboratories')) {
-    text += `\n\n### BIS Recognized Testing Laboratories\n`
+    text += `\n\n### BIS Recognized Testing Laboratories\n\n`
+    text += `| Laboratory Name | Recognized Scope | Details |\n`
+    text += `| :--- | :--- | :--- |\n`
     for (const lab of labSources) {
-      text += `- **${lab.title}**\n  - **Recognized Scope:** ${lab.standard || lab.product || 'Indian Standards'}\n  - **Details:** ${lab.text || lab.section || 'BIS-recognized facility'}\n`
+      text += `| ${lab.title || 'Laboratory'} | ${lab.standard || lab.product || 'Indian Standards'} | ${lab.text || lab.section || 'BIS-recognized facility'} |\n`
     }
   }
 
-  return text
+  return formatMarkdownTables(text)
 }
 
 function generateFollowUps(userQuery, top5Sources, backendRelatedQuestions, language) {
@@ -1087,6 +1112,10 @@ export default async function handler(req, res) {
     if (!formattedContent) {
       formattedContent = formatResponseAccordingToQuery(content, ragAnswer, top5Sources, role, effectiveLanguage)
     }
+
+    // Always normalize markdown tables to guarantee standard GFM table structure
+    formattedContent = formatMarkdownTables(formattedContent)
+
     if (followUps.length === 0) {
       followUps = generateFollowUps(content, top5Sources, relatedQuestions, effectiveLanguage)
     }

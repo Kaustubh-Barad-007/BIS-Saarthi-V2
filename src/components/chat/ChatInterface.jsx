@@ -9,6 +9,7 @@ import {
   PanelLeftOpen, PanelLeftClose, History, Key, Eye, EyeOff, Loader2, Zap
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { resolveDetailedCitation } from '@/lib/standardsReferences'
 import { toast } from 'sonner'
 import useChatStore from '@/store/chatStore'
@@ -18,6 +19,50 @@ import { cn, formatDateTime, truncate } from '@/lib/utils'
 import { CHAT_OUTPUT_OPTIONS, LANGUAGES } from '@/lib/constants'
 import { useTranslation } from '@/lib/i18n'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+
+// Format and normalize markdown tables to guarantee clean GFM rendering
+function prepareMarkdownContent(content) {
+  if (!content || typeof content !== 'string') return ''
+  return content
+    .replace(/\|\s*\|\s*(?=[A-Za-z0-9\u0900-\u0D7F:\-])/g, '|\n| ')
+    .replace(/(\|[^\n]+\|)\n\s*\n(\|[ \t]*[:\-A-Za-z0-9\u0900-\u0D7F])/g, '$1\n$2')
+    .replace(/(\|[^\n]+\|)\n\s*\n(\|[ \t]*[:\-A-Za-z0-9\u0900-\u0D7F])/g, '$1\n$2')
+    .replace(/([^\n|])\n(\|[^\n]+\|)/g, '$1\n\n$2')
+    .replace(/(\|[^\n]+\|)\n([^|\n\s])/g, '$1\n\n$2')
+}
+
+const markdownComponents = {
+  table: ({ node, ...props }) => (
+    <div className="overflow-x-auto my-3.5 rounded-lg border border-gray-200 dark:border-dark-border shadow-xs">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border text-xs text-left" {...props} />
+    </div>
+  ),
+  thead: ({ node, ...props }) => (
+    <thead className="bg-gray-50/90 dark:bg-dark-surface/90 text-gray-800 dark:text-gray-200 font-semibold border-b border-gray-200 dark:border-dark-border" {...props} />
+  ),
+  tbody: ({ node, ...props }) => (
+    <tbody className="divide-y divide-gray-100 dark:divide-dark-border/60 bg-white dark:bg-dark-bg/40" {...props} />
+  ),
+  tr: ({ node, ...props }) => (
+    <tr className="hover:bg-gray-50/70 dark:hover:bg-dark-surface/50 transition-colors" {...props} />
+  ),
+  th: ({ node, ...props }) => (
+    <th className="px-3 py-2.5 font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider text-[11px] whitespace-nowrap bg-gray-100/80 dark:bg-dark-surface" {...props} />
+  ),
+  td: ({ node, ...props }) => (
+    <td className="px-3 py-2 text-gray-700 dark:text-gray-300 align-top leading-relaxed text-xs break-words" {...props} />
+  ),
+  a: ({ node, ...props }) => (
+    <a className="text-blue-600 dark:text-blue-400 underline font-medium hover:text-blue-800" target="_blank" rel="noopener noreferrer" {...props} />
+  ),
+  code: ({ node, inline, ...props }) => (
+    inline ? (
+      <code className="bg-gray-100 dark:bg-dark-surface px-1 py-0.5 rounded text-xs font-mono text-gray-800 dark:text-gray-200" {...props} />
+    ) : (
+      <code className="block bg-gray-100 dark:bg-dark-surface p-2 rounded text-xs font-mono overflow-x-auto" {...props} />
+    )
+  ),
+}
 
 // Phonetically normalize acronyms and units for clean speech pronunciation in Indian accents
 function normalizeTextForSpeech(text, lang = 'en') {
@@ -224,7 +269,12 @@ function MessageBubble({
                     </button>
                   </div>
                 )}
-                <ReactMarkdown>{showOriginal ? message.content : (translatedContent || message.content)}</ReactMarkdown>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={markdownComponents}
+                >
+                  {prepareMarkdownContent(showOriginal ? message.content : (translatedContent || message.content))}
+                </ReactMarkdown>
 
                 {/* ── Sources Section: Top 5 Results from Backend As-Is ── */}
                 {!isUser && messageSources.length > 0 && (
