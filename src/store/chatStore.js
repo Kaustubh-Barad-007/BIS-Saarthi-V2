@@ -385,6 +385,7 @@ const useChatStore = create((set, get) => ({
       let canVerify = false
       let apiLatency = ''
       let followUps = []
+      let apiRes = null
 
       try {
         const ragApiKey = getStoredRagApiKey()
@@ -398,7 +399,7 @@ const useChatStore = create((set, get) => ({
         const effectiveLang = detectRequestedLanguage(content, selectedLanguage)
         const englishPrompt = await ensureEnglishQuery(content, effectiveLang)
 
-        const apiRes = await chatApi.query({
+        apiRes = await chatApi.query({
           sessionId,
           content,
           englishQuery: englishPrompt,
@@ -526,6 +527,7 @@ const useChatStore = create((set, get) => ({
       let canVerify = false
       let apiLatency = ''
       let followUps = []
+      let apiRes = null
 
       try {
         const previousMessages = trimmedMessages.slice(0, -1)
@@ -537,7 +539,7 @@ const useChatStore = create((set, get) => ({
         const effectiveLang = detectRequestedLanguage(lastUserMsg.content, selectedLanguage)
         const englishPrompt = await ensureEnglishQuery(lastUserMsg.content, effectiveLang)
 
-        const apiRes = await chatApi.query({
+        apiRes = await chatApi.query({
           sessionId: currentSessionId,
           content: lastUserMsg.content,
           englishQuery: englishPrompt,
@@ -630,6 +632,7 @@ const useChatStore = create((set, get) => ({
       let canVerify = false
       let apiLatency = ''
       let followUps = []
+      let apiRes = null
 
       try {
         const previousMessages = messages.slice(0, targetIdx)
@@ -641,7 +644,7 @@ const useChatStore = create((set, get) => ({
         const effectiveLang = detectRequestedLanguage(newContent, selectedLanguage)
         const englishPrompt = await ensureEnglishQuery(newContent, effectiveLang)
 
-        const apiRes = await chatApi.query({
+        apiRes = await chatApi.query({
           sessionId: currentSessionId,
           content: newContent,
           englishQuery: englishPrompt,
